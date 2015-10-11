@@ -5,6 +5,8 @@ Usage:
 
 """
 
+from i18nhelpers import retrieve_language_resources
+
 
 def make_language_pack(lang):
 
