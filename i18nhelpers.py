@@ -1,11 +1,20 @@
 
-# topics, contents, exercises, subtitles, kalite_po_files, ka_po_files = retrieve_language_resources(lang)
-
-
+import collections
 import os
 
 
-def retrieve_language_resources(lang, softwareversion):
+LangpackResources = collections.namedtuple(
+    "LangpackResources",
+    ["topics",
+     "contents",
+     "exercises",
+     "subtitles",
+     "kalite_catalog",
+     "ka_catalog"
+    ])
+
+
+def retrieve_language_resources(lang: str, version: str) -> LangpackResources:
 
     content_data = retrieve_kalite_content_data()
     exercise_data = retrieve_kalite_exercise_data()
@@ -16,13 +25,13 @@ def retrieve_language_resources(lang, softwareversion):
     # retrieve KA Lite po files from CrowdIn
     crowdin_project_name = "ka-lite"
     crowdin_secret_key = os.environ["KALITE_CROWDIN_SECRET_KEY"]
-    includes = [softwareversion]
+    includes = [version]
     kalite_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, includes)
 
     # retrieve Khan Academy po files from CrowdIn
     crowdin_project_name = "khanacademy"
     crowdin_secret_key = os.environ["KA_CROWDIN_SECRET_KEY"]
-    includes = [softwareversion]
+    includes = [version]
     ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, includes)
 
-    return topic_data, content_data, exercise_data, kalite_catalog, ka_catalog
+    return LangpackResources(topic_data, content_data, exercise_data, subtitle_data, kalite_catalog, ka_catalog)
