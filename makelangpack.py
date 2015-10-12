@@ -10,19 +10,23 @@ from i18nhelpers import retrieve_language_resources
 
 def make_language_pack(lang):
 
-    topics, contents, exercises, subtitles, kalite_po_files, ka_po_files = retrieve_language_resources(lang)
+    topic_data, content_data, exercise_data, subtitles, kalite_po_files, ka_po_files = retrieve_language_resources(lang)
 
 
-    exercises = translate_exercises(exercises, ka_po_files)
-    topics =  translate_topics(topics, ka_po_files)
-    contents = translate_content(contents, ka_po_files)
+    exercise_data = translate_exercises(exercise_data, ka_po_files)
+    topic_data =  translate_topics(topic_data, ka_po_files)
+    content_data = translate_content(content_data, ka_po_files)
 
-    exercises = list(exercises)
-    khan_exercises = retrieve_khan_exercises(exercises)
-    perseus_items = retrieve_assessment_items(exercises)
-    exercises = remove_untranslated_exercises(exercises, khan_exercises, perseus_items)
+    exercise_data = list(exercise_data)
+    khan_exercises = retrieve_khan_exercises(exercise_data)
+    perseus_items = retrieve_assessment_items(exercise_data)
+    exercise_data = remove_untranslated_exercises(exercise_data, khan_exercises, perseus_items)
 
-    topics = remove_unavailable_topics(topics, exercises)
+    # now include only the assessment item resources that we need
+    all_assessment_resources = get_full_assessment_resource_list()
+    included_assessment_resources = filter_unneeded_assessment_resources(all_assessment_resources, exercise_data)
+
+    topic_data = remove_unavailable_topics(topic_data, exercise_data)
 
     filename = "{lang}.zip".format(lang=lang)
-    bundle_language_pack(filename, topics, contents, exercises, kalite_po_files, ka_po_files)
+    bundle_language_pack(filename, topic_data, content_data, exercise_data, kalite_po_files, ka_po_files)
