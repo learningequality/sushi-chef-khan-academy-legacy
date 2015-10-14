@@ -10,7 +10,8 @@ LangpackResources = collections.namedtuple(
      "exercises",
      "subtitles",
      "kalite_catalog",
-     "ka_catalog"
+     "ka_catalog",
+     "dubbed_video_mapping"
     ])
 
 
@@ -34,4 +35,6 @@ def retrieve_language_resources(lang: str, version: str) -> LangpackResources:
     includes = [version]
     ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, includes)
 
-    return LangpackResources(topic_data, content_data, exercise_data, subtitle_data, kalite_catalog, ka_catalog)
+    dubbed_video_mapping = retrieve_dubbed_video_mapping(lang)
+
+    return LangpackResources(topic_data, content_data, exercise_data, subtitle_data, kalite_catalog, ka_catalog, dubbed_video_mapping)

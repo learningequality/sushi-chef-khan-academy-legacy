@@ -10,12 +10,14 @@ from i18nhelpers import retrieve_language_resources
 
 def make_language_pack(lang):
 
-    topic_data, content_data, exercise_data, subtitles, kalite_po_files, ka_po_files = retrieve_language_resources(lang)
+    topic_data, content_data, exercise_data, subtitles, kalite_po_files, ka_po_files, dubmap = retrieve_language_resources(lang)
 
 
     exercise_data = translate_exercises(exercise_data, ka_po_files)
     topic_data =  translate_topics(topic_data, ka_po_files)
     content_data = translate_content(content_data, ka_po_files)
+
+    content_data = apply_dubbed_video_map(content_data, dubmap)
 
     exercise_data = list(exercise_data)
     khan_exercises = retrieve_khan_exercises(exercise_data)
