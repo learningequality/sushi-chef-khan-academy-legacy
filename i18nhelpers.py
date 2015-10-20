@@ -98,6 +98,3 @@ def retrieve_kalite_content_data():
             content = json.load(f)
         
         return content
-
-
-
