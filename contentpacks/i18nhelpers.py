@@ -52,18 +52,3 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="e
     )
 
     zip_path = download_and_cache_file(url)
-
-
-def download_and_cache_file(url, cachedir=None, ignorecache=False) -> str:
-    "Download the given url if it's not saved in cachedir. Returns the path to
-    the file. Always download the file if ignorecache is True.
-    "
-    if not cachedir:
-        cachedir = os.path.join(os.getcwd(), "build")
-
-    path = os.path.join(cachedir, os.path.basename(url))
-
-    if ignorecache or not os.path.exists(path):
-        urllib.urlretrieve(url, path)
-
-    return path
