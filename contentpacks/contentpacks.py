@@ -1,11 +1,13 @@
 
 import collections
 import fnmatch
+import ujson as json
 import os
 import zipfile
+
+from contentpacks.utils import download_and_cache_file
 from babel.messages.catalog import Catalog
 from babel.messages.pofile import read_po
-from .utils import download_and_cache_file
 
 
 LangpackResources = collections.namedtuple(
@@ -45,9 +47,21 @@ def retrieve_language_resources(lang: str, version: str) -> LangpackResources:
     return LangpackResources(topic_data, content_data, exercise_data, subtitle_data, kalite_catalog, ka_catalog, dubbed_video_mapping)
 
 
+def retrieve_dubbed_video_mapping(video_ids: [str], lang: str) -> dict:
+    """
+    Returns a dictionary mapping between the english id, and its id for
+    the dubbed video version given the language.
+    """
+    url_template = ("http://www.khanacademy.org/api/v1/"
+                    "videos/{video_id}?lang={lang}")
+    return {}
+
+
 def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="en", includes="*.po") -> Catalog:
 
-    request_url_template = "https://api.crowdin.com/api/project/{project_id}/download/{lang_code}.zip?key={key}"
+    request_url_template = ("https://api.crowdin.com/api/"
+                            "project/{project_id}/download/"
+                            "{lang_code}.zip?key={key}")
     request_url = request_url_template.format(
         project_id=crowdin_project_name,
         lang_code=lang_code,
@@ -74,3 +88,31 @@ def _combine_catalogs(*catalogs):
         catalog._messages.update(oldcatalog._messages)
 
     return catalog
+
+
+def _get_video_ids(content_data: dict) -> [str]:
+    """
+    Returns a list of video ids given the KA content dict.
+    """
+    return list(key for key in content_data.keys() if content_data[key]["kind"] == "Video")
+
+
+def _retrieve_ka_topic_tree(lang="en"):
+    """
+    Retrieve the full topic tree straight from KA.
+    """
+    url = None
+    path = download_and_cache_file
+
+
+def retrieve_kalite_content_data(url=None) -> dict:
+    """
+    Retrieve the KA Lite contents.json file in the master branch.  If
+    url is given, download from that url instead.
+    """
+    if not url:
+        url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/contents.json"
+
+    path = download_and_cache_file(url)
+    with open(path) as f:
+        return json.load(f)
