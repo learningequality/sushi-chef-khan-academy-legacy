@@ -47,6 +47,10 @@ def retrieve_language_resources(lang: str, version: str) -> LangpackResources:
     return LangpackResources(topic_data, content_data, exercise_data, subtitle_data, kalite_catalog, ka_catalog, dubbed_video_mapping)
 
 
+def retrieve_subtitles(videos: list, lang="en") -> dict:
+    return {}
+
+
 def retrieve_dubbed_video_mapping(video_ids: [str], lang: str) -> dict:
     """
     Returns a dictionary mapping between the english id, and its id for
