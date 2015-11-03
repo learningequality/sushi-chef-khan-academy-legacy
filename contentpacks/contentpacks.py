@@ -1,8 +1,9 @@
 
 import collections
 import fnmatch
-import ujson as json
 import os
+import requests
+import ujson as json
 import zipfile
 
 from contentpacks.utils import download_and_cache_file
@@ -55,10 +56,27 @@ def retrieve_dubbed_video_mapping(video_ids: [str], lang: str) -> dict:
     """
     Returns a dictionary mapping between the english id, and its id for
     the dubbed video version given the language.
+
+    Note (aron): optimize later by doing only one request to the topic
+    tree and then filtering videos from there.
     """
     url_template = ("http://www.khanacademy.org/api/v1/"
                     "videos/{video_id}?lang={lang}")
-    return {}
+
+    dubbed_video_mapping = {}
+
+    for video in video_ids:
+        url = url_template.format(video_id=video, lang=lang)
+
+        r = requests.get(url)
+        r.raise_for_status()
+
+        deets = r.json()
+
+        if deets["translated_youtube_lang"] == lang:
+            dubbed_video_mapping[video] = deets["translated_youtube_id"]
+
+    return dubbed_video_mapping
 
 
 def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="en", includes="*.po") -> Catalog:
@@ -98,7 +116,8 @@ def _get_video_ids(content_data: dict) -> [str]:
     """
     Returns a list of video ids given the KA content dict.
     """
-    return list(key for key in content_data.keys() if content_data[key]["kind"] == "Video")
+    video_ids = list(key for key in content_data.keys() if content_data[key]["kind"] == "Video")
+    return sorted(video_ids)
 
 
 def _retrieve_ka_topic_tree(lang="en"):

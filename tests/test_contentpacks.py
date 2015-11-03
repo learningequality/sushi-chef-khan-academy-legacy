@@ -1,7 +1,8 @@
 import vcr
 from babel.messages.catalog import Catalog
 from hypothesis import assume, given
-from hypothesis.strategies import integers, text, lists, tuples, sampled_from
+from hypothesis.strategies import integers, text, lists, tuples, sampled_from, \
+    sets
 
 from contentpacks.contentpacks import _combine_catalogs, _get_video_ids, \
     retrieve_dubbed_video_mapping, retrieve_kalite_content_data, \
@@ -72,17 +73,40 @@ class Test_retrieve_kalite_content_data:
         assert isinstance(content_data, dict)
 
 
+@vcr.use_cassette("tests/fixtures/cassettes/kalite/contents.json.yml")
+def _get_all_video_ids():
+    """
+    Test utility function so we only need to generate the list of video
+    ids once, and then assign that to an instance variable. We
+    wrap it as a function instead of assigning the value of
+    retrieve_kalite_content_data directly so we can use the
+    cassette system to cache the results, avoiding an expensive
+    http request.
+
+    """
+    content_data = retrieve_kalite_content_data()
+
+    ids = _get_video_ids(content_data)
+
+    # return a tuple, to make sure it gets never modified.
+    ids_tuple = tuple(ids)
+
+    # just take the first 10 ids -- don't run too many
+    return ids_tuple[:10]
+
+
 class Test_retrieve_dubbed_video_mapping:
 
-    @vcr.use_cassette("tests/fixtures/cassettes/kalite/contents.json.yml")
-    def test_returns_a_subset_of_all_videos(self):
-        content_data = retrieve_kalite_content_data()
-        all_videos = _get_video_ids(content_data)
+    video_list = _get_all_video_ids()
 
-        dubbed_videos = set(
+    @vcr.use_cassette("tests/fixtures/cassettes/khanacademy/video_api.yml", record_mode="new_episodes")
+    @given(sets(elements=sampled_from(video_list)))
+    def test_returns_dict_given_singleton_list(self, video_ids):
+
+        dubbed_videos_set = set(
             retrieve_dubbed_video_mapping(
-                all_videos,
+                video_ids,
                 lang="de"
             ))
 
-        assert dubbed_videos.issubset(all_videos)
+        assert dubbed_videos_set.issubset(video_ids)
