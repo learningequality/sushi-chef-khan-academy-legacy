@@ -4,7 +4,7 @@ from hypothesis import assume, given
 from hypothesis.strategies import integers, text, lists, tuples, sampled_from, \
     sets
 
-from contentpacks.contentpacks import _combine_catalogs, _get_video_ids, \
+from contentpacks.khanacademy import _combine_catalogs, _get_video_ids, \
     retrieve_dubbed_video_mapping, retrieve_kalite_content_data, \
     retrieve_translations
 
