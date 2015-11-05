@@ -23,6 +23,23 @@ LangpackResources = collections.namedtuple(
     ])
 
 
+# monkey patch polib.POEntry.merge
+def new_merge(self, other):
+    """
+    Add the non-plural msgstr of `other` rather than an empty string.
+
+    Basically, re-add the change in
+    https://github.com/learningequality/ka-lite/commit/9f0aa49579a5d4c98df548863d20a252ed93220e
+    but using monkey patching rather than editing the source file directly.
+    """
+    self.old_merge(other)
+    self.msgstr = other.msgstr if other.msgstr else self.msgstr
+
+POEntry_class = polib.POEntry
+POEntry_class.old_merge = POEntry_class.merge
+POEntry_class.merge = new_merge
+
+
 def retrieve_language_resources(lang: str, version: str) -> LangpackResources:
 
     content_data = retrieve_kalite_content_data()
