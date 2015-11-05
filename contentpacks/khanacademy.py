@@ -1,7 +1,13 @@
 
 import collections
 import fnmatch
+import gc
+import glob
 import os
+import polib
+import shutil
+import subprocess
+import tempfile
 import requests
 import ujson as json
 import zipfile
@@ -57,8 +63,8 @@ def retrieve_language_resources(lang: str, version: str) -> LangpackResources:
     # retrieve Khan Academy po files from CrowdIn
     crowdin_project_name = "khanacademy"
     crowdin_secret_key = os.environ["KA_CROWDIN_SECRET_KEY"]
-    includes = [version]
-    ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, includes)
+    includes = []
+    ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key)
 
     dubbed_video_mapping = retrieve_dubbed_video_mapping(lang)
 
@@ -179,6 +185,20 @@ def retrieve_kalite_content_data(url=None) -> dict:
     """
     if not url:
         url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/contents.json"
+
+    path = download_and_cache_file(url)
+    with open(path) as f:
+        return json.load(f)
+
+
+def retrieve_kalite_exercise_data(url=None) -> dict:
+    """
+    Retrieve the KA Lite contents.json file in the master branch.  If
+    url is given, download from that url instead.
+    """
+    print("downloading exercise data")
+    if not url:
+        url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/exercises.json"
 
     path = download_and_cache_file(url)
     with open(path) as f:
