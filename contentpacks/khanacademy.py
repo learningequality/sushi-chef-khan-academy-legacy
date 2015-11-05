@@ -79,7 +79,7 @@ def retrieve_dubbed_video_mapping(video_ids: [str], lang: str) -> dict:
     return dubbed_video_mapping
 
 
-def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="en", includes="*.po") -> Catalog:
+def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="en", includes="*.po") -> polib.POFile:
 
     request_url_template = ("https://api.crowdin.com/api/"
                             "project/{project_id}/download/"
@@ -91,23 +91,50 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="e
     )
 
     zip_path = download_and_cache_file(request_url)
+    zip_extraction_path = tempfile.mkdtemp()
 
-    catalogs = []
     with zipfile.ZipFile(zip_path) as zf:
-        filenames = fnmatch.filter(zf.namelist(), includes)
-        for filename in filenames:
-            f = zf.open(filename)
-            pofile = read_po(f)
-            catalogs.append(pofile)
+        zf.extractall(zip_extraction_path)
 
-    return _combine_catalogs(*catalogs)
+    all_filenames = glob.iglob(
+        os.path.join(zip_extraction_path, "**"),
+        recursive=True
+    )
+    filenames = fnmatch.filter(all_filenames, includes)
+
+    # use the polib library, since it's much faster at concatenating
+    # po files.  it doesn't have a dict interface though, so we'll
+    # reread the file using babel.Catalog.
+    with tempfile.NamedTemporaryFile() as f:
+        main_pofile = polib.POFile(fpath=f.name)
+
+        for filename in filenames:
+            pofile = polib.pofile(filename)
+            main_pofile.merge(pofile)
+
+        for entry in main_pofile:
+            entry.obsolete = False
+
+        main_pofile.save()
+
+    shutil.rmtree(zip_extraction_path)
+
+    # add convenience dict for mapping a msgid to msgstr
+    main_pofile.msgid_mapping = {m.msgid: m.msgstr for m in main_pofile if m.translated()}
+
+    return main_pofile
 
 
 def _combine_catalogs(*catalogs):
     catalog = Catalog()
 
     for oldcatalog in catalogs:
+        print("processing %s" % oldcatalog)
         catalog._messages.update(oldcatalog._messages)
+        # manually call the gc here so we don't occupy too much
+        # memory, and avoid having one huge gc in the future by
+        # dumping a po file after it's read
+        gc.collect()
 
     return catalog
 
