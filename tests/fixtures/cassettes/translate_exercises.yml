@@ -1,0 +1,26 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Connection: [close]
+      Host: [api.crowdin.com]
+      User-Agent: [Python-urllib/3.5]
+    method: GET
+    uri: https://api.crowdin.com/api/project/khanacademy/download/es-ES.zip
+  response:
+    body: {string: "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<error>\n  <code>1</code>\n\
+        \  <message>Requested project does not exist or API key is not valid</message>\n\
+        </error>\n"}
+    headers:
+      Cache-Control: ['no-store, no-cache, must-revalidate, post-check=0, pre-check=0']
+      Connection: [close]
+      Content-Type: [text/xml]
+      Date: ['Thu, 05 Nov 2015 21:21:50 GMT']
+      Expires: ['Thu, 19 Nov 1981 08:52:00 GMT']
+      Pragma: [no-cache]
+      Server: [nginx]
+      Set-Cookie: ['cid=3i5dmjvtv4leur1fvf224n4b10; expires=Thu, 17-Dec-2015 13:21:50
+          GMT; path=/']
+      Vary: [Accept-Encoding]
+    status: {code: 404, message: Not Found}
+version: 1
