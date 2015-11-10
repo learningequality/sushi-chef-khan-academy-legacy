@@ -7,10 +7,11 @@ from hypothesis.strategies import integers, text, lists, tuples, sampled_from, \
 
 from contentpacks.khanacademy import _combine_catalogs, _get_video_ids, \
     retrieve_dubbed_video_mapping, retrieve_kalite_content_data, \
-    retrieve_translations, retrieve_kalite_exercise_data
+    retrieve_translations, retrieve_kalite_exercise_data, \
+    retrieve_kalite_topic_data
 from contentpacks.utils import translate_exercises, translate_topics, \
     translate_contents, EXERCISE_FIELDS_TO_TRANSLATE, \
-    CONTENT_FIELDS_TO_TRANSLATE
+    CONTENT_FIELDS_TO_TRANSLATE, TOPIC_FIELDS_TO_TRANSLATE
 
 
 logging.basicConfig()
@@ -134,6 +135,31 @@ class Test_translating_kalite_data:
     @vcr.use_cassette("tests/fixtures/cassettes/translate_exercises.yml", filter_query_parameters=["key"])
     def setup_class(cls):
         cls.ka_catalog = retrieve_translations("khanacademy", "dummy", lang_code="es-ES", includes="*learn.*.po")
+
+    @vcr.use_cassette("tests/fixtures/cassettes/translate_topics.yml")
+    def test_translate_topics(self):
+        topic_data = retrieve_kalite_topic_data()
+        translated_topic_data = translate_topics(
+            topic_data,
+            self.ka_catalog,
+        )
+
+        def _test_topic_children(translated_topic, untranslated_topic):
+            for field in TOPIC_FIELDS_TO_TRANSLATE:
+                untranslated_fieldval = untranslated_topic.get(field)
+                translated_fieldval = translated_topic.get(field)
+
+                assert (translated_fieldval ==
+                        self.ka_catalog.msgid_mapping.get(
+                            untranslated_fieldval,
+                            untranslated_fieldval)
+                )
+
+                for translated, untranslated in zip(translated_topic.get("children", []),
+                                                    untranslated_topic.get("children", [])):
+                    _test_topic_children(translated, untranslated)
+
+        _test_topic_children(translated_topic_data, topic_data)
 
     @vcr.use_cassette("tests/fixtures/cassettes/translate_contents.yml")
     def test_translate_contents(self):

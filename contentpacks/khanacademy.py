@@ -191,9 +191,22 @@ def retrieve_kalite_content_data(url=None) -> dict:
         return json.load(f)
 
 
+def retrieve_kalite_topic_data(url=None):
+    """
+    Retrieve the KA Lite topics.json file in the master branch.  If
+    url is given, download from that url instead.
+    """
+    if not url:
+        url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/topics.json"
+
+    path = download_and_cache_file(url)
+    with open(path) as f:
+        return json.load(f)
+
+
 def retrieve_kalite_exercise_data(url=None) -> dict:
     """
-    Retrieve the KA Lite contents.json file in the master branch.  If
+    Retrieve the KA Lite exercises.json file in the master branch.  If
     url is given, download from that url instead.
     """
     print("downloading exercise data")

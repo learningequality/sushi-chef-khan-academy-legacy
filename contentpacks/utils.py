@@ -2,6 +2,7 @@ import copy
 import os
 import polib
 import urllib.request
+import urllib.parse as urlparse
 
 
 EXERCISE_FIELDS_TO_TRANSLATE = [
@@ -11,6 +12,11 @@ EXERCISE_FIELDS_TO_TRANSLATE = [
 ]
 
 CONTENT_FIELDS_TO_TRANSLATE = [
+    "title",
+    "description",
+]
+
+TOPIC_FIELDS_TO_TRANSLATE = [
     "title",
     "description",
 ]
@@ -27,7 +33,7 @@ def download_and_cache_file(url, cachedir=None, ignorecache=False) -> str:
 
     os.makedirs(cachedir, exist_ok=True)
 
-    path = os.path.join(cachedir, os.path.basename(url))
+    path = os.path.join(cachedir, os.path.basename(urlparse.urlparse(url).path))
 
     if ignorecache or not os.path.exists(path):
         urllib.request.urlretrieve(url, path)
@@ -49,7 +55,19 @@ def translate_exercises(exercise_data: dict, catalog: polib.POFile) -> dict:
 
 
 def translate_topics(topic_data: dict, catalog: polib.POFile) -> dict:
-    pass
+    topic_data = copy.deepcopy(topic_data)
+
+    def _translate_topic(topic):
+        for field in TOPIC_FIELDS_TO_TRANSLATE:
+            fieldval = topic.get(field)
+            if field in topic:
+                topic[field] = catalog.msgid_mapping.get(fieldval, fieldval)
+
+        topic['children'] = [_translate_topic(child) for child in topic.get('children', [])]
+        return topic
+
+    _translate_topic(topic_data)
+    return topic_data
 
 
 def translate_contents(content_data: dict, catalog: polib.POFile) -> dict:
