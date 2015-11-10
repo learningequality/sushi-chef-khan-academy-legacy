@@ -10,6 +10,11 @@ EXERCISE_FIELDS_TO_TRANSLATE = [
     "display_name",
 ]
 
+CONTENT_FIELDS_TO_TRANSLATE = [
+    "title",
+    "description",
+]
+
 
 def download_and_cache_file(url, cachedir=None, ignorecache=False) -> str:
     """
@@ -41,3 +46,18 @@ def translate_exercises(exercise_data: dict, catalog: polib.POFile) -> dict:
             exercise_data[key][field] = catalog.msgid_mapping.get(msgid, "")
 
     return exercise_data
+
+
+def translate_topics(topic_data: dict, catalog: polib.POFile) -> dict:
+    pass
+
+
+def translate_contents(content_data: dict, catalog: polib.POFile) -> dict:
+    content_data = copy.deepcopy(content_data)
+
+    for key, content in content_data.items():
+        for field in CONTENT_FIELDS_TO_TRANSLATE:
+            msgid = content[field]
+            content_data[key][field] = catalog.msgid_mapping.get(msgid, "")
+
+    return content_data

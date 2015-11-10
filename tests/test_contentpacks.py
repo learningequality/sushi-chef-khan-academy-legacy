@@ -1,4 +1,5 @@
 import vcr
+import logging
 from babel.messages.catalog import Catalog
 from hypothesis import assume, given
 from hypothesis.strategies import integers, text, lists, tuples, sampled_from, \
@@ -7,9 +8,13 @@ from hypothesis.strategies import integers, text, lists, tuples, sampled_from, \
 from contentpacks.khanacademy import _combine_catalogs, _get_video_ids, \
     retrieve_dubbed_video_mapping, retrieve_kalite_content_data, \
     retrieve_translations, retrieve_kalite_exercise_data
-from contentpacks.utils import translate_exercises, \
-    EXERCISE_FIELDS_TO_TRANSLATE
+from contentpacks.utils import translate_exercises, translate_topics, \
+    translate_contents, EXERCISE_FIELDS_TO_TRANSLATE, \
+    CONTENT_FIELDS_TO_TRANSLATE
 
+
+logging.basicConfig()
+logging.getLogger("vcr").setLevel(logging.DEBUG)
 
 
 class Test_retrieve_translations:
@@ -124,6 +129,25 @@ class Test_retrieve_dubbed_video_mapping:
 
 
 class Test_translating_kalite_data:
+
+    @classmethod
+    @vcr.use_cassette("tests/fixtures/cassettes/translate_exercises.yml", filter_query_parameters=["key"])
+    def setup_class(cls):
+        cls.ka_catalog = retrieve_translations("khanacademy", "dummy", lang_code="es-ES", includes="*learn.*.po")
+
+    @vcr.use_cassette("tests/fixtures/cassettes/translate_contents.yml")
+    def test_translate_contents(self):
+        content_data = retrieve_kalite_content_data()
+        translated_content_data = translate_contents(
+            content_data,
+            self.ka_catalog,
+        )
+
+        for content_id in translated_content_data:
+            for field in CONTENT_FIELDS_TO_TRANSLATE:
+                translated_fieldval = translated_content_data[content_id][field]
+                untranslated_fieldval = content_data[content_id][field]
+                assert translated_fieldval == self.ka_catalog.msgid_mapping.get(untranslated_fieldval, "")
 
     @vcr.use_cassette("tests/fixtures/cassettes/translate_exercises.yml", filter_query_parameters=["key"])
     def test_translating_kalite_exercise_data(self):
