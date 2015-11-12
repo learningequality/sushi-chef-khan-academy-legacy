@@ -6,30 +6,30 @@ Usage:
 
 """
 
-from contentpacks.khanacademy import retrieve_language_resources
+from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_video_map, retrieve_html_exercises
+from contentpacks.utils import translate_contents, translate_exercises, translate_topics
 
 
 def make_language_pack(lang):
 
-    topic_data, content_data, exercise_data, subtitles, kalite_po_files, ka_po_files, dubmap = retrieve_language_resources(lang)
+    topic_data, content_data, exercise_data, subtitles, kalite_catalog, content_catalog, dubmap = retrieve_language_resources(lang)
 
 
-    exercise_data = translate_exercises(exercise_data, ka_po_files)
-    topic_data =  translate_topics(topic_data, ka_po_files)
-    content_data = translate_content(content_data, ka_po_files)
+    exercise_data = translate_exercises(exercise_data, content_catalog)
+    topic_data =  translate_topics(topic_data, content_catalog)
+    content_data = translate_contents(content_data, content_catalog)
 
-    content_data = apply_dubbed_video_map(content_data, dubmap)
+    dubbed_content_data = apply_dubbed_video_map(content_data, dubmap)
 
-    exercise_data = list(exercise_data)
-    khan_exercises = retrieve_khan_exercises(exercise_data)
-    perseus_items = retrieve_assessment_items(exercise_data)
-    exercise_data = remove_untranslated_exercises(exercise_data, khan_exercises, perseus_items)
+    exercise_ids = exercise_data.keys()
+    html_exercise_path, translated_html_exercise_ids = retrieve_html_exercises(exercise_ids, lang)
 
     # now include only the assessment item resources that we need
     all_assessment_resources = get_full_assessment_resource_list()
     included_assessment_resources = filter_unneeded_assessment_resources(all_assessment_resources, exercise_data)
+    exercise_data = remove_untranslated_exercises(exercise_data, translated_html_exercise_ids)
 
-    topic_data = remove_unavailable_topics(topic_data, exercise_data)
+    topic_data = remove_unavailable_topics(topic_data, exercise_data, included_assessment_resources)
 
     filename = "{lang}.zip".format(lang=lang)
-    bundle_language_pack(filename, topic_data, content_data, exercise_data, kalite_po_files, ka_po_files)
+    bundle_language_pack(filename, topic_data, dubbed_content_data, exercise_data, kalite_catalog, content_catalog)
