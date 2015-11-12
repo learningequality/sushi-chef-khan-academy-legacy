@@ -1,20 +1,27 @@
 
 import collections
+import copy
 import fnmatch
 import gc
 import glob
 import os
-import polib
 import shutil
 import subprocess
+import urllib
+import zipfile
 import tempfile
+from multiprocessing.pool import ThreadPool as Pool
+
+import polib
 import requests
 import ujson as json
-import zipfile
-
-from contentpacks.utils import download_and_cache_file
 from babel.messages.catalog import Catalog
 from babel.messages.pofile import read_po
+
+from contentpacks.utils import download_and_cache_file
+
+
+NUM_PROCESSES = 5
 
 
 LangpackResources = collections.namedtuple(
@@ -216,3 +223,32 @@ def retrieve_kalite_exercise_data(url=None) -> dict:
     path = download_and_cache_file(url)
     with open(path) as f:
         return json.load(f)
+
+
+def apply_dubbed_video_map(content_data: dict, dubmap: dict) -> dict:
+    # TODO: stub. Implement more fully next time
+    return copy.deepcopy(content_data)
+
+
+def retrieve_html_exercises(exercises: [str], lang: str) -> (str, [str]):
+    """
+    Return a 2-tuple with the first element pointing to the path the exercise files are stored,
+    and the second element a list of exercise ids that have html exercises.
+    """
+    BUILD_DIR = os.path.join(os.getcwd(), "build", lang)
+    EXERCISE_DOWNLOAD_URL_TEMPLATE = ("https://es.khanacademy.org/"
+                                      "khan-exercises/exercises/{id}.html?lang={lang}")
+
+    def _download_html_exercise(exercise_id):
+        url = EXERCISE_DOWNLOAD_URL_TEMPLATE.format(id=exercise_id, lang=lang)
+        try:
+            download_and_cache_file(url, cachedir=BUILD_DIR)
+            return exercise_id
+        except urllib.error.HTTPError:
+            return None
+
+    pool = Pool(processes=NUM_PROCESSES)
+    result = pool.map(_download_html_exercise, exercises)
+    # filter out Nones, since it means we got an error downloading those exercises
+    result = [e for e in result if e]
+    return (BUILD_DIR, result)

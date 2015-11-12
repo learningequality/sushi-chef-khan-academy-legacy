@@ -1,17 +1,19 @@
-import vcr
 import logging
+import os
+
+import vcr
 from babel.messages.catalog import Catalog
 from hypothesis import assume, given
-from hypothesis.strategies import integers, text, lists, tuples, sampled_from, \
-    sets
+from hypothesis.strategies import integers, lists, sampled_from, sets, text, \
+    tuples
 
 from contentpacks.khanacademy import _combine_catalogs, _get_video_ids, \
-    retrieve_dubbed_video_mapping, retrieve_kalite_content_data, \
-    retrieve_translations, retrieve_kalite_exercise_data, \
-    retrieve_kalite_topic_data
-from contentpacks.utils import translate_exercises, translate_topics, \
-    translate_contents, EXERCISE_FIELDS_TO_TRANSLATE, \
-    CONTENT_FIELDS_TO_TRANSLATE, TOPIC_FIELDS_TO_TRANSLATE
+    retrieve_dubbed_video_mapping, retrieve_html_exercises, \
+    retrieve_kalite_content_data, retrieve_kalite_exercise_data, \
+    retrieve_kalite_topic_data, retrieve_translations
+from contentpacks.utils import CONTENT_FIELDS_TO_TRANSLATE, \
+    EXERCISE_FIELDS_TO_TRANSLATE, TOPIC_FIELDS_TO_TRANSLATE, translate_contents, \
+    translate_exercises, translate_topics
 
 
 logging.basicConfig()
@@ -187,3 +189,14 @@ class Test_translating_kalite_data:
                 translated_fieldval = translated_exercise_data[exercise_id][field]
                 untranslated_fieldval = exercise_data[exercise_id][field]
                 assert translated_fieldval == ka_catalog.msgid_mapping.get(untranslated_fieldval, "")
+
+
+@vcr.use_cassette("tests/fixtures/cassettes/test_retrieve_html_exercises.yml")
+def test_retrieve_html_exercises():
+    exercise_data = retrieve_kalite_exercise_data()
+    khan_exercises = [key for key, e in exercise_data.items() if not e.get("uses_assessment_items")]
+    exercises = sorted(khan_exercises)[:5]  # use only first five for fast testing
+    exercise_path, retrieved_exercises = retrieve_html_exercises(exercises, lang="es")
+
+    assert set(retrieved_exercises).issubset(khan_exercises)
+    assert os.path.exists(exercise_path)

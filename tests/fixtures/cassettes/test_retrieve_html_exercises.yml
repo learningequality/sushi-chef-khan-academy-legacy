@@ -1,0 +1,73 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Connection: [close]
+      Host: [es.khanacademy.org]
+      User-Agent: [Python-urllib/3.5]
+    method: GET
+    uri: https://es.khanacademy.org/khan-exercises/exercises/absolute_value_of_complex_numbers.html?lang=es
+  response:
+    body: {string: "<!DOCTYPE html>\n<html data-require=\"math graphie math-format\"\
+        >\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Valor absoluto de n&#xFA;meros\
+        \ complejos</title>\n    <script data-main=\"../local-only/main.js\" src=\"\
+        ../local-only/require.js\"></script>\n</head>\n<body>\n    <div class=\"exercise\"\
+        >\n    <div class=\"vars\">\n        <var id=\"REAL\">randRangeExclude( -8,\
+        \ 8, [ -1, 0, 1, 2 ] )</var>\n        <var id=\"IMAG\">randRangeExclude( -8,\
+        \ 8, [ -1, 0, 1, 2 ] )</var>\n        <var id=\"ABS_SQUARE\">REAL * REAL +\
+        \ IMAG * IMAG</var>\n        <var id=\"REPRESENTATION\">complexNumber( REAL,\
+        \ IMAG )</var>\n    </div>\n\n    <div class=\"problems\">\n        <div>\n\
+        \            <p class=\"question\">Determina el valor absoluto del siguiente\
+        \ n&#xFA;mero complejo:</p>\n            <p>\n                <code><var>REPRESENTATION</var></code>\n\
+        \            </p>\n            <div class=\"solution\" data-type=\"radical\"\
+        >\n                <var>ABS_SQUARE</var>\n            </div>\n           \
+        \ <div class=\"hints\">\n                <p>El valor absoluto de cualquier\
+        \ n&#xFA;mero es su distancia al cero. Al igual que los n&#xFA;meros complejos\
+        \ pueden visualizarse como puntos en el plano complejo, los valores absolutos\
+        \ de los n&#xFA;meros complejos pueden determinarse utilizando la f&#xF3;rmula\
+        \ de la distancia.</p>\n                <div>\n                    <div class=\"\
+        graphie\" id=\"graph\">graphInit({range:[[-10,10],[-10,10]],scale:20,tickStep:1,labelStep:1}),label([10,.5],&quot;Re&quot;,&quot;left&quot;),label([.5,9],&quot;Im&quot;,&quot;right&quot;),circle([REAL,IMAG],.15,{fill:KhanUtil.BLUE,stroke:&quot;none&quot;}),label([REAL,IMAG],REPRESENTATION,&quot;left&quot;,{color:KhanUtil.BLUE,labelDistance:10})</div>\n\
+        \                    <p><code><var>REPRESENTATION</var></code> se traza arriba\
+        \ como un c&#xED;rculo <strong class=\"hint_blue\">azul</strong>.</p>\n  \
+        \              </div>\n                <div>\n                    <div class=\"\
+        graphie\" data-update=\"graph\">path([[0,0],[REAL,IMAG]],{stroke:KhanUtil.ORANGE})</div>\n\
+        \                    <p>El valor absoluto que necesitamos es la longitud del\
+        \ segmento de recta <strong class=\"hint_orange\"> naranja</strong>.</p>\n\
+        \                </div>\n                <div>\n                    <div class=\"\
+        graphie\" data-update=\"graph\">path([[0,0],[REAL,0],[REAL,IMAG]],{stroke:KhanUtil.BLUE})</div>\n\
+        \                    <p>El segmento <strong class=\"hint_orange\">naranja</strong>\
+        \ de la recta es la hipotenusa de un tri&#xE1;ngulo rect&#xE1;ngulo. Sus dos\
+        \ piernas (mostradas en <strong class=\"hint_blue\"> azul</strong>) tienen\
+        \ longitudes de <code><var>abs( REAL )</var></code> y <code><var>abs( IMAG\
+        \ )</var></code>, que corresponden a los valores absolutos de las partes reales\
+        \ e imaginarias del n&#xFA;mero complejo  <code><var>REPRESENTATION</var></code>.</p>\n\
+        \                </div>\n                <p>Al sustituir en el Teorema de\
+        \ Pit&#xE1;goras: <br> <code>\\qquad |<var>REPRESENTATION</var>|^2 = <var>abs(\
+        \ REAL )</var>^2 + <var>abs( IMAG )</var>^2</code>, as&#xED; que <br> <code>\\\
+        qquad |<var>REPRESENTATION</var>| = \\sqrt{<var>abs( REAL )</var>^2 + <var>abs(\
+        \ IMAG )</var>^2}</code>.</p>\n                <p>\n                    <code>\\\
+        qquad \\sqrt{<var>abs(REAL)</var>^2 + <var>abs(IMAG)</var>^2} = \\sqrt{<var>REAL\
+        \ * REAL</var> + <var>IMAG * IMAG</var>} = \\sqrt{<var>ABS_SQUARE</var>}</code>\n\
+        \                </p>\n                <p data-if=\"squareRootCanSimplify(\
+        \ ABS_SQUARE )\">Simplificando el radical da <code><var>formattedSquareRootOf(\
+        \ ABS_SQUARE )</var></code>. Ese es valor absoluto de <code><var>REPRESENTATION</var></code>.</p>\n\
+        \                <p data-else=\"\">El radical no puede ser simplificado. El\
+        \ valor absoluto de <code><var>REPRESENTATION</var></code> es <code>\\sqrt{<var>ABS_SQUARE</var>}</code>.</p>\n\
+        \            </div>\n        </div>\n    </div>\n    </div>\n</body>\n</html>\n"}
+    headers:
+      Accept-Ranges: [none]
+      Alt-Svc: ['quic=":443"; p="1"; ma=604800']
+      Cache-Control: [no-cache]
+      Connection: [close]
+      Content-Type: [text/html]
+      Date: ['Thu, 12 Nov 2015 00:07:31 GMT']
+      Expires: ['Thu, 12 Nov 2015 00:07:31 GMT']
+      Server: [Google Frontend]
+      Set-Cookie: [fkey=1.0_yotgGfJxdLYmcA==_1447286851; Path=/, 'gae_b_id=X2dhZV9iaW5nb19yYW5kb206bnRqY1ZYNlc0UWM5X0h0T0l2NjZlbWs4LXE3cnpuWDZudVcxcUktVw==;
+          expires=Fri, 11 Nov 2016 00:07:31 GMT; Max-Age=31536000; Path=/', 'ka_session=RXPsNCReBiGXYJGQ6MXGsLs_0TUOeYV6OyGucTXo:1447286851:1447286851;
+          expires=Fri, 11 Nov 2016 00:07:31 GMT; Max-Age=31536000; Path=/']
+      Vary: [Accept-Encoding]
+      X-Content-Type-Options: [nosniff]
+      X-Frame-Options: [SAMEORIGIN]
+    status: {code: 200, message: OK}
+version: 1
