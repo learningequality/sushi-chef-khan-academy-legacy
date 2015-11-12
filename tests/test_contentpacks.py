@@ -191,12 +191,44 @@ class Test_translating_kalite_data:
                 assert translated_fieldval == ka_catalog.msgid_mapping.get(untranslated_fieldval, "")
 
 
-@vcr.use_cassette("tests/fixtures/cassettes/test_retrieve_html_exercises.yml")
-def test_retrieve_html_exercises():
-    exercise_data = retrieve_kalite_exercise_data()
-    khan_exercises = [key for key, e in exercise_data.items() if not e.get("uses_assessment_items")]
-    exercises = sorted(khan_exercises)[:5]  # use only first five for fast testing
-    exercise_path, retrieved_exercises = retrieve_html_exercises(exercises, lang="es")
+class Test_retrieve_html_exercises:
 
-    assert set(retrieved_exercises).issubset(khan_exercises)
-    assert os.path.exists(exercise_path)
+    @vcr.use_cassette("tests/fixtures/cassettes/test_retrieve_html_exercises_setup.yml")
+    def setup(self):
+        self.exercise_data = retrieve_kalite_exercise_data()
+        self.khan_exercises = [key for key, e in self.exercise_data.items() if not e.get("uses_assessment_items")]
+        self.khan_exercises.sort()
+
+    @vcr.use_cassette("tests/fixtures/cassettes/test_retrieve_html_exercises.yml")
+    def test_creates_folder_with_contents(self):
+        exercises = sorted(self.khan_exercises)[:5]  # use only first five for fast testing
+        exercise_path, retrieved_exercises = retrieve_html_exercises(exercises, lang="es")
+
+        assert retrieved_exercises  # not empty
+        assert set(retrieved_exercises).issubset(self.khan_exercises)
+        assert os.path.exists(exercise_path)
+
+    @vcr.use_cassette("tests/fixtures/cassettes/test_retrieve_html_exercises_2.yml")
+    def test_doesnt_return_exercises_without_translation(self):
+        # The expected behaviour from KA's API is that it would return
+        # the english version of an exercise if either a translated
+        # exercise for the given language doesn't exist, or the
+        # language is unsupported.
+        exercise = self.khan_exercises[0]
+        lang = "aaa"            # there's no language with code aaa... I hope?
+
+        path, retrieved_exercises = retrieve_html_exercises([exercise], lang, force=True)
+
+        assert not retrieved_exercises
+
+    @vcr.use_cassette("tests/fixtures/cassettes/test_retrieve_html_exercises_3.yml")
+    def test_returns_exercise_with_translation(self):
+        # espanol has almost complete
+        # translation. Assuming this specific
+        # exercise has one
+        lang = "es"
+        exercise = self.khan_exercises[0]
+
+        path, retrieved_exercises = retrieve_html_exercises([exercise], lang, force=True)
+
+        assert retrieved_exercises == [exercise]

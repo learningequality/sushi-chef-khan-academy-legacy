@@ -1,6 +1,7 @@
 
 import collections
 import copy
+import filecmp
 import fnmatch
 import gc
 import glob
@@ -8,13 +9,13 @@ import os
 import shutil
 import subprocess
 import urllib
-import zipfile
 import tempfile
+import zipfile
 from multiprocessing.pool import ThreadPool as Pool
 
 import polib
 import requests
-import ujson as json
+import ujson
 from babel.messages.catalog import Catalog
 from babel.messages.pofile import read_po
 
@@ -195,7 +196,7 @@ def retrieve_kalite_content_data(url=None) -> dict:
 
     path = download_and_cache_file(url)
     with open(path) as f:
-        return json.load(f)
+        return ujson.load(f)
 
 
 def retrieve_kalite_topic_data(url=None):
@@ -208,7 +209,7 @@ def retrieve_kalite_topic_data(url=None):
 
     path = download_and_cache_file(url)
     with open(path) as f:
-        return json.load(f)
+        return ujson.load(f)
 
 
 def retrieve_kalite_exercise_data(url=None) -> dict:
@@ -222,7 +223,7 @@ def retrieve_kalite_exercise_data(url=None) -> dict:
 
     path = download_and_cache_file(url)
     with open(path) as f:
-        return json.load(f)
+        return ujson.load(f)
 
 
 def apply_dubbed_video_map(content_data: dict, dubmap: dict) -> dict:
@@ -230,20 +231,28 @@ def apply_dubbed_video_map(content_data: dict, dubmap: dict) -> dict:
     return copy.deepcopy(content_data)
 
 
-def retrieve_html_exercises(exercises: [str], lang: str) -> (str, [str]):
+def retrieve_html_exercises(exercises: [str], lang: str, force=False) -> (str, [str]):
     """
     Return a 2-tuple with the first element pointing to the path the exercise files are stored,
     and the second element a list of exercise ids that have html exercises.
     """
     BUILD_DIR = os.path.join(os.getcwd(), "build", lang)
+    EN_BUILD_DIR = os.path.join(os.getcwd(), "build", "en")
     EXERCISE_DOWNLOAD_URL_TEMPLATE = ("https://es.khanacademy.org/"
                                       "khan-exercises/exercises/{id}.html?lang={lang}")
 
     def _download_html_exercise(exercise_id):
-        url = EXERCISE_DOWNLOAD_URL_TEMPLATE.format(id=exercise_id, lang=lang)
+        """
+        Download an exercise and return its exercise id *if* the
+        downloaded url from the selected language is different from the english version.
+        """
+        lang_url = EXERCISE_DOWNLOAD_URL_TEMPLATE.format(id=exercise_id, lang=lang)
+        en_url = EXERCISE_DOWNLOAD_URL_TEMPLATE.format(id=exercise_id, lang="en")
         try:
-            download_and_cache_file(url, cachedir=BUILD_DIR)
-            return exercise_id
+            lang_file = download_and_cache_file(lang_url, cachedir=BUILD_DIR, ignorecache=force)
+            en_file = download_and_cache_file(en_url, cachedir=EN_BUILD_DIR, ignorecache=force)
+            if not filecmp.cmp(lang_file, en_file, shallow=False):
+                return exercise_id
         except urllib.error.HTTPError:
             return None
 
