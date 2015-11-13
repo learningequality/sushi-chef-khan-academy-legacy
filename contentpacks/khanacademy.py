@@ -257,7 +257,7 @@ def retrieve_html_exercises(exercises: [str], lang: str, force=False) -> (str, [
             return None
 
     pool = Pool(processes=NUM_PROCESSES)
-    result = pool.map(_download_html_exercise, exercises)
+    translated_exercises = pool.map(_download_html_exercise, exercises)
     # filter out Nones, since it means we got an error downloading those exercises
-    result = [e for e in result if e]
+    result = [e for e in translated_exercises if e]
     return (BUILD_DIR, result)
