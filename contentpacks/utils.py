@@ -1,9 +1,17 @@
 import copy
 import os
-import polib
+import urllib.parse
 import urllib.request
-import urllib.parse as urlparse
+from enum import Enum
+from urllib.parse import urlparse
 
+import polib
+
+
+class NodeType(Enum):
+    exercise = "Exercise"
+    video = "Video"
+    topic = "Topic"
 
 EXERCISE_FIELDS_TO_TRANSLATE = [
     "description",
