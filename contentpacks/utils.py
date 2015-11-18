@@ -8,7 +8,11 @@ from urllib.parse import urlparse
 import polib
 
 
-class NodeType(Enum):
+class UnexpectedKindError(Exception):
+    pass
+
+
+class NodeType:
     exercise = "Exercise"
     video = "Video"
     topic = "Topic"
