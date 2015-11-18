@@ -186,7 +186,7 @@ def _retrieve_ka_topic_tree(lang="en"):
     path = download_and_cache_file
 
 
-def retrieve_kalite_content_data(url=None) -> dict:
+def retrieve_kalite_content_data(url=None, force=False) -> dict:
     """
     Retrieve the KA Lite contents.json file in the master branch.  If
     url is given, download from that url instead.
@@ -194,12 +194,12 @@ def retrieve_kalite_content_data(url=None) -> dict:
     if not url:
         url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/contents.json"
 
-    path = download_and_cache_file(url)
+    path = download_and_cache_file(url, ignorecache=force)
     with open(path) as f:
         return ujson.load(f)
 
 
-def retrieve_kalite_topic_data(url=None):
+def retrieve_kalite_topic_data(url=None, force=False):
     """
     Retrieve the KA Lite topics.json file in the master branch.  If
     url is given, download from that url instead.
@@ -207,12 +207,12 @@ def retrieve_kalite_topic_data(url=None):
     if not url:
         url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/topics.json"
 
-    path = download_and_cache_file(url)
+    path = download_and_cache_file(url, ignorecache=force)
     with open(path) as f:
         return ujson.load(f)
 
 
-def retrieve_kalite_exercise_data(url=None) -> dict:
+def retrieve_kalite_exercise_data(url=None, force=False) -> dict:
     """
     Retrieve the KA Lite exercises.json file in the master branch.  If
     url is given, download from that url instead.
@@ -221,7 +221,7 @@ def retrieve_kalite_exercise_data(url=None) -> dict:
     if not url:
         url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/exercises.json"
 
-    path = download_and_cache_file(url)
+    path = download_and_cache_file(url, ignorecache=force)
     with open(path) as f:
         return ujson.load(f)
 
