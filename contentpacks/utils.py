@@ -45,7 +45,7 @@ def download_and_cache_file(url, cachedir=None, ignorecache=False) -> str:
 
     os.makedirs(cachedir, exist_ok=True)
 
-    path = os.path.join(cachedir, os.path.basename(urlparse.urlparse(url).path))
+    path = os.path.join(cachedir, os.path.basename(urlparse(url).path))
 
     if ignorecache or not os.path.exists(path):
         urllib.request.urlretrieve(url, path)
@@ -91,3 +91,36 @@ def translate_contents(content_data: dict, catalog: polib.POFile) -> dict:
             content_data[key][field] = catalog.msgid_mapping.get(msgid, "")
 
     return content_data
+
+
+def flatten_topic_tree(topic_root, contents, exercises):
+
+    def _flatten_topic(node):
+        childless_topic = copy.copy(node)
+        children = childless_topic.pop("children", [])
+
+        kind = childless_topic["kind"]
+        node_id = childless_topic["id"]
+        slug = childless_topic["slug"]
+
+        if kind == NodeType.topic:
+            # get the slugs of the children so we can refer to them
+            children_slugs = [c["slug"] for c in children]
+            childless_topic["children"] = children_slugs
+            yield slug, childless_topic
+
+        elif kind == NodeType.exercise:
+            exercise = exercises[node_id]
+            yield slug, exercise
+
+        elif kind == NodeType.video:
+            video = contents[node_id]
+            yield slug, video
+
+        else:
+            raise UnexpectedKindError("Unexpected node kind: {}".format(kind))
+
+        for child in children:
+            yield from _flatten_topic(child)
+
+    return _flatten_topic(topic_root)
