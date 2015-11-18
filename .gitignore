@@ -55,5 +55,7 @@ docs/_build/
 
 # PyBuilder
 target/
-/TAGS
-/.hypothesis/
+# virtualenv
+venv
+
+.hypothesis
