@@ -10,7 +10,7 @@ from hypothesis.strategies import integers, lists, sampled_from, sets, text, \
 from contentpacks.khanacademy import _combine_catalogs, _get_video_ids, \
     retrieve_dubbed_video_mapping, retrieve_html_exercises, \
     retrieve_kalite_content_data, retrieve_kalite_exercise_data, \
-    retrieve_kalite_topic_data, retrieve_translations
+    retrieve_kalite_topic_data, retrieve_translations, retrieve_subtitles
 from contentpacks.utils import CONTENT_FIELDS_TO_TRANSLATE, \
     EXERCISE_FIELDS_TO_TRANSLATE, TOPIC_FIELDS_TO_TRANSLATE, translate_contents, \
     translate_exercises, translate_topics
@@ -19,6 +19,46 @@ from contentpacks.utils import CONTENT_FIELDS_TO_TRANSLATE, \
 logging.basicConfig()
 logging.getLogger("vcr").setLevel(logging.DEBUG)
 
+class Test_retrieve_subtitles:
+    def test_incorrect_youtube_id(self):
+        incorrect_list = ["aaa"]
+        empty_list = retrieve_subtitles(incorrect_list)
+        test_list = []
+        assert type(empty_list) == list
+        assert len(empty_list) == 0
+        assert empty_list == test_list
+
+    def test_correct_youtube_id(self):
+        correct_list = ["y2-uaPiyoxc"]
+        filled_list = retrieve_subtitles(correct_list)
+        test_list = ["y2-uaPiyoxc"]
+        assert type(filled_list) == list
+        assert len(filled_list) == 1
+        assert filled_list == test_list
+
+    def test_correct_and_incorrect_youtube_id(self):
+        mixed_list =  ["y2-uaPiyoxc", "asdadsafa"]
+        filled_list = retrieve_subtitles(mixed_list)
+        test_list = ["y2-uaPiyoxc"]
+        assert type(filled_list) == list
+        assert len(filled_list) == 1
+        assert filled_list == test_list
+
+    def test_directory_made(self):
+        correct_list = ["y2-uaPiyoxc"]
+        youtube_id = correct_list[0]
+        file_suffix = '.vtt'
+        retrieve_subtitles(correct_list)
+        path = os.getcwd() + "/build/subtitles/en/" + youtube_id + file_suffix
+        assert os.path.exists(path)
+
+    def test_correct_youtube_id_and_incorrect_langpack(self):
+        correct_list = ["y2-uaPiyoxc"]
+        empty_list = retrieve_subtitles(correct_list,"falselang")
+        test_list = []
+        assert type(empty_list) == list
+        assert len(empty_list) == 0
+        assert empty_list == test_list
 
 class Test_retrieve_translations:
 

@@ -22,7 +22,8 @@ TOPIC_FIELDS_TO_TRANSLATE = [
 ]
 
 
-def download_and_cache_file(url, cachedir=None, ignorecache=False) -> str:
+
+def download_and_cache_file(url, cachedir=None, ignorecache=False, filename=None) -> str:
     """
     Download the given url if it's not saved in cachedir. Returns the
     path to the file. Always download the file if ignorecache is True.
@@ -33,12 +34,16 @@ def download_and_cache_file(url, cachedir=None, ignorecache=False) -> str:
 
     os.makedirs(cachedir, exist_ok=True)
 
-    path = os.path.join(cachedir, os.path.basename(urlparse.urlparse(url).path))
+    if not filename:
+        filename = os.path.basename(urlparse.urlparse(url).path)
 
+    path = os.path.join(cachedir, filename)
+    
     if ignorecache or not os.path.exists(path):
         urllib.request.urlretrieve(url, path)
 
     return path
+
 
 
 def translate_exercises(exercise_data: dict, catalog: polib.POFile) -> dict:
