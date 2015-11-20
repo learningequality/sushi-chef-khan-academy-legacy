@@ -6,6 +6,12 @@ from enum import Enum
 from urllib.parse import urlparse
 
 import polib
+import ujson
+
+from contentpacks.models import CompatibilityAssessmentItem
+
+
+from peewee import SqliteDatabase, Using
 
 
 class UnexpectedKindError(Exception):
@@ -66,6 +72,29 @@ def translate_exercises(exercise_data: dict, catalog: polib.POFile) -> dict:
     return exercise_data
 
 
+def translate_nodes(nodes, catalog):
+    """Translates the following fields which are common across all nodes:
+
+    title
+    description
+
+    (see NODE_FIELDS_TO_TRANSLATE for a more up-to-date list)
+
+    Note that translation in these fields is nonessential -- meaning
+    that even if they're not translated they're not a dealbreaker, and
+    thus won't be eliminated from the topic tree.
+
+    """
+    for slug, node in nodes:
+
+        for field in NODE_FIELDS_TO_TRANSLATE:
+            original_text = node[field]
+            node = copy.copy(node)
+            node[field] = catalog.msgid_mapping.get(original_text) or original_text
+
+        yield slug, node
+
+
 def translate_topics(topic_data: dict, catalog: polib.POFile) -> dict:
     topic_data = copy.deepcopy(topic_data)
 
@@ -124,3 +153,57 @@ def flatten_topic_tree(topic_root, contents, exercises):
             yield from _flatten_topic(child)
 
     return _flatten_topic(topic_root)
+
+
+def translate_assessment_item_text(items: dict, catalog: polib.POFile):
+    """
+    Expects a dict with assessment ids as key and the item data as
+    value, along with a catalog file from retrieve_language_resources
+    as translation source. Returns a series of key value pairs with
+    the id as key and the translated item data as the value.
+
+    Assessment item translations are considered essential, and thus
+    if they're found missing will make that exercise as unavailable.
+    """
+    # TODO (aronasorman): implement tests
+    gettext = lambda s: catalog.msgid_mapping.get(s, "")
+    for id, item in items:
+        item = copy.copy(item)
+
+        item_data = ujson.loads(item["item_data"])
+        translated_item_data = smart_translate_item_data(item_data, gettext)
+        item["item_data"] = ujson.dumps(translated_item_data)
+
+        yield id, item
+
+
+
+def smart_translate_item_data(item_data: dict, gettext):
+    """Auto translate the content fields of a given assessment item data.
+
+    An assessment item doesn't have the same fields; they change
+    depending on the question. Instead of manually specifying the
+    fields to translate, this function loops over all fields of
+    item_data and translates only the content field.
+
+    Requires a gettext function.
+    """
+    # TODO (aronasorman): implement tests
+    # just translate strings immediately
+    if isinstance(item_data, basestring):
+        return gettext(item_data)
+
+    elif isinstance(item_data, list):
+        return map(smart_translate_item_data, item_data)
+
+    elif isinstance(item_data, dict):
+        if 'content' in item_data:
+            item_data['content'] = gettext(item_data['content']) if item_data['content'] else ""
+
+        for field, field_data in item_data.iteritems():
+            if isinstance(field_data, dict):
+                item_data[field] = smart_translate_item_data(field_data)
+            elif isinstance(field_data, list):
+                item_data[field] = map(smart_translate_item_data, field_data)
+
+        return item_data
