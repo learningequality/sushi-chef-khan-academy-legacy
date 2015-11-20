@@ -110,7 +110,7 @@ def retrieve_dubbed_video_mapping(video_ids: [str], lang: str) -> dict:
     return dubbed_video_mapping
 
 
-def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="en", includes="*.po") -> polib.POFile:
+def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="en", force=False, includes="*.po") -> polib.POFile:
 
     request_url_template = ("https://api.crowdin.com/api/"
                             "project/{project_id}/download/"
@@ -121,7 +121,7 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="e
         key=crowdin_secret_key,
     )
 
-    zip_path = download_and_cache_file(request_url)
+    zip_path = download_and_cache_file(request_url, ignorecache=force)
     zip_extraction_path = tempfile.mkdtemp()
 
     with zipfile.ZipFile(zip_path) as zf:
