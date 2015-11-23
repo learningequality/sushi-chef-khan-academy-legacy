@@ -8,13 +8,12 @@ from urllib.parse import urlparse
 import polib
 import ujson
 
-from contentpacks.models import CompatibilityAssessmentItem
-
-
-from peewee import SqliteDatabase, Using
-
 
 class UnexpectedKindError(Exception):
+    pass
+
+
+class NotTranslatable(Exception):
     pass
 
 
@@ -30,6 +29,11 @@ EXERCISE_FIELDS_TO_TRANSLATE = [
 ]
 
 CONTENT_FIELDS_TO_TRANSLATE = [
+    "title",
+    "description",
+]
+
+NODE_FIELDS_TO_TRANSLATE = [
     "title",
     "description",
 ]
@@ -166,16 +170,29 @@ def translate_assessment_item_text(items: dict, catalog: polib.POFile):
     if they're found missing will make that exercise as unavailable.
     """
     # TODO (aronasorman): implement tests
-    gettext = lambda s: catalog.msgid_mapping.get(s, "")
-    for id, item in items:
+    def gettext(s):
+        """
+        Specialized gettext function that raises NotTranslatable when no
+        translation for s has been found.
+        """
+        try:
+            trans = catalog.msgid_mapping[s]
+        except KeyError:
+            raise NotTranslatable("String has no translation: {}".format(s))
+
+        return trans
+
+    for id, item in items.items():
         item = copy.copy(item)
 
         item_data = ujson.loads(item["item_data"])
-        translated_item_data = smart_translate_item_data(item_data, gettext)
-        item["item_data"] = ujson.dumps(translated_item_data)
-
-        yield id, item
-
+        try:
+            translated_item_data = smart_translate_item_data(item_data, gettext)
+        except NotTranslatable:
+            continue
+        else:
+            item["item_data"] = ujson.dumps(translated_item_data)
+            yield id, item
 
 
 def smart_translate_item_data(item_data: dict, gettext):
@@ -190,7 +207,7 @@ def smart_translate_item_data(item_data: dict, gettext):
     """
     # TODO (aronasorman): implement tests
     # just translate strings immediately
-    if isinstance(item_data, basestring):
+    if isinstance(item_data, str):
         return gettext(item_data)
 
     elif isinstance(item_data, list):
@@ -207,3 +224,24 @@ def smart_translate_item_data(item_data: dict, gettext):
                 item_data[field] = map(smart_translate_item_data, field_data)
 
         return item_data
+
+
+def remove_untranslated_exercises(nodes, html_ids, translated_assessment_data):
+    item_data = dict(translated_assessment_data)
+    html_ids = set(html_ids)
+
+    def is_translated_exercise(ex):
+        ex_id = ex["id"]
+        if ex_id in html_ids:  # translated html exercise
+            return True
+        elif ex["uses_assessment_items"]:
+            for assessment_raw in ex["all_assessment_items"]:
+                item_data = ujson.loads(assessment_raw)
+                assessment_id = item_data
+                return assessment_id in translated_assessment_data
+
+    for slug, node in nodes:
+        if node["kind"] != NodeType.exercise:
+            yield slug, node
+        elif is_translated_exercise(node):
+            yield slug, node

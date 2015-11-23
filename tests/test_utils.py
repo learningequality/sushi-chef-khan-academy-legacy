@@ -50,18 +50,25 @@ class Test_translate_nodes:
                                                                         untranslated_fieldval)
 
 
-
-
-
-
-
-
 class Test_translate_assessment_item_text:
 
-    def test_translates_text(self):
-        node_data = dict(generate_node_list())
+    def test_doesnt_return_untranslated_items(self):
         catalog = generate_catalog()
 
-        translated_exercises = list(translate_assessment_item_text(node_data.items(), catalog))
+        sample_data = {
+            "not_in_catalog": {
+                "item_data": '"wala ito sa catalog"'
+            },
+            "not_translated": {
+                "item_data": '"Heart failure"'
+            },
+            "translated": {
+                "item_data": '"Millions"'
+            }
+        }
 
-        assert False
+        translated = [id for id, _ in translate_assessment_item_text(sample_data, catalog)]
+
+        assert "translated" in translated
+        assert "not_in_catalog" not in translated
+        assert "not_translated" not in translated
