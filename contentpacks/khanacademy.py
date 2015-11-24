@@ -79,15 +79,22 @@ def retrieve_language_resources(lang: str, version: str) -> LangpackResources:
     return LangpackResources(topic_data, content_data, exercise_data, subtitle_data, kalite_catalog, ka_catalog, dubbed_video_mapping)
 
 
-def retrieve_subtitles(videos: list, lang="en") -> list:
+def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
     #videos => contains list of youtube ids
-    #return list of youtubeids that were downloaded
+    """return list of youtubeids that were downloaded"""
     downloaded_videos = []
     not_downloaded_videos = []
     for youtube_id in videos:
         request_url = "https://www.amara.org/api2/partners/videos/?format=json&video_url=http://www.youtube.com/watch?v=%s" % (
         youtube_id)
-        response =  requests.get(request_url)
+        
+        try:
+            response =  requests.get(request_url)
+            response.raise_for_status()
+        except requests.exceptions.HTTPError:
+            print("Skipping {}".format(youtube_id))
+            continue
+
         content = ujson.loads(response.content)
         if not content["objects"]:
             not_downloaded_videos.append(youtube_id)
@@ -95,15 +102,14 @@ def retrieve_subtitles(videos: list, lang="en") -> list:
         else:
             amara_id = content["objects"][0]["id"]
             subtitle_download_uri = "https://www.amara.org/api/videos/%s/languages/%s/subtitles/?format=vtt" %(amara_id, lang)
-            
             try:
                 response_code = urllib.request.urlopen(subtitle_download_uri)
 
             except urllib.error.HTTPError:
                 continue   
-            FILE_DIR = os.path.join(os.getcwd(), "build", "subtitles", lang)
+            file_dir = os.path.join(os.getcwd(), "build", "subtitles", lang)
             filename = "{}.vtt".format(youtube_id)
-            download_and_cache_file(subtitle_download_uri, FILE_DIR, filename=filename)
+            download_and_cache_file(subtitle_download_uri, file_dir, filename=filename, ignorecache=force)
             downloaded_videos.append(youtube_id)
     
     return downloaded_videos
@@ -136,7 +142,7 @@ def retrieve_dubbed_video_mapping(video_ids: [str], lang: str) -> dict:
     return dubbed_video_mapping
 
 
-def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="en", includes="*.po") -> polib.POFile:
+def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="en", force=False, includes="*.po") -> polib.POFile:
 
     request_url_template = ("https://api.crowdin.com/api/"
                             "project/{project_id}/download/"
@@ -147,7 +153,7 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="e
         key=crowdin_secret_key,
     )
 
-    zip_path = download_and_cache_file(request_url)
+    zip_path = download_and_cache_file(request_url, ignorecache=force)
     zip_extraction_path = tempfile.mkdtemp()
 
     with zipfile.ZipFile(zip_path) as zf:
@@ -212,7 +218,7 @@ def _retrieve_ka_topic_tree(lang="en"):
     path = download_and_cache_file
 
 
-def retrieve_kalite_content_data(url=None) -> dict:
+def retrieve_kalite_content_data(url=None, force=False) -> dict:
     """
     Retrieve the KA Lite contents.json file in the master branch.  If
     url is given, download from that url instead.
@@ -220,12 +226,12 @@ def retrieve_kalite_content_data(url=None) -> dict:
     if not url:
         url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/contents.json"
 
-    path = download_and_cache_file(url)
+    path = download_and_cache_file(url, ignorecache=force)
     with open(path) as f:
         return ujson.load(f)
 
 
-def retrieve_kalite_topic_data(url=None):
+def retrieve_kalite_topic_data(url=None, force=False):
     """
     Retrieve the KA Lite topics.json file in the master branch.  If
     url is given, download from that url instead.
@@ -233,12 +239,12 @@ def retrieve_kalite_topic_data(url=None):
     if not url:
         url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/topics.json"
 
-    path = download_and_cache_file(url)
+    path = download_and_cache_file(url, ignorecache=force)
     with open(path) as f:
         return ujson.load(f)
 
 
-def retrieve_kalite_exercise_data(url=None) -> dict:
+def retrieve_kalite_exercise_data(url=None, force=False) -> dict:
     """
     Retrieve the KA Lite exercises.json file in the master branch.  If
     url is given, download from that url instead.
@@ -247,7 +253,7 @@ def retrieve_kalite_exercise_data(url=None) -> dict:
     if not url:
         url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/exercises.json"
 
-    path = download_and_cache_file(url)
+    path = download_and_cache_file(url, ignorecache=force)
     with open(path) as f:
         return ujson.load(f)
 

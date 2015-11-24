@@ -22,43 +22,40 @@ logging.getLogger("vcr").setLevel(logging.DEBUG)
 class Test_retrieve_subtitles:
     def test_incorrect_youtube_id(self):
         incorrect_list = ["aaa"]
-        empty_list = retrieve_subtitles(incorrect_list)
+        empty_list = retrieve_subtitles(incorrect_list, force=True)
         test_list = []
-        assert type(empty_list) == list
-        assert len(empty_list) == 0
-        assert empty_list == test_list
+        assert not empty_list
+        assert isinstance(empty_list, list)
 
     def test_correct_youtube_id(self):
         correct_list = ["y2-uaPiyoxc"]
-        filled_list = retrieve_subtitles(correct_list)
+        filled_list = retrieve_subtitles(correct_list, force=True)
         test_list = ["y2-uaPiyoxc"]
-        assert type(filled_list) == list
-        assert len(filled_list) == 1
-        assert filled_list == test_list
+        assert filled_list
+        assert isinstance(filled_list, list)
 
     def test_correct_and_incorrect_youtube_id(self):
         mixed_list =  ["y2-uaPiyoxc", "asdadsafa"]
-        filled_list = retrieve_subtitles(mixed_list)
+        filled_list = retrieve_subtitles(mixed_list, force=True)
         test_list = ["y2-uaPiyoxc"]
-        assert type(filled_list) == list
-        assert len(filled_list) == 1
+        assert filled_list
+        assert isinstance(filled_list, list)
         assert filled_list == test_list
 
     def test_directory_made(self):
         correct_list = ["y2-uaPiyoxc"]
         youtube_id = correct_list[0]
         file_suffix = '.vtt'
-        retrieve_subtitles(correct_list)
+        retrieve_subtitles(correct_list, force=True)
         path = os.getcwd() + "/build/subtitles/en/" + youtube_id + file_suffix
         assert os.path.exists(path)
 
     def test_correct_youtube_id_and_incorrect_langpack(self):
         correct_list = ["y2-uaPiyoxc"]
-        empty_list = retrieve_subtitles(correct_list,"falselang")
+        empty_list = retrieve_subtitles(correct_list,"falselang", force=True)
         test_list = []
-        assert type(empty_list) == list
-        assert len(empty_list) == 0
-        assert empty_list == test_list
+        assert not empty_list
+        assert isinstance(empty_list, list)
 
 class Test_retrieve_translations:
 
