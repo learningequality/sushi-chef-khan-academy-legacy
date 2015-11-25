@@ -79,8 +79,40 @@ def retrieve_language_resources(lang: str, version: str) -> LangpackResources:
     return LangpackResources(topic_data, content_data, exercise_data, subtitle_data, kalite_catalog, ka_catalog, dubbed_video_mapping)
 
 
-def retrieve_subtitles(videos: list, lang="en") -> dict:
-    return {}
+def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
+    #videos => contains list of youtube ids
+    """return list of youtubeids that were downloaded"""
+    downloaded_videos = []
+    not_downloaded_videos = []
+    for youtube_id in videos:
+        request_url = "https://www.amara.org/api2/partners/videos/?format=json&video_url=http://www.youtube.com/watch?v=%s" % (
+        youtube_id)
+        
+        try:
+            response =  requests.get(request_url)
+            response.raise_for_status()
+        except requests.exceptions.HTTPError:
+            print("Skipping {}".format(youtube_id))
+            continue
+
+        content = ujson.loads(response.content)
+        if not content["objects"]:
+            not_downloaded_videos.append(youtube_id)
+            continue
+        else:
+            amara_id = content["objects"][0]["id"]
+            subtitle_download_uri = "https://www.amara.org/api/videos/%s/languages/%s/subtitles/?format=vtt" %(amara_id, lang)
+            try:
+                response_code = urllib.request.urlopen(subtitle_download_uri)
+
+            except urllib.error.HTTPError:
+                continue   
+            file_dir = os.path.join(os.getcwd(), "build", "subtitles", lang)
+            filename = "{}.vtt".format(youtube_id)
+            download_and_cache_file(subtitle_download_uri, file_dir, filename=filename, ignorecache=force)
+            downloaded_videos.append(youtube_id)
+    
+    return downloaded_videos
 
 
 def retrieve_dubbed_video_mapping(video_ids: [str], lang: str) -> dict:

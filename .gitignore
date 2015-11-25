@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 
+.DS_Store
+
 # C extensions
 *.so
 
@@ -55,5 +57,7 @@ docs/_build/
 
 # PyBuilder
 target/
-/TAGS
-/.hypothesis/
+# virtualenv
+venv
+
+.hypothesis
