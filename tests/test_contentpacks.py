@@ -1,6 +1,5 @@
 import logging
 import os
-
 import vcr
 from babel.messages.catalog import Catalog
 from hypothesis import assume, given
@@ -10,16 +9,30 @@ from hypothesis.strategies import integers, lists, sampled_from, sets, text, \
 from contentpacks.khanacademy import _combine_catalogs, _get_video_ids, \
     retrieve_dubbed_video_mapping, retrieve_html_exercises, \
     retrieve_kalite_content_data, retrieve_kalite_exercise_data, \
-    retrieve_kalite_topic_data, retrieve_translations, retrieve_subtitles
+    retrieve_kalite_topic_data, retrieve_translations, retrieve_subtitles, apply_dubbed_video_map
 from contentpacks.utils import CONTENT_FIELDS_TO_TRANSLATE, \
     EXERCISE_FIELDS_TO_TRANSLATE, TOPIC_FIELDS_TO_TRANSLATE, translate_contents, \
     translate_exercises, translate_topics
-
+from helpers import cvcr
+from helpers import generate_node_list
 
 logging.basicConfig()
 logging.getLogger("vcr").setLevel(logging.DEBUG)
 
+
+class Test_apply_dubbed_video_map:
+
+    def test_apply_dubbed(self, test_content, correct_answer):
+       
+        test_dubbed = {"y2-uaPiyoxc":"lhS-nvcK8Co"}
+        test_dict = list(apply_dubbed_video_map(test_content, test_dubbed))
+        assert test_dict
+        assert isinstance(test_dict, list)
+        assert test_dict == correct_answer
+
+
 class Test_retrieve_subtitles:
+    @cvcr.use_cassette()
     def test_incorrect_youtube_id(self):
         incorrect_list = ["aaa"]
         empty_list = retrieve_subtitles(incorrect_list, force=True)
@@ -27,6 +40,7 @@ class Test_retrieve_subtitles:
         assert not empty_list
         assert isinstance(empty_list, list)
 
+    @cvcr.use_cassette()
     def test_correct_youtube_id(self):
         correct_list = ["y2-uaPiyoxc"]
         filled_list = retrieve_subtitles(correct_list, force=True)
@@ -34,6 +48,7 @@ class Test_retrieve_subtitles:
         assert filled_list
         assert isinstance(filled_list, list)
 
+    @cvcr.use_cassette()
     def test_correct_and_incorrect_youtube_id(self):
         mixed_list =  ["y2-uaPiyoxc", "asdadsafa"]
         filled_list = retrieve_subtitles(mixed_list, force=True)
@@ -42,6 +57,7 @@ class Test_retrieve_subtitles:
         assert isinstance(filled_list, list)
         assert filled_list == test_list
 
+    @cvcr.use_cassette()
     def test_directory_made(self):
         correct_list = ["y2-uaPiyoxc"]
         youtube_id = correct_list[0]
@@ -50,12 +66,38 @@ class Test_retrieve_subtitles:
         path = os.getcwd() + "/build/subtitles/en/" + youtube_id + file_suffix
         assert os.path.exists(path)
 
+    @cvcr.use_cassette()
     def test_correct_youtube_id_and_incorrect_langpack(self):
         correct_list = ["y2-uaPiyoxc"]
         empty_list = retrieve_subtitles(correct_list,"falselang", force=True)
         test_list = []
         assert not empty_list
         assert isinstance(empty_list, list)
+
+class Test_retrieve_dubbed_mappings:
+    
+    @cvcr.use_cassette(serializer="yaml")
+    def test_correct_youtube_id_dubbed(self):
+        correct_list = ["y2-uaPiyoxc"]
+        correct_dictionary = {"y2-uaPiyoxc" : "lhS-nvcK8Co"}
+        test_call = retrieve_dubbed_video_mapping(correct_list, "de")
+        assert isinstance(test_call, dict)
+        assert test_call
+        assert test_call == correct_dictionary
+
+    @cvcr.use_cassette(serializer="yaml")
+    def test_correct_youtube_id_incorrect_lang_dubbed(self):
+        correct_list = ["y2-uaPiyoxc"]
+        test_call = retrieve_dubbed_video_mapping(correct_list, "asdasda")
+        assert isinstance(test_call, dict)
+        assert not test_call
+
+    @cvcr.use_cassette(serializer="yaml")
+    def test_incorrect_youtube_id_dubbed(self):
+        incorrect_list = ["asfbsaf"]
+        test_call = retrieve_dubbed_video_mapping(incorrect_list, "de")
+        assert isinstance(test_call, dict)
+        assert not test_call
 
 class Test_retrieve_translations:
 

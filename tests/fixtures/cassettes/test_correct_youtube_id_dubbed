@@ -1,0 +1,52 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.8.1]
+    method: GET
+    uri: http://www.khanacademy.org/api/v1/videos/y2-uaPiyoxc?lang=de
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/61WaW7jNhi9iqAfRQtU1mLLdgwMCteTprMks8TN4mIgUCQlMaZIDUnJcQa5Tc/Q
+        C8zFSjKSI48z3X8Ejkh+T9/y3qM+uUoAJilQGCVbXqs6xQlB7sxxaXHusQa+mi64+73jCqwPkQYn
+        taBm228IwtyHvGaKsNzbEFV4sgSUeqwuUyykiaIEYiZxQnnOd5GkBDmWfrvnmT3pp1uPQU+CQcVy
+        E1kAmXyssVSEM6nDMkAl1utQYGDWEqRzNnBREMZeMPXCYBmFszCaBZOVAUB8wygHyLzWAHxyy2pk
+        AgqlqpnvZ0Aquh2s9Y8GhAMucv/V3Gub4EHOGix0W/xeIwYa4stn8y6T8/+M3LahHNbT/wytMQ4W
+        3HuNvgbdUFr8zWYzWBeAAQgQLrcW/28NGtXCjkVjxWP93KOVIoraSa0+/1ZQzJySKGdNMWH6/xUw
+        SwYB1KrgIlnjrTkL8vguKxW/vhyp68uzYnVyofDVy7eL2xcvLq7OKFy/L9DJMXl3dXG3unqZgcv3
+        GYgu4quoCNDP8/Hr7RFLI/13clGtFrEAJz/VO5zzuIElbE6Xx+GbZR6cLed3pzfH8dnNu+j05pfo
+        9G4+fD5396tAWEJBKku9QpW2aa+xYNjZEOyg2jkmsCg+/y4YLHRdNUPO2wwLhJ07U7ZUAwP4IK3b
+        o3QEYjwBZknPDOJKJQrkhqa/ukuQz24nwzCLhmMwRsNhFmSZOWk3stFolKUgxJMIx2E8dT/0uS7J
+        nWl1OIlGk3g8CMzek4kDwZyCbxzFHTtZR36sidAilw7QqetJSCwHDzpKGFdJVaeUyKKnxErwXGAp
+        u5E1e2VhRFQiaW2FYR78xt870M6bgRLbuj/07CKrKbU7JnhhFd9gZ8HLUpuBM1dKkLQ2FflnnHlm
+        HQtIAPXPCyCwN6dkjfv2s09y2ALCBzxL8vbkow/5w0Fgy8cUm/mX3DDZZsR0doYchaY/A4QaKwLW
+        Ydr3mLgcyl0FlkpGBYnCt8qu3HeWqqHxrcn+IM2ntNgdfZSjVr4XelHg8fQGQ/UgxseR/9Np6/wE
+        SPRoK+0jxE6mLZdxhHcDbf7SDx7a1qNLN4vdWBfOj9fe2cI7nzvfvpo7CGegpuo7E50CuK4r229t
+        dGX1mEVfLQlhGTfU+eQiIisKtjvw50A6rd08yu6rwuqq6moy0znE7Oyr4cx5o5u9VgfgB+J8Anw3
+        qHurXM2ABCBkW9XeZUMvnCzDo1kQzMJ49YUPdZc0BQ93DrJEXxNmAS6MV7sdruYsyUgPOgy9cLjU
+        uMPpLJxa6EPOtW8YaHn4G6Bg8UPzbBt5NXhLtvwWfpNp9dQCP+syyQ39E9MqLKyhUSD0a6G9D2SC
+        GUipzUGJGreXjsQiaQlhewO9TndWO5SngLbfIfu2IgujNDcI4GQUHk1GwVGKxmE2HCIchVEEcBjE
+        k7EudgqiI4S+buL/0r/Np0tfp1I3jZT5XtMa4vf65RcfW2oPbip7p2u/3HCBZGcN+99dvdCdb1i9
+        tPxxjOAcKzinJzgtDM1HlTx9w9itA5JoH0RmOG3Qn0n6/g8U64CsKgoAAA==
+    headers:
+      Access-Control-Allow-Credentials: ['true']
+      Access-Control-Allow-Origin: ['*']
+      Cache-Control: [no-cache]
+      Content-Encoding: [gzip]
+      Content-Length: ['1183']
+      Content-Type: [application/json; charset=utf-8]
+      Date: ['Mon, 30 Nov 2015 20:59:00 GMT']
+      Expires: ['Mon, 30 Nov 2015 20:59:00 GMT']
+      Server: [Google Frontend]
+      Set-Cookie: ['gae_b_id=X2dhZV9iaW5nb19yYW5kb206eEtCc1JhLUg3akhFZ3JPaS1tRXNudGJwV0V5dENEZmtlX2dxNHp5aw==;
+          expires=Tue, 29 Nov 2016 20:59:00 GMT; Max-Age=31536000; Path=/', 'ka_session=Tq0NbC20yGYHpv9iyz_zgYQZ2cQUYbfkfkLGjcM-:1448917140:1448917140;
+          expires=Tue, 29 Nov 2016 20:59:00 GMT; Max-Age=31536000; Path=/']
+      Vary: [Accept-Encoding]
+      X-Content-Type-Options: [nosniff]
+      X-KA-API-Response: ['true']
+    status: {code: 200, message: OK}
+version: 1

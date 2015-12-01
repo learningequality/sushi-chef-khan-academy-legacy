@@ -57,7 +57,7 @@ def download_and_cache_file(url, cachedir=None, ignorecache=False, filename=None
     os.makedirs(cachedir, exist_ok=True)
 
     if not filename:
-        filename = os.path.basename(urlparse.urlparse(url).path)
+        filename = os.path.basename(urllib.parse.urlparse(url).path)
 
     path = os.path.join(cachedir, filename)
     

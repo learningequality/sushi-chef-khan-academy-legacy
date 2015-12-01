@@ -20,7 +20,7 @@ from babel.messages.catalog import Catalog
 from babel.messages.pofile import read_po
 
 from contentpacks.utils import download_and_cache_file
-
+from contentpacks.utils import NodeType
 
 NUM_PROCESSES = 5
 
@@ -135,6 +135,8 @@ def retrieve_dubbed_video_mapping(video_ids: [str], lang: str) -> dict:
         r.raise_for_status()
 
         deets = r.json()
+        if not deets:
+            continue
 
         if deets["translated_youtube_lang"] == lang:
             dubbed_video_mapping[video] = deets["translated_youtube_id"]
@@ -258,9 +260,16 @@ def retrieve_kalite_exercise_data(url=None, force=False) -> dict:
         return ujson.load(f)
 
 
-def apply_dubbed_video_map(content_data: dict, dubmap: dict) -> dict:
+def apply_dubbed_video_map(content_data: list, dubmap: dict):
     # TODO: stub. Implement more fully next time
-    return copy.deepcopy(content_data)
+
+    for key,values in content_data:
+        if values["kind"] != NodeType.video:
+            continue
+        values["youtube_id"] = dubmap.get(values["youtube_id"])
+        values["video_id"] = dubmap.get(values["video_id"])
+        yield key,values
+
 
 
 def retrieve_html_exercises(exercises: [str], lang: str, force=False) -> (str, [str]):

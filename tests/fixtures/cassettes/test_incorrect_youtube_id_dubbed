@@ -1,0 +1,32 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: ['*/*']
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.8.1]
+    method: GET
+    uri: http://www.khanacademy.org/api/v1/videos/asfbsaf?lang=de
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/8srzckBAE/8yyUEAAAA
+    headers:
+      Access-Control-Allow-Credentials: ['true']
+      Access-Control-Allow-Origin: ['*']
+      Cache-Control: [no-cache]
+      Content-Encoding: [gzip]
+      Content-Length: ['24']
+      Content-Type: [application/json; charset=utf-8]
+      Date: ['Mon, 30 Nov 2015 20:59:01 GMT']
+      Expires: ['Mon, 30 Nov 2015 20:59:01 GMT']
+      Server: [Google Frontend]
+      Set-Cookie: ['gae_b_id=X2dhZV9iaW5nb19yYW5kb206cjE2TXFpWERqUkc2QVoybXRXUUtyNFRDT0MzOE9HajZpeE4xMWUyNA==;
+          expires=Tue, 29 Nov 2016 20:59:01 GMT; Max-Age=31536000; Path=/', 'ka_session=lHp8EExJr5r8t1XgQ-VFiDC2Icg9Tk_Rzm9ghkPE:1448917141:1448917141;
+          expires=Tue, 29 Nov 2016 20:59:01 GMT; Max-Age=31536000; Path=/']
+      Vary: [Accept-Encoding]
+      X-Content-Type-Options: [nosniff]
+      X-KA-API-Response: ['true']
+    status: {code: 200, message: OK}
+version: 1
