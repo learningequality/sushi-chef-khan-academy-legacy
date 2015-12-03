@@ -1,12 +1,13 @@
 import os.path
 
 import vcr
+import ujson
 
 from contentpacks.khanacademy import retrieve_kalite_content_data, \
     retrieve_kalite_exercise_data, retrieve_kalite_topic_data
 from contentpacks.utils import NODE_FIELDS_TO_TRANSLATE, \
     download_and_cache_file, flatten_topic_tree, translate_nodes, \
-    translate_assessment_item_text
+    translate_assessment_item_text, NodeType, remove_untranslated_exercises
 
 from helpers import cvcr, generate_node_list, generate_catalog
 
@@ -72,3 +73,58 @@ class Test_translate_assessment_item_text:
         assert "translated" in translated
         assert "not_in_catalog" not in translated
         assert "not_translated" not in translated
+
+
+class Test_remove_untranslated_exercise:
+
+    def test_always_returns_videos_and_topics(self):
+        self.nodes = [
+            ("no-html", {"kind": NodeType.exercise,
+                         "id": "1",
+                         "uses_assessment_items": False}),
+            ("no-assessment", {"kind": NodeType.exercise,
+                               "id": "2",
+                               "uses_assessment_items": True,
+                               "all_assessment_items": []}),
+
+            ("video", {"kind": NodeType.video}),
+            ("topic", {"kind": NodeType.topic}),
+        ]
+        # these don't matter, and can thus be empty
+        item_data = {}
+        html_ids = set()
+
+        result = set(s for s ,_ in remove_untranslated_exercises(self.nodes, html_ids, item_data))
+
+        assert "video" in result
+        assert "topic" in result
+
+    def test_returns_exercise_with_assessment_items(self):
+        nodes = [
+            ("translated", {"kind": NodeType.exercise,
+                            "id": "1",
+                            "uses_assessment_items": True,
+                            "all_assessment_items": [ujson.dumps({"id": "jebs"})],
+            }
+            )
+        ]
+
+        items = {"jebs": "jebs"}
+
+        exercises = set(k for k,_ in remove_untranslated_exercises(nodes, [], items))
+
+        assert "translated" in exercises
+
+    def test_returns_exercise_with_html(self):
+        nodes = [
+            ("has-html", {
+                "kind": NodeType.exercise,
+                "id": "has-html",
+                "uses_assessment_items": False
+            })
+        ]
+        html_ids = ["has-html"]
+
+        exercises = set(k for k,_ in remove_untranslated_exercises(nodes, html_ids, {}))
+
+        assert "has-html" in exercises

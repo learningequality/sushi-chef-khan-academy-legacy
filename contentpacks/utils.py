@@ -57,7 +57,7 @@ def download_and_cache_file(url, cachedir=None, ignorecache=False, filename=None
     os.makedirs(cachedir, exist_ok=True)
 
     if not filename:
-        filename = os.path.basename(urlparse.urlparse(url).path)
+        filename = os.path.basename(urlparse(url).path)
 
     path = os.path.join(cachedir, filename)
     
@@ -232,21 +232,28 @@ def smart_translate_item_data(item_data: dict, gettext):
 
 
 def remove_untranslated_exercises(nodes, html_ids, translated_assessment_data):
-    item_data = dict(translated_assessment_data)
+    item_data_ids = set(translated_assessment_data.keys())
     html_ids = set(html_ids)
 
     def is_translated_exercise(ex):
+
         ex_id = ex["id"]
         if ex_id in html_ids:  # translated html exercise
             return True
         elif ex["uses_assessment_items"]:
             for assessment_raw in ex["all_assessment_items"]:
                 item_data = ujson.loads(assessment_raw)
-                assessment_id = item_data
-                return assessment_id in translated_assessment_data
+                assessment_id = item_data["id"]
+                if assessment_id in item_data_ids:
+                    continue
+                else:
+                    return False
+            return True
 
     for slug, node in nodes:
         if node["kind"] != NodeType.exercise:
             yield slug, node
         elif is_translated_exercise(node):
             yield slug, node
+        else:
+            continue
