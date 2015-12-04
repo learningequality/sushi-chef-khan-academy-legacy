@@ -30,9 +30,9 @@ def make_language_pack(lang):
     all_assessment_resources = get_full_assessment_resource_list()
     included_assessment_resources = filter_unneeded_assessment_resources(all_assessment_resources, exercise_data)
 
-    exercise_data = remove_untranslated_exercises(exercise_data, translated_html_exercise_ids)
+    node_data = remove_untranslated_exercises(exercise_data, translated_html_exercise_ids)
 
-    topic_data = remove_unavailable_topics(topic_data, exercise_data, included_assessment_resources)
+    node_data = remove_unavailable_topics(topic_data, exercise_data, included_assessment_resources)
 
     filename = "{lang}.zip".format(lang=lang)
-    bundle_language_pack(filename, nodes, kalite_catalog)
+    bundle_language_pack(filename, node_data, kalite_catalog)

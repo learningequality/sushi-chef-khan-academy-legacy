@@ -2,8 +2,8 @@ import copy
 import os
 import urllib.parse
 import urllib.request
-from enum import Enum
 from urllib.parse import urlparse
+from contentpacks.models import Item
 
 import polib
 import ujson
@@ -257,3 +257,17 @@ def remove_untranslated_exercises(nodes, html_ids, translated_assessment_data):
             yield slug, node
         else:
             continue
+
+
+def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog):
+    zf = zipfile.ZipFile        # or whatever appropriate format we want
+    db = SqliteDatabase()
+
+    nodes = convert_dicts_to_models(nodes)
+    save_models(nodes, db)
+    save_catalog(frontend_catalog, zf)
+    save_catalog(backend_catalog, zf)
+    save_subtitles(subtitle_path, zf)
+    save_db(db, zf)
+
+    return dest
