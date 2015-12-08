@@ -7,7 +7,8 @@ Usage:
 """
 
 from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_video_map, retrieve_html_exercises
-from contentpacks.utils import translate_nodes, flatten_topic_tree
+from contentpacks.utils import translate_nodes, flatten_topic_tree, \
+    remove_untranslated_exercises
 
 
 def make_language_pack(lang):
@@ -27,12 +28,12 @@ def make_language_pack(lang):
     html_exercise_path, translated_html_exercise_ids = retrieve_html_exercises(html_exercise_ids, lang)
 
     # now include only the assessment item resources that we need
-    all_assessment_resources = get_full_assessment_resource_list()
-    included_assessment_resources = filter_unneeded_assessment_resources(all_assessment_resources, exercise_data)
+    # all_assessment_resources = get_full_assessment_resource_list()
+    # included_assessment_resources = filter_unneeded_assessment_resources(all_assessment_resources, exercise_data)
 
     node_data = remove_untranslated_exercises(exercise_data, translated_html_exercise_ids)
 
-    node_data = remove_unavailable_topics(topic_data, exercise_data, included_assessment_resources)
+    node_data = remove_unavailable_topics(node_data)
 
     filename = "{lang}.zip".format(lang=lang)
     bundle_language_pack(filename, node_data, kalite_catalog)

@@ -8,6 +8,7 @@ from peewee import Using
 
 import polib
 import ujson
+import zipfile
 
 
 class UnexpectedKindError(Exception):
@@ -268,8 +269,8 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog):
     nodes = populate_parent_foreign_keys(nodes)
     save_models(nodes, db)
 
-    save_catalog(frontend_catalog, zf)
-    save_catalog(backend_catalog, zf)
+    save_catalog(frontend_catalog, zf, "frontend.mo")
+    save_catalog(backend_catalog, zf, "backend.mo")
     save_subtitles(subtitle_path, zf)
 
     save_db(db, zf)
@@ -316,3 +317,13 @@ def save_models(nodes, db):
     with Using(db, [Item]):
         for node in nodes:
             node.save()
+
+
+def save_catalog(catalog: dict, zf: zipfile.ZipFile, name: str):
+
+    mofile = polib.MOFile()
+    for msgid, msgstr in catalog.items():
+        entry = polib.POEntry(msgid=msgid, msgstr=msgstr)
+        mofile.append(entry)
+
+    zf.writestr(name, mofile.to_binary())

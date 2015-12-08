@@ -2,13 +2,15 @@ import os.path
 
 import vcr
 import ujson
+import tempfile
+import zipfile
 
 from contentpacks.khanacademy import retrieve_kalite_content_data, \
     retrieve_kalite_exercise_data, retrieve_kalite_topic_data
 from contentpacks.utils import NODE_FIELDS_TO_TRANSLATE, \
     download_and_cache_file, flatten_topic_tree, translate_nodes, \
     translate_assessment_item_text, NodeType, remove_untranslated_exercises, \
-    convert_dicts_to_models
+    convert_dicts_to_models, save_catalog
 
 from helpers import cvcr, generate_node_list, generate_catalog
 
@@ -138,3 +140,16 @@ class Test_convert_dicts_to_models:
         new_nodes = list(convert_dicts_to_models(nodes))
 
         # see if we can have peewee validate the models
+
+
+class Test_save_catalog:
+
+    def test_mofile_exists_in_zip(self):
+        with tempfile.NamedTemporaryFile() as f:
+            zf = zipfile.ZipFile(f, "w")
+            name = "test.mo"
+            catalog = {"msgid": "msgstr"}
+
+            save_catalog(catalog, zf, name)
+
+            assert name in zf.namelist()
