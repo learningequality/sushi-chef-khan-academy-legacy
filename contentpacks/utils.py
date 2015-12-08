@@ -4,6 +4,7 @@ import urllib.parse
 import urllib.request
 from urllib.parse import urlparse
 from contentpacks.models import Item
+from peewee import Using
 
 import polib
 import ujson
@@ -261,14 +262,16 @@ def remove_untranslated_exercises(nodes, html_ids, translated_assessment_data):
 
 def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog):
     zf = zipfile.ZipFile        # or whatever appropriate format we want
-    db = SqliteDatabase()
+    db = SqliteDatabase(dest)
 
     nodes = convert_dicts_to_models(nodes)
     nodes = populate_parent_foreign_keys(nodes)
     save_models(nodes, db)
+
     save_catalog(frontend_catalog, zf)
     save_catalog(backend_catalog, zf)
     save_subtitles(subtitle_path, zf)
+
     save_db(db, zf)
 
     return dest
@@ -302,3 +305,14 @@ def convert_dicts_to_models(nodes):
         return item
 
     yield from (convert_dict_to_model(node) for _, node in nodes)
+
+
+def save_models(nodes, db):
+    """
+    Save all the models in nodes into the db specified.
+    """
+    # aron: I didn't bother writing tests for this, since it's such a simple
+    # function!
+    with Using(db, [Item]):
+        for node in nodes:
+            node.save()
