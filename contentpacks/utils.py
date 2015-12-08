@@ -264,6 +264,7 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog):
     db = SqliteDatabase()
 
     nodes = convert_dicts_to_models(nodes)
+    nodes = populate_parent_foreign_keys(nodes)
     save_models(nodes, db)
     save_catalog(frontend_catalog, zf)
     save_catalog(backend_catalog, zf)
