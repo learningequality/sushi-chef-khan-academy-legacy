@@ -7,7 +7,8 @@ from contentpacks.khanacademy import retrieve_kalite_content_data, \
     retrieve_kalite_exercise_data, retrieve_kalite_topic_data
 from contentpacks.utils import NODE_FIELDS_TO_TRANSLATE, \
     download_and_cache_file, flatten_topic_tree, translate_nodes, \
-    translate_assessment_item_text, NodeType, remove_untranslated_exercises
+    translate_assessment_item_text, NodeType, remove_untranslated_exercises, \
+    convert_dicts_to_models
 
 from helpers import cvcr, generate_node_list, generate_catalog
 
@@ -128,3 +129,12 @@ class Test_remove_untranslated_exercise:
         exercises = set(k for k,_ in remove_untranslated_exercises(nodes, html_ids, {}))
 
         assert "has-html" in exercises
+
+
+class Test_convert_dicts_to_models:
+
+    def test_raises_no_errors_on_actual_data(self):
+        nodes = list(generate_node_list())
+        new_nodes = list(convert_dicts_to_models(nodes))
+
+        # see if we can have peewee validate the models

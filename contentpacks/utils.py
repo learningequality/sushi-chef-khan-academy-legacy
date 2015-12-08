@@ -272,3 +272,33 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog):
     save_db(db, zf)
 
     return dest
+
+
+def convert_dicts_to_models(nodes):
+
+    def _make_extra_fields_value(present_fields, node_dict):
+        """
+        Generate the JSON string that goes into an item's extra_fields value.
+        Do this by looking at the model's columns and then adding those values
+        not in the columns into the extra_fields.
+        """
+        fields_diff = set(node_dict.keys()) - set(present_fields)
+
+        extra_fields = {}
+        for field in fields_diff:
+            extra_fields[field] = node_dict[field]
+
+        return ujson.dumps(extra_fields)
+
+    def convert_dict_to_model(node):
+        item = Item(**node)
+
+        item.__dict__.update(**node)
+        item.extra_fields = _make_extra_fields_value(
+            item._meta.get_field_names(),
+            node
+        )
+
+        return item
+
+    yield from (convert_dict_to_model(node) for _, node in nodes)
