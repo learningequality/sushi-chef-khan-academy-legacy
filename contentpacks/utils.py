@@ -9,6 +9,7 @@ from peewee import Using
 import polib
 import ujson
 import zipfile
+import pathlib
 
 
 class UnexpectedKindError(Exception):
@@ -327,3 +328,20 @@ def save_catalog(catalog: dict, zf: zipfile.ZipFile, name: str):
         mofile.append(entry)
 
     zf.writestr(name, mofile.to_binary())
+
+
+def populate_parent_foreign_keys(nodes):
+    node_keys = {node.slug : node for node in nodes}
+
+    for node in node_keys.values():
+        path = pathlib.Path(node.path)
+        parent_slug = path.parent.name
+        parent = node_keys.get(parent_slug)
+
+        node.parent = parent
+
+        yield node
+
+
+def save_db(db, zf):
+    zf.write(db.database)

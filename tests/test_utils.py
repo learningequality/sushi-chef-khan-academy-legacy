@@ -7,12 +7,15 @@ import zipfile
 
 from contentpacks.khanacademy import retrieve_kalite_content_data, \
     retrieve_kalite_exercise_data, retrieve_kalite_topic_data
+from contentpacks.models import Item
 from contentpacks.utils import NODE_FIELDS_TO_TRANSLATE, \
     download_and_cache_file, flatten_topic_tree, translate_nodes, \
     translate_assessment_item_text, NodeType, remove_untranslated_exercises, \
-    convert_dicts_to_models, save_catalog
+    convert_dicts_to_models, save_catalog, populate_parent_foreign_keys, \
+    save_db
 
 from helpers import cvcr, generate_node_list, generate_catalog
+from peewee import SqliteDatabase, Using
 
 
 class Test_download_and_cache_file:
@@ -153,3 +156,51 @@ class Test_save_catalog:
             save_catalog(catalog, zf, name)
 
             assert name in zf.namelist()
+
+
+class Test_populate_parent_foreign_keys:
+
+    def test_all_nodes_have_parent_values(self):
+        nodes = convert_dicts_to_models(generate_node_list())
+        new_nodes = list(populate_parent_foreign_keys(nodes))
+
+        for node in new_nodes:
+            if node.title != "Khan Academy": # aron: maybe there's a better way to find the root node?
+                assert node.parent and isinstance(node.parent, Item)
+
+
+class Test_save_db:
+
+    def test_writes_db_to_archive(self):
+        with tempfile.NamedTemporaryFile() as zffobj:
+            zf = zipfile.ZipFile(zffobj, "w")
+
+            with tempfile.NamedTemporaryFile() as dbfobj:
+                db = SqliteDatabase(dbfobj.name)
+                db.connect()
+                with Using(db, [Item]):
+                    Item.create_table()
+                    item = Item(id="test", title="test",
+                                description="test", available=False,
+                                slug="srug", kind=NodeType.video,
+                                path="/test/test")
+                    item.save()
+                db.close()
+
+                save_db(db, zf)
+
+            zf.close()
+
+            # reopen the db from the zip, see if our object was saved
+            with tempfile.NamedTemporaryFile() as f:
+                # we should only have one file in the zipfile, the db. Assume
+                # that the first file is the db.
+                zf = zipfile.ZipFile(zffobj.name)
+                dbfobj = zf.open(zf.infolist()[0])
+                f.write(dbfobj.read())
+                f.seek(0)
+
+                db = SqliteDatabase(f.name)
+
+                with Using(db, [Item]):
+                    Item.get(title="test")
