@@ -4,11 +4,12 @@ import urllib.parse
 import urllib.request
 from urllib.parse import urlparse
 from contentpacks.models import Item
-from peewee import Using
+from peewee import Using, SqliteDatabase
 
 import polib
 import ujson
 import zipfile
+import tempfile
 import pathlib
 
 
@@ -45,7 +46,6 @@ TOPIC_FIELDS_TO_TRANSLATE = [
     "title",
     "description",
 ]
-
 
 
 def download_and_cache_file(url, cachedir=None, ignorecache=False, filename=None) -> str:
@@ -263,18 +263,20 @@ def remove_untranslated_exercises(nodes, html_ids, translated_assessment_data):
 
 
 def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog):
-    zf = zipfile.ZipFile        # or whatever appropriate format we want
-    db = SqliteDatabase(dest)
+    with zipfile.ZipFile(dest, "w") as zf, tempfile.NamedTemporaryFile() as dbf:
+        db = SqliteDatabase(dbf.name)
+        db.connect()
 
-    nodes = convert_dicts_to_models(nodes)
-    nodes = populate_parent_foreign_keys(nodes)
-    save_models(nodes, db)
+        nodes = convert_dicts_to_models(nodes)
+        nodes = populate_parent_foreign_keys(nodes)
+        save_models(nodes, db)
+        dbf.flush()
 
-    save_catalog(frontend_catalog, zf, "frontend.mo")
-    save_catalog(backend_catalog, zf, "backend.mo")
-    # save_subtitles(subtitle_path, zf)
+        save_catalog(frontend_catalog.msgid_mapping, zf, "frontend.mo")
+        save_catalog(backend_catalog.msgid_mapping, zf, "backend.mo")
+        # save_subtitles(subtitle_path, zf)
 
-    save_db(db, zf)
+        save_db(db, zf)
 
     return dest
 
@@ -299,6 +301,7 @@ def convert_dicts_to_models(nodes):
         item = Item(**node)
 
         item.__dict__.update(**node)
+        item.available = True
         item.extra_fields = _make_extra_fields_value(
             item._meta.get_field_names(),
             node
@@ -316,6 +319,7 @@ def save_models(nodes, db):
     # aron: I didn't bother writing tests for this, since it's such a simple
     # function!
     with Using(db, [Item]):
+        Item.create_table()
         for node in nodes:
             node.save()
 
@@ -327,7 +331,10 @@ def save_catalog(catalog: dict, zf: zipfile.ZipFile, name: str):
         entry = polib.POEntry(msgid=msgid, msgstr=msgstr)
         mofile.append(entry)
 
-    zf.writestr(name, mofile.to_binary())
+    # zf.writestr(name, mofile.to_binary())
+    with tempfile.NamedTemporaryFile() as f:
+        mofile.save(f.name)
+        zf.write(f.name, name)
 
 
 def populate_parent_foreign_keys(nodes):
@@ -344,4 +351,18 @@ def populate_parent_foreign_keys(nodes):
 
 
 def save_db(db, zf):
-    zf.write(db.database)
+    zf.write(db.database, "content.db")
+
+
+def separate_exercise_types(node_data):
+    node_data = list(node_data)
+
+    def _is_html_exercise(node):
+        return node["kind"] == NodeType.exercise and not node["uses_assessment_items"]
+
+    def _is_assessment_exercise(node):
+        return node["kind"] == NodeType.exercise and node["uses_assessment_items"]
+
+    return (id for id, n in node_data if _is_html_exercise(n)), \
+        (id for id, n in node_data if _is_assessment_exercise(n)), \
+        node_data

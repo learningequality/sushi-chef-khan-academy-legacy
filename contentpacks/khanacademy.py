@@ -60,23 +60,25 @@ def retrieve_language_resources(lang: str, version: str) -> LangpackResources:
     exercise_data = retrieve_kalite_exercise_data()
     topic_data = retrieve_kalite_topic_data()
 
-    subtitle_list = retrieve_subtitles(lang)
+    video_ids = list(content_data.keys())
+    # subtitle_list = retrieve_subtitles(video_ids, lang)
+    subtitle_list = []
+    # dubbed_video_mapping = retrieve_dubbed_video_mapping(video_ids, lang)
+    dubbed_video_mapping = []
 
     # retrieve KA Lite po files from CrowdIn
     crowdin_project_name = "ka-lite"
     crowdin_secret_key = os.environ["KALITE_CROWDIN_SECRET_KEY"]
     includes = [version]
-    kalite_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, includes)
+    kalite_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, lang, includes)
 
     # retrieve Khan Academy po files from CrowdIn
     crowdin_project_name = "khanacademy"
     crowdin_secret_key = os.environ["KA_CROWDIN_SECRET_KEY"]
     includes = []
-    ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key)
+    ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, lang)
 
-    dubbed_video_mapping = retrieve_dubbed_video_mapping(lang)
-
-    return LangpackResources(topic_data, content_data, exercise_data, subtitle_data, kalite_catalog, ka_catalog, dubbed_video_mapping)
+    return LangpackResources(topic_data, content_data, exercise_data, subtitle_list, kalite_catalog, ka_catalog, dubbed_video_mapping)
 
 
 def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
@@ -85,9 +87,11 @@ def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
     downloaded_videos = []
     not_downloaded_videos = []
     for youtube_id in videos:
+        print("trying to download subtitle for %s" % youtube_id)
         request_url = "https://www.amara.org/api2/partners/videos/?format=json&video_url=http://www.youtube.com/watch?v=%s" % (
-        youtube_id)
-        
+            youtube_id
+        )
+
         try:
             response =  requests.get(request_url)
             response.raise_for_status()
@@ -106,12 +110,12 @@ def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
                 response_code = urllib.request.urlopen(subtitle_download_uri)
 
             except urllib.error.HTTPError:
-                continue   
+                continue
             file_dir = os.path.join(os.getcwd(), "build", "subtitles", lang)
             filename = "{}.vtt".format(youtube_id)
             download_and_cache_file(subtitle_download_uri, file_dir, filename=filename, ignorecache=force)
             downloaded_videos.append(youtube_id)
-    
+
     return downloaded_videos
 
 
@@ -129,6 +133,7 @@ def retrieve_dubbed_video_mapping(video_ids: [str], lang: str) -> dict:
     dubbed_video_mapping = {}
 
     for video in video_ids:
+        print("retrieving dubbed video mapping for %s" % video)
         url = url_template.format(video_id=video, lang=lang)
 
         r = requests.get(url)
@@ -136,7 +141,7 @@ def retrieve_dubbed_video_mapping(video_ids: [str], lang: str) -> dict:
 
         deets = r.json()
 
-        if deets["translated_youtube_lang"] == lang:
+        if isinstance(deets, dict) and deets["translated_youtube_lang"] == lang:
             dubbed_video_mapping[video] = deets["translated_youtube_id"]
 
     return dubbed_video_mapping
@@ -152,7 +157,7 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="e
         lang_code=lang_code,
         key=crowdin_secret_key,
     )
-
+    print(request_url)
     zip_path = download_and_cache_file(request_url, ignorecache=force)
     zip_extraction_path = tempfile.mkdtemp()
 

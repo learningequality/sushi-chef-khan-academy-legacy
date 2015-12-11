@@ -8,32 +8,40 @@ Usage:
 
 from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_video_map, retrieve_html_exercises
 from contentpacks.utils import translate_nodes, flatten_topic_tree, \
-    remove_untranslated_exercises
+    remove_untranslated_exercises, bundle_language_pack, separate_exercise_types
 
 
-def make_language_pack(lang):
+def make_language_pack(lang, version):
 
-    topic_data, content_data, exercise_data, subtitles, kalite_catalog, content_catalog, dubmap = retrieve_language_resources(lang)
+    topic_data, content_data, exercise_data, subtitles, kalite_catalog, content_catalog, dubmap = retrieve_language_resources(lang, version)
 
     node_data = list(
         flatten_topic_tree(topic_data, content_data, exercise_data)
     )
 
-    node_data = translate_nodes(node_data)
-    node_data = list(
-        apply_dubbed_video_map(node_data, dubmap)
-    )
+    node_data = translate_nodes(node_data, content_catalog)
+    node_data = list(node_data)
+    # node_data = list(
+    #     apply_dubbed_video_map(node_data, dubmap)
+    # )
 
-    html_exercise_ids = get_html_exercises(node_data) # to be implemented
+    html_exercise_ids, assessment_exercise_ids, node_data = separate_exercise_types(node_data) # to be implemented
     html_exercise_path, translated_html_exercise_ids = retrieve_html_exercises(html_exercise_ids, lang)
 
     # now include only the assessment item resources that we need
     # all_assessment_resources = get_full_assessment_resource_list()
     # included_assessment_resources = filter_unneeded_assessment_resources(all_assessment_resources, exercise_data)
 
-    node_data = remove_untranslated_exercises(exercise_data, translated_html_exercise_ids)
+    # node_data = remove_untranslated_exercises(exercise_data, translated_html_exercise_ids, assessment_data)
 
-    node_data = remove_unavailable_topics(node_data)
+    # node_data = remove_unavailable_topics(node_data)
 
     filename = "{lang}.zip".format(lang=lang)
-    bundle_language_pack(filename, node_data, kalite_catalog)
+    bundle_language_pack(filename, node_data, kalite_catalog, kalite_catalog)
+
+
+def main():
+    make_language_pack("es-ES", "0.15")
+
+if __name__ == "__main__":
+    main()
