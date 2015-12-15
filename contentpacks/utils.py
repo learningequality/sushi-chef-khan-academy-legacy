@@ -268,8 +268,13 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog):
         db.connect()
 
         nodes = convert_dicts_to_models(nodes)
+        nodes = list(save_models(nodes, db)) # we have to make sure to force
+                                             # the evaluation of each
+                                             # save_models call, in order to
+                                             # avoid nesting them.
         nodes = populate_parent_foreign_keys(nodes)
-        save_models(nodes, db)
+        list(save_models(nodes, db))
+        db.close()
         dbf.flush()
 
         save_catalog(frontend_catalog.msgid_mapping, zf, "frontend.mo")
@@ -318,10 +323,15 @@ def save_models(nodes, db):
     """
     # aron: I didn't bother writing tests for this, since it's such a simple
     # function!
+    db.create_table(Item, safe=True)
     with Using(db, [Item]):
-        Item.create_table()
         for node in nodes:
-            node.save()
+            try:
+                node.save()
+            except Exception as e:
+                print("Cannot save {path}, exception: {e}".format(path=node.path, e=e))
+
+            yield node
 
 
 def save_catalog(catalog: dict, zf: zipfile.ZipFile, name: str):
@@ -338,14 +348,16 @@ def save_catalog(catalog: dict, zf: zipfile.ZipFile, name: str):
 
 
 def populate_parent_foreign_keys(nodes):
-    node_keys = {node.slug : node for node in nodes}
+    node_keys = {node.slug: node for node in nodes}
 
     for node in node_keys.values():
         path = pathlib.Path(node.path)
         parent_slug = path.parent.name
-        parent = node_keys.get(parent_slug)
-
-        node.parent = parent
+        try:
+            parent = node_keys[parent_slug]
+            node.parent = parent
+        except KeyError:
+            print("{path} is an orphan.".format(path=node.path))
 
         yield node
 
