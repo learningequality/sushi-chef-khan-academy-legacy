@@ -1,6 +1,7 @@
 aiohttp==0.18.3
 Babel==2.1.1
 chardet==2.3.0
+docopt==0.6.2
 elpy==1.10.0
 flake8==2.5.0
 hypothesis==1.11.4

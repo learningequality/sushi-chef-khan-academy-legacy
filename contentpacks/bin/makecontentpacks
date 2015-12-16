@@ -3,17 +3,22 @@
 makepack
 
 Usage:
+  makecontentpacks ka-lite <lang> <version> [--subtitlelang=subtitle-lang --contentlang=content-lang --interfacelang=interface-lang --videolang=video-lang]
+  makecontentpacks -h | --help
+  makecontentpacks --version
 
 """
+
+from docopt import docopt
 
 from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_video_map, retrieve_html_exercises
 from contentpacks.utils import translate_nodes, flatten_topic_tree, \
     remove_untranslated_exercises, bundle_language_pack, separate_exercise_types
 
 
-def make_language_pack(lang, version):
+def make_language_pack(lang, version, sublangargs):
 
-    topic_data, content_data, exercise_data, subtitles, kalite_catalog, content_catalog, dubmap = retrieve_language_resources(lang, version)
+    topic_data, content_data, exercise_data, subtitles, interface_catalog, content_catalog, dubmap = retrieve_language_resources(version, sublangargs)
 
     node_data = list(
         flatten_topic_tree(topic_data, content_data, exercise_data)
@@ -37,11 +42,32 @@ def make_language_pack(lang, version):
     # node_data = remove_unavailable_topics(node_data)
 
     filename = "{lang}.zip".format(lang=lang)
-    bundle_language_pack(filename, node_data, kalite_catalog, kalite_catalog)
+    bundle_language_pack(filename, node_data, interface_catalog, interface_catalog)
+
+
+def normalize_sublang_args(args):
+    """
+    Transform the command line arguments we have into something that conforms to the retrieve_language_resources interface.
+    This mostly means using the given lang parameter as the default lang, overridable by the different sublang args.
+    """
+    return {
+        "video_lang": args['--videolang'] or args['<lang>'],
+        "content_lang": args['--contentlang'] or args['<lang>'],
+        "interface_lang": args['--interfacelang'] or args['<lang>'],
+        "subtitle_lang": args['--subtitlelang'] or args['<lang>'],
+    }
 
 
 def main():
-    make_language_pack("es-ES", "0.15")
+    args = docopt(__doc__)
+
+    assert args["ka-lite"], ("Sorry, content packs for non-KA Lite "
+                             "software aren't implemented yet.")
+    del args["ka-lite"]
+
+    sublangs = normalize_sublang_args(args)
+
+    make_language_pack(args["<lang>"], args["<version>"], sublangs)
 
 if __name__ == "__main__":
     main()
