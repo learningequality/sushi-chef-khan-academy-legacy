@@ -99,10 +99,13 @@ def translate_nodes(nodes, catalog):
     """
     for slug, node in nodes:
 
+        node = copy.copy(node)
         for field in NODE_FIELDS_TO_TRANSLATE:
             original_text = node[field]
-            node = copy.copy(node)
-            node[field] = catalog.msgid_mapping.get(original_text) or original_text
+            try:
+                node[field] = catalog.msgid_mapping[original_text]
+            except KeyError:
+                print("could not translate {field} for {title}".format(field=field, title=node["title"]))
 
         yield slug, node
 
