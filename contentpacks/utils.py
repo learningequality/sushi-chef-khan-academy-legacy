@@ -306,7 +306,7 @@ def convert_dicts_to_models(nodes):
         item = Item(**node)
 
         item.__dict__.update(**node)
-        item.available = True
+        item.available = False
         item.extra_fields = _make_extra_fields_value(
             item._meta.get_field_names(),
             node
