@@ -54,7 +54,7 @@ POEntry_class.old_merge = POEntry_class.merge
 POEntry_class.merge = new_merge
 
 
-def retrieve_language_resources(lang: str, version: str) -> LangpackResources:
+def retrieve_language_resources(version: str, sublangargs: dict) -> LangpackResources:
 
     content_data = retrieve_kalite_content_data()
     exercise_data = retrieve_kalite_exercise_data()
@@ -69,14 +69,14 @@ def retrieve_language_resources(lang: str, version: str) -> LangpackResources:
     # retrieve KA Lite po files from CrowdIn
     crowdin_project_name = "ka-lite"
     crowdin_secret_key = os.environ["KALITE_CROWDIN_SECRET_KEY"]
-    includes = [version]
-    kalite_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, lang, includes)
+    includes = version
+    kalite_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code=sublangargs["interface_lang"], includes=includes, force=True)
 
     # retrieve Khan Academy po files from CrowdIn
     crowdin_project_name = "khanacademy"
     crowdin_secret_key = os.environ["KA_CROWDIN_SECRET_KEY"]
     includes = []
-    ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, lang)
+    ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code=sublangargs["content_lang"], force=True)
 
     return LangpackResources(topic_data, content_data, exercise_data, subtitle_list, kalite_catalog, ka_catalog, dubbed_video_mapping)
 
@@ -189,6 +189,7 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="e
 
     # add convenience dict for mapping a msgid to msgstr
     main_pofile.msgid_mapping = {m.msgid: m.msgstr for m in main_pofile if m.translated()}
+    # main_pofile.msgid_mapping = {m.msgid: m.msgstr for m in main_pofile }
 
     return main_pofile
 
