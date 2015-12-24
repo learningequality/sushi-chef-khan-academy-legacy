@@ -30,7 +30,7 @@ def make_language_pack(lang, version, sublangargs):
     #     apply_dubbed_video_map(node_data, dubmap)
     # )
 
-    html_exercise_ids, assessment_exercise_ids, node_data = separate_exercise_types(node_data) # to be implemented
+    html_exercise_ids, assessment_exercise_ids, node_data = separate_exercise_types(node_data)
     html_exercise_path, translated_html_exercise_ids = retrieve_html_exercises(html_exercise_ids, lang)
 
     # now include only the assessment item resources that we need
