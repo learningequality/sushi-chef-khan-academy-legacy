@@ -192,11 +192,9 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="e
 
     shutil.rmtree(zip_extraction_path)
 
-    # add convenience dict for mapping a msgid to msgstr
-    main_pofile.msgid_mapping = {m.msgid: m.msgstr for m in main_pofile if m.translated()}
-    # main_pofile.msgid_mapping = {m.msgid: m.msgstr for m in main_pofile }
+    msgid_mapping = {m.msgid: m.msgstr for m in main_pofile if m.translated()}
 
-    return main_pofile
+    return msgid_mapping
 
 
 def _combine_catalogs(*catalogs):

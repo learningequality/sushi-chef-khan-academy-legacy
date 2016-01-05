@@ -103,7 +103,7 @@ def translate_nodes(nodes, catalog):
         for field in NODE_FIELDS_TO_TRANSLATE:
             original_text = node[field]
             try:
-                node[field] = catalog.msgid_mapping[original_text]
+                node[field] = catalog[original_text]
             except KeyError:
                 print("could not translate {field} for {title}".format(field=field, title=node["title"]))
 
@@ -280,8 +280,8 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog):
         db.close()
         dbf.flush()
 
-        save_catalog(frontend_catalog.msgid_mapping, zf, "frontend.mo")
-        save_catalog(backend_catalog.msgid_mapping, zf, "backend.mo")
+        save_catalog(frontend_catalog, zf, "frontend.mo")
+        save_catalog(backend_catalog, zf, "backend.mo")
         # save_subtitles(subtitle_path, zf)
 
         save_db(db, zf)
