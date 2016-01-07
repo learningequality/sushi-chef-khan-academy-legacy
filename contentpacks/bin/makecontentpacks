@@ -45,7 +45,7 @@ def make_language_pack(lang, version, sublangargs):
     pack_metadata = generate_kalite_language_pack_metadata(lang, version, interface_catalog, content_catalog)
 
     filename = "{lang}.zip".format(lang=lang)
-    bundle_language_pack(filename, node_data, interface_catalog, interface_catalog)
+    bundle_language_pack(filename, node_data, interface_catalog, interface_catalog, pack_metadata)
 
 
 def normalize_sublang_args(args):
