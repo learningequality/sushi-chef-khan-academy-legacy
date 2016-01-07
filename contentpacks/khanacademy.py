@@ -74,7 +74,7 @@ def retrieve_language_resources(version: str, sublangargs: dict) -> LangpackReso
     else:
         crowdin_project_name = "ka-lite"
         crowdin_secret_key = os.environ["KALITE_CROWDIN_SECRET_KEY"]
-        includes = version
+        includes = "*{}*.po".format(version)
         kalite_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code=sublangargs["interface_lang"], includes=includes, force=True)
 
         # retrieve Khan Academy po files from CrowdIn
