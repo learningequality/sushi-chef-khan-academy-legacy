@@ -48,6 +48,34 @@ TOPIC_FIELDS_TO_TRANSLATE = [
 ]
 
 
+class Catalog(dict):
+    """
+    Just like a dict, but computes some additional metadata specific to i18n catalog files.
+    """
+
+    def __init__(self, pofile: polib._BaseFile):
+        """
+        Extract the strings from the given pofile, and computes the metadata.
+        """
+        self.update({m.msgid: m.msgstr for m in pofile if m.translated()})
+
+        # compute metadata -- needs to be after we add the translated strings
+        self.percent_translated = self.compute_translated(pofile)
+
+        super().__init__()
+
+    def compute_translated(self, pofile: polib._BaseFile) -> int:
+        """
+        Returns the percentage of strings translated. Returned number is between 0
+        to 100.
+
+        """
+        trans_count = len(self)
+        all_strings_count = len(pofile)
+
+        return (trans_count / all_strings_count) * 100
+
+
 def download_and_cache_file(url, cachedir=None, ignorecache=False, filename=None) -> str:
     """
     Download the given url if it's not saved in cachedir. Returns the

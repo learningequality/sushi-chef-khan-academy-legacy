@@ -7,7 +7,6 @@ import gc
 import glob
 import os
 import shutil
-import subprocess
 import urllib
 import tempfile
 import zipfile
@@ -16,10 +15,8 @@ from multiprocessing.pool import ThreadPool as Pool
 import polib
 import requests
 import ujson
-from babel.messages.catalog import Catalog
-from babel.messages.pofile import read_po
 
-from contentpacks.utils import download_and_cache_file
+from contentpacks.utils import download_and_cache_file, Catalog
 
 
 NUM_PROCESSES = 5
@@ -69,8 +66,8 @@ def retrieve_language_resources(version: str, sublangargs: dict) -> LangpackReso
     # retrieve KA Lite po files from CrowdIn
     interface_lang = sublangargs["interface_lang"]
     if interface_lang == "en":
-        kalite_catalog = {}
-        ka_catalog = {}
+        kalite_catalog = Catalog()
+        ka_catalog = Catalog()
     else:
         crowdin_project_name = "ka-lite"
         crowdin_secret_key = os.environ["KALITE_CROWDIN_SECRET_KEY"]
@@ -192,7 +189,7 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="e
 
     shutil.rmtree(zip_extraction_path)
 
-    msgid_mapping = {m.msgid: m.msgstr for m in main_pofile if m.translated()}
+    msgid_mapping = Catalog(main_pofile)
 
     return msgid_mapping
 
