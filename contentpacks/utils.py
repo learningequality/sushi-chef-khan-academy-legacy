@@ -409,3 +409,21 @@ def separate_exercise_types(node_data):
     return (id for id, n in node_data if _is_html_exercise(n)), \
         (id for id, n in node_data if _is_assessment_exercise(n)), \
         node_data
+
+
+def generate_kalite_language_pack_metadata(lang: str, version: str, interface_catalog: Catalog, content_catalog: Catalog):
+    """
+    Create the language pack metadata based on the files passed in.
+    """
+    metadata = {
+        "code": lang,
+        'software_version': version,
+        'language_pack_version': 1,
+        'percent_translated': interface_catalog.percent_translated,
+        'topic_tree_translated': content_catalog.percent_translated,
+        'subtitle_count': 0,
+        "name": "DEBUG",
+        'native_name': 'DEBUG',
+    }
+
+    return metadata

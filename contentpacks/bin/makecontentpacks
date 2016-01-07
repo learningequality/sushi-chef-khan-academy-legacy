@@ -13,7 +13,8 @@ from docopt import docopt
 
 from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_video_map, retrieve_html_exercises
 from contentpacks.utils import translate_nodes, flatten_topic_tree, \
-    remove_untranslated_exercises, bundle_language_pack, separate_exercise_types
+    remove_untranslated_exercises, bundle_language_pack, separate_exercise_types, \
+    generate_kalite_language_pack_metadata
 
 
 def make_language_pack(lang, version, sublangargs):
@@ -40,6 +41,8 @@ def make_language_pack(lang, version, sublangargs):
     # node_data = remove_untranslated_exercises(exercise_data, translated_html_exercise_ids, assessment_data)
 
     # node_data = remove_unavailable_topics(node_data)
+
+    pack_metadata = generate_kalite_language_pack_metadata(lang, version, interface_catalog, content_catalog)
 
     filename = "{lang}.zip".format(lang=lang)
     bundle_language_pack(filename, node_data, interface_catalog, interface_catalog)
