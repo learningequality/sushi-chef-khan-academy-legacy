@@ -97,15 +97,15 @@ def translate_nodes(nodes, catalog):
     thus won't be eliminated from the topic tree.
 
     """
-    for slug, node in nodes:
+    for slug, old_node in nodes:
 
-        node = copy.copy(node)
+        node = copy.copy(old_node)
         for field in NODE_FIELDS_TO_TRANSLATE:
-            original_text = node[field]
+            original_text = old_node[field]
             try:
                 node[field] = catalog[original_text]
             except KeyError:
-                print("could not translate {field} for {title}".format(field=field, title=node["title"]))
+                print("could not translate {field} for {title}".format(field=field, title=old_node["title"]))
 
         yield slug, node
 
