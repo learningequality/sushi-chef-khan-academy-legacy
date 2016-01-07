@@ -48,6 +48,9 @@ TOPIC_FIELDS_TO_TRANSLATE = [
 ]
 
 
+LANGUAGELOOKUP_PATH = pathlib.Path(__file__).parent / "resources" / "languagelookup.json"
+
+
 class Catalog(dict):
     """
     Just like a dict, but computes some additional metadata specific to i18n catalog files.
@@ -293,7 +296,7 @@ def remove_untranslated_exercises(nodes, html_ids, translated_assessment_data):
             continue
 
 
-def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog):
+def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata):
     with zipfile.ZipFile(dest, "w") as zf, tempfile.NamedTemporaryFile() as dbf:
         db = SqliteDatabase(dbf.name)
         db.connect()
@@ -313,6 +316,8 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog):
         # save_subtitles(subtitle_path, zf)
 
         save_db(db, zf)
+
+        save_metadata(zf, metadata)
 
     return dest
 
@@ -422,8 +427,36 @@ def generate_kalite_language_pack_metadata(lang: str, version: str, interface_ca
         'percent_translated': interface_catalog.percent_translated,
         'topic_tree_translated': content_catalog.percent_translated,
         'subtitle_count': 0,
-        "name": "DEBUG",
-        'native_name': 'DEBUG',
+        "name": get_lang_name(lang),
+        'native_name': get_lang_native_name(lang),
     }
 
     return metadata
+
+
+def get_lang_name(lang):
+    with open(str(LANGUAGELOOKUP_PATH)) as f:
+        langlookup = ujson.load(f)
+
+    try:
+        return langlookup[lang]["name"]
+    except KeyError:
+        print("No name found for {}. Defaulting to DEBUG.".format(lang))
+        return "DEBUG"
+
+
+def get_lang_native_name(lang):
+    with open(str(LANGUAGELOOKUP_PATH)) as f:
+        langlookup = ujson.load(f)
+
+    try:
+        return langlookup[lang]["native_name"]
+    except KeyError:
+        print("No native name found for {}. Defaulting to DEBUG.".format(lang))
+        return "DEBUG"
+
+
+def save_metadata(zf, metadata):
+    dump = ujson.dumps(metadata)
+    metadata_name = "{}_metadata.json".format(metadata["code"])
+    zf.writestr(metadata_name, dump)
