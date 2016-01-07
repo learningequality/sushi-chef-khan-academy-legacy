@@ -256,7 +256,7 @@ def smart_translate_item_data(item_data: dict, gettext):
         if 'content' in item_data:
             item_data['content'] = gettext(item_data['content']) if item_data['content'] else ""
 
-        for field, field_data in item_data.iteritems():
+        for field, field_data in item_data.items():
             if isinstance(field_data, dict):
                 item_data[field] = smart_translate_item_data(field_data)
             elif isinstance(field_data, list):
