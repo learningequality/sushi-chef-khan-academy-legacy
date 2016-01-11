@@ -458,5 +458,5 @@ def get_lang_native_name(lang):
 
 def save_metadata(zf, metadata):
     dump = ujson.dumps(metadata)
-    metadata_name = "{}_metadata.json".format(metadata["code"])
+    metadata_name = "metadata.json"
     zf.writestr(metadata_name, dump)
