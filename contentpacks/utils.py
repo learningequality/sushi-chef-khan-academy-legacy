@@ -56,14 +56,19 @@ class Catalog(dict):
     Just like a dict, but computes some additional metadata specific to i18n catalog files.
     """
 
-    def __init__(self, pofile: polib._BaseFile):
+    def __init__(self, pofile=None):
         """
         Extract the strings from the given pofile, and computes the metadata.
         """
-        self.update({m.msgid: m.msgstr for m in pofile if m.translated()})
+        if not pofile:
+            pofile = []
+            self.percent_translated = 0
+        else:
 
-        # compute metadata -- needs to be after we add the translated strings
-        self.percent_translated = self.compute_translated(pofile)
+            self.update({m.msgid: m.msgstr for m in pofile if m.translated()})
+
+            # compute metadata -- needs to be after we add the translated strings
+            self.percent_translated = self.compute_translated(pofile)
 
         super().__init__()
 
