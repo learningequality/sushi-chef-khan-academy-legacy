@@ -3,13 +3,14 @@
 makepack
 
 Usage:
-  makecontentpacks ka-lite <lang> <version> [--subtitlelang=subtitle-lang --contentlang=content-lang --interfacelang=interface-lang --videolang=video-lang]
+  makecontentpacks ka-lite <lang> <version> [--subtitlelang=subtitle-lang --contentlang=content-lang --interfacelang=interface-lang --videolang=video-lang --out=outdir]
   makecontentpacks -h | --help
   makecontentpacks --version
 
 """
-
+import os
 from docopt import docopt
+from pathlib import Path
 
 from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_video_map, retrieve_html_exercises
 from contentpacks.utils import translate_nodes, flatten_topic_tree, \
@@ -17,7 +18,7 @@ from contentpacks.utils import translate_nodes, flatten_topic_tree, \
     generate_kalite_language_pack_metadata
 
 
-def make_language_pack(lang, version, sublangargs):
+def make_language_pack(lang, version, sublangargs, filename):
 
     topic_data, content_data, exercise_data, subtitles, interface_catalog, content_catalog, dubmap = retrieve_language_resources(version, sublangargs)
 
@@ -44,8 +45,7 @@ def make_language_pack(lang, version, sublangargs):
 
     pack_metadata = generate_kalite_language_pack_metadata(lang, version, interface_catalog, content_catalog)
 
-    filename = "{lang}.zip".format(lang=lang)
-    bundle_language_pack(filename, node_data, interface_catalog, interface_catalog, pack_metadata)
+    bundle_language_pack(str(filename), node_data, interface_catalog, interface_catalog, pack_metadata)
 
 
 def normalize_sublang_args(args):
@@ -68,9 +68,13 @@ def main():
                              "software aren't implemented yet.")
     del args["ka-lite"]
 
+    lang = args["<lang>"]
+    version = args["<version>"]
+    out = Path(args["--out"]) if args['--out'] else Path.cwd() / "{lang}.zip".format(lang=lang)
+
     sublangs = normalize_sublang_args(args)
 
-    make_language_pack(args["<lang>"], args["<version>"], sublangs)
+    make_language_pack(lang, version, sublangs, out)
 
 if __name__ == "__main__":
     main()
