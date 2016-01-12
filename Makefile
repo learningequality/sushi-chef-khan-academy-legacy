@@ -8,5 +8,9 @@ supported:
 
 all: supported
 
-pex:
-	pex --python=python3 -r requirements.txt -m contentpacks -o makecontentpacks --no-wheel .
+sdist:
+	python setup.py sdist
+
+pex: sdist
+	pex --python=python3 -r requirements.txt -o makecontentpacks --no-wheel -m contentpacks dist/content-pack-maker-`python setup.py --version`.tar.gz
+
