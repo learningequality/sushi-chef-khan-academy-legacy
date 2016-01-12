@@ -7,3 +7,6 @@ supported:
 	python contentpacks/bin/makecontentpacks ka-lite fr 0.15 --out=out/fr.zip
 
 all: supported
+
+pex:
+	pex --python=python3 -r requirements.txt -m contentpacks -o makecontentpacks --no-wheel .
