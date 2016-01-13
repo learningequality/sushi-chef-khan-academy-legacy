@@ -14,3 +14,5 @@ sdist:
 pex: sdist
 	pex --python=python3 -r requirements.txt -o makecontentpacks -m contentpacks --disable-cache --no-wheel dist/content-pack-maker-`python setup.py --version`.tar.gz
 
+publish:
+	scp -P 4242 out/*.zip $(sshuser)@pantry.learningequality.org:/var/www/downloads/$(project)/$(version)/content/contentpacks/

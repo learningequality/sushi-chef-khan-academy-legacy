@@ -1,0 +1,21 @@
+machine:
+  python:
+    version: 3.5.0
+  environment:
+    project: ka-lite
+    version: 0.16
+    sshuser: circleci
+
+dependencies:
+  override:
+    - pip install pex
+
+test:
+  override:
+    - make supported
+
+deployment:
+  pantry:
+    branch: master
+    commands:
+      - make publish
