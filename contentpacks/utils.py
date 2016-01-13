@@ -49,7 +49,7 @@ TOPIC_FIELDS_TO_TRANSLATE = [
 ]
 
 
-LANGUAGELOOKUP_DATA = pkgutil.get(__package__, "resources/languagelookup.json")
+LANGUAGELOOKUP_DATA = pkgutil.get_data('contentpacks', "resources/languagelookup.json")
 
 
 class Catalog(dict):
