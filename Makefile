@@ -12,5 +12,5 @@ sdist:
 	python setup.py sdist
 
 pex: sdist
-	pex --python=python3 -r requirements.txt -o makecontentpacks --no-wheel -m contentpacks dist/content-pack-maker-`python setup.py --version`.tar.gz
+	pex --python=python3 -r requirements.txt -o makecontentpacks -m contentpacks --disable-cache --no-wheel dist/content-pack-maker-`python setup.py --version`.tar.gz
 
