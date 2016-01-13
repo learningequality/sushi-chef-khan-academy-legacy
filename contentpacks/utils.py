@@ -1,5 +1,6 @@
 import copy
 import os
+import pkgutil
 import urllib.parse
 import urllib.request
 from urllib.parse import urlparse
@@ -48,7 +49,7 @@ TOPIC_FIELDS_TO_TRANSLATE = [
 ]
 
 
-LANGUAGELOOKUP_PATH = pathlib.Path(__file__).parent / "resources" / "languagelookup.json"
+LANGUAGELOOKUP_DATA = pkgutil.get(__package__, "resources/languagelookup.json")
 
 
 class Catalog(dict):
@@ -440,8 +441,7 @@ def generate_kalite_language_pack_metadata(lang: str, version: str, interface_ca
 
 
 def get_lang_name(lang):
-    with open(str(LANGUAGELOOKUP_PATH)) as f:
-        langlookup = ujson.load(f)
+    langlookup = ujson.loads(LANGUAGELOOKUP_DATA)
 
     try:
         return langlookup[lang]["name"]
@@ -451,8 +451,7 @@ def get_lang_name(lang):
 
 
 def get_lang_native_name(lang):
-    with open(str(LANGUAGELOOKUP_PATH)) as f:
-        langlookup = ujson.load(f)
+    langlookup = ujson.loads(LANGUAGELOOKUP_DATA)
 
     try:
         return langlookup[lang]["native_name"]
