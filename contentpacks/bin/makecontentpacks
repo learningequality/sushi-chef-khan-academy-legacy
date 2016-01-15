@@ -14,7 +14,9 @@ from docopt import docopt
 from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_video_map, retrieve_html_exercises
 from contentpacks.utils import translate_nodes, flatten_topic_tree, \
     remove_untranslated_exercises, bundle_language_pack, separate_exercise_types
+import logging
 
+logging.basicConfig(filename='example.log',level=logging.DEBUG)
 
 def make_language_pack(lang, version, sublangargs):
 

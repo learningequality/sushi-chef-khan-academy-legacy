@@ -48,27 +48,39 @@ TOPIC_FIELDS_TO_TRANSLATE = [
 ]
 
 
-def download_and_cache_file(url, cachedir=None, ignorecache=False, filename=None) -> str:
+def cache_file(func):
+    """
+    Execute the decorated function only if the file in question is not already cached.
+    Returns the path to the file. Always download the file if ignorecache is True.
+    All decorated functions must only accept 2 args, 'url' and 'path'.
+    """
+    def func_wrapper(url, cachedir=None, ignorecache=False, filename=None):
+            if not cachedir:
+                cachedir = os.path.join(os.getcwd(), "build")
+
+            os.makedirs(cachedir, exist_ok=True)
+
+            if not filename:
+                filename = os.path.basename(urlparse(url).path)
+
+            path = os.path.join(cachedir, filename)
+
+            if ignorecache or not os.path.exists(path):
+                func(url, path)
+
+            return path
+
+    return func_wrapper
+
+
+@cache_file
+def download_and_cache_file(url, path) -> str:
     """
     Download the given url if it's not saved in cachedir. Returns the
     path to the file. Always download the file if ignorecache is True.
     """
 
-    if not cachedir:
-        cachedir = os.path.join(os.getcwd(), "build")
-
-    os.makedirs(cachedir, exist_ok=True)
-
-    if not filename:
-        filename = os.path.basename(urlparse(url).path)
-
-    path = os.path.join(cachedir, filename)
-    
-    if ignorecache or not os.path.exists(path):
-        urllib.request.urlretrieve(url, path)
-
-    return path
-
+    urllib.request.urlretrieve(url, path)
 
 
 def translate_exercises(exercise_data: dict, catalog: polib.POFile) -> dict:

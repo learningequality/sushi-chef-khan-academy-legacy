@@ -5,12 +5,15 @@ import filecmp
 import fnmatch
 import gc
 import glob
+import logging
 import os
+import re
 import shutil
 import subprocess
 import urllib
 import tempfile
 import zipfile
+from functools import reduce
 from multiprocessing.pool import ThreadPool as Pool
 
 import polib
@@ -19,8 +22,7 @@ import ujson
 from babel.messages.catalog import Catalog
 from babel.messages.pofile import read_po
 
-from contentpacks.utils import download_and_cache_file
-
+from contentpacks.utils import download_and_cache_file, cache_file
 
 NUM_PROCESSES = 5
 
@@ -227,44 +229,247 @@ def _retrieve_ka_topic_tree(lang="en"):
     path = download_and_cache_file
 
 
-def retrieve_kalite_content_data(url=None, force=False) -> dict:
+first_cap_re = re.compile('(.)([A-Z][a-z]+)')
+all_cap_re = re.compile('([a-z0-9])([A-Z])')
+
+
+def convert_camel_case(name) -> str:
+    s1 = first_cap_re.sub(r'\1_\2', name)
+    return all_cap_re.sub(r'\1_\2', s1).lower()
+
+
+node_data = None
+
+
+def convert_all_nodes_to_camel_case(nodes) -> list:
+    for i, node in enumerate(nodes):
+        new_node = {}
+        for k, v in node.items():
+            new_node[convert_camel_case(k)] = v
+        nodes[i] = new_node
+
+
+# Khan Academy specific blacklists
+
+slug_blacklist = ["new-and-noteworthy", "talks-and-interviews", "coach-res"]  # not relevant
+slug_blacklist += ["cs", "towers-of-hanoi"]  # not (yet) compatible
+slug_blacklist += ["cc-third-grade-math", "cc-fourth-grade-math", "cc-fifth-grade-math", "cc-sixth-grade-math",
+                   "cc-seventh-grade-math", "cc-eighth-grade-math"]  # common core
+slug_blacklist += ["MoMA", "getty-museum", "stanford-medicine", "crash-course1", "mit-k12", "hour-of-code",
+                   "metropolitan-museum", "bitcoin", "tate", "crash-course1", "crash-course-bio-ecology",
+                   "british-museum", "aspeninstitute", "asian-art-museum", "amnh", "nova"]  # partner content
+
+# TODO(jamalex): re-check these videos later and remove them from here if they've recovered
+slug_blacklist += ["mortgage-interest-rates", "factor-polynomials-using-the-gcf", "inflation-overview",
+                   "time-value-of-money", "changing-a-mixed-number-to-an-improper-fraction",
+                   "applying-the-metric-system"]  # errors on video downloads
+
+
+# 'Mortgage interest rates' at http://s3.amazonaws.com/KA-youtube-converted/vy_pvstdBhg.mp4/vy_pvstdBhg.mp4...
+# 'Inflation overview' at http://s3.amazonaws.com/KA-youtube-converted/-Z5kkfrEc8I.mp4/-Z5kkfrEc8I.mp4...
+# 'Factor expressions using the GCF' at http://s3.amazonaws.com/KA-youtube-converted/_sIuZHYrdWM.mp4/_sIuZHYrdWM.mp4...
+# 'Time value of money' at http://s3.amazonaws.com/KA-youtube-converted/733mgqrzNKs.mp4/733mgqrzNKs.mp4...
+# 'Applying the metric system' at http://s3.amazonaws.com/KA-youtube-converted/CDvPPsB3nEM.mp4/CDvPPsB3nEM.mp4...
+# 'Mixed numbers: changing to improper fractions' at http://s3.amazonaws.com/KA-youtube-converted/xkg7370cpjs.mp4/xkg7370cpjs.mp4...
+
+slug_key = {
+    "Topic": "slug",
+    "Video": "readable_id",
+    "Exercise": "name",
+}
+
+def modify_slugs(nodes) -> list:
+    for node in nodes:
+        node["slug"] = node.get(slug_key.get(node.get("kind")))
+    return nodes
+
+id_key = {
+    "Topic": "slug",
+    "Video": "youtube_id",
+    "Exercise": "name",
+}
+
+def modify_ids(nodes) -> list:
+    for node in nodes:
+        node["id"] = node.get(id_key.get(node.get("kind")))
+    return nodes
+
+def apply_black_list(nodes) -> list:
+    return [node for node in nodes if node.get("slug") not in slug_blacklist]
+
+def group_by_slug(count_dict, item):
+    # Build a dictionary, keyed by slug, of items that share that slug
+    if item.get("slug") in count_dict:
+        count_dict[item.get("slug")].append(item)
+    else:
+        count_dict[item.get("slug")] = [item]
+    return count_dict
+
+def create_paths_remove_orphans_and_empty_topics(nodes) -> list:
+    node_dict = {node.get("id"): node for node in nodes}
+    # Set the slug on the root node to "khan"
+    node_dict["x00000000"]["slug"] = "khan"
+
+    node_list = []
+
+    def recurse_nodes(node, parent_path=""):
+
+        """
+        :param node: dict
+        :param parent_path: str
+        """
+        node["path"] = parent_path + node.get("slug") + "/"
+
+        children = node.pop("child_data", [])
+
+        if children:
+            children = [node_dict.get(child.get("id")) for child in children if node_dict.get(child.get("id"))]
+
+            counts = reduce(group_by_slug, children, {})
+            for items in counts.values():
+                # Slug has more than one item!
+                if len(items) > 1:
+                    i = 1
+                    # Rename the items
+                    for item in items:
+                        if item.get("kind") != "Video":
+                            # Don't change video slugs, as that will break internal links from KA.
+                            item["slug"] = item["slug"] + "_{i}".format(i=i)
+                            item["path"] = node.get("path") + item["slug"] + "/"
+                            i += 1
+
+        for child in children:
+            recurse_nodes(child, node.get("path"))
+
+        if children or node.get("kind") != "Topic":
+            node_list.append(node)
+
+    recurse_nodes(node_dict["x00000000"])
+
+    return node_list
+
+@cache_file
+def download_and_clean_kalite_data(url, path) -> str:
+    data = requests.get(url)
+    while data.status_code != 200:
+        data = requests.get(url)
+
+    node_data = ujson.loads(data.content)
+
+    # Convert all keys of nodes to snake case from camel case.
+    for key in node_data:
+        node_data[key] = convert_all_nodes_to_camel_case(node_data[key])
+
+    # Remove any topic nodes that are hidden, deleted, or set to 'do_not_publish'
+    # Also remove those flags from the nodes themselves.
+
+    topic_nodes = []
+
+    for node in node_data["topics"]:
+        hidden = node.pop("hide")
+        dnp = node.pop("do_not_publish")
+        deleted = node.pop("deleted")
+        if not (hidden or dnp or deleted):
+            topic_nodes.append(node)
+
+    node_data["topics"] = topic_nodes
+
+    # Hack to hardcode the mp4 format flag on Videos.
+    for node in node_data["videos"]:
+        node["format"] = "mp4"
+
+    # Flatten node_data
+
+    node_data = [node for node_list in node_data for node in node_list]
+
+    # Modify slugs by kind to give more readable URLs
+
+    node_data = modify_slugs(node_data)
+
+    # Remove blacklisted items
+
+    node_data = apply_black_list(node_data)
+
+    # Create paths, deduplicate slugs, remove orphaned content and childless topics
+
+    node_data = create_paths_remove_orphans_and_empty_topics(node_data)
+
+    # Modify id keys to match KA Lite id formats
+
+    node_data = modify_ids(node_data)
+
+    # Save node_data to disk
+
+    with open(path, "w") as f:
+        return ujson.dump(node_data, f)
+
+
+topic_attributes = [
+    'childData',
+    'deleted',
+    'description',
+    'doNotPublish',
+    'hide',
+    'id',
+    'kind',
+    'slug',
+    'title'
+]
+
+exercise_attributes = [
+    'allAssessmentItems',
+    'curatedRelatedVideos',
+    'description',
+    'displayName',
+    'fileName',
+    'id',
+    'kind',
+    'name',
+    'prerequisites',
+    'slug',
+    'title',
+    'usesAssessmentItems'
+]
+
+video_attributes = [
+    'description',
+    'downloadSize',
+    'duration',
+    'id',
+    'imageUrl',
+    'keywords',
+    'kind',
+    'licenseName',
+    'readableId',
+    'relatedExerciseUrl',
+    'relativeUrl',
+    'sha',
+    'slug',
+    'title',
+    'youtubeId'
+]
+
+
+def retrieve_kalite_data(lang=None, force=False) -> list:
     """
-    Retrieve the KA Lite contents.json file in the master branch.  If
-    url is given, download from that url instead.
+    Retrieve the KA content data direct from KA.
     """
-    if not url:
-        url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/contents.json"
+    if lang:
+        url = "http://www.khanacademy.org/api/v2/topics/topictree?lang={lang}&projection={projection}".format(lang=lang)
+    else:
+        url = "http://www.khanacademy.org/api/v2/topics/topictree?projection={projection}"
 
-    path = download_and_cache_file(url, ignorecache=force)
-    with open(path) as f:
-        return ujson.load(f)
+    projection = {
+        "topics": [{key: 1 for key in topic_attributes}],
+        "exercises": [{key: 1 for key in exercise_attributes}],
+        "videos": [{key: 1 for key in video_attributes}]
+    }
 
+    url = url.format(projection=ujson.dumps(projection))
 
-def retrieve_kalite_topic_data(url=None, force=False):
-    """
-    Retrieve the KA Lite topics.json file in the master branch.  If
-    url is given, download from that url instead.
-    """
-    if not url:
-        url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/topics.json"
+    node_data = download_and_clean_kalite_data(url, ignorecache=force, filename="nodes.json")
 
-    path = download_and_cache_file(url, ignorecache=force)
-    with open(path) as f:
-        return ujson.load(f)
-
-
-def retrieve_kalite_exercise_data(url=None, force=False) -> dict:
-    """
-    Retrieve the KA Lite exercises.json file in the master branch.  If
-    url is given, download from that url instead.
-    """
-    print("downloading exercise data")
-    if not url:
-        url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/exercises.json"
-
-    path = download_and_cache_file(url, ignorecache=force)
-    with open(path) as f:
-        return ujson.load(f)
+    return node_data
 
 
 def apply_dubbed_video_map(content_data: dict, dubmap: dict) -> dict:
