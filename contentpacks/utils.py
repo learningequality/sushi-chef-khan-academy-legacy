@@ -5,7 +5,6 @@ import urllib.request
 from urllib.parse import urlparse
 from contentpacks.models import Item
 from peewee import Using, SqliteDatabase
-
 import polib
 import ujson
 import zipfile
@@ -25,6 +24,7 @@ class NodeType:
     exercise = "Exercise"
     video = "Video"
     topic = "Topic"
+
 
 EXERCISE_FIELDS_TO_TRANSLATE = [
     "description",
@@ -150,7 +150,6 @@ def translate_contents(content_data: dict, catalog: polib.POFile) -> dict:
 
 
 def flatten_topic_tree(topic_root, contents, exercises):
-
     def _flatten_topic(node):
         childless_topic = copy.copy(node)
         children = childless_topic.pop("children", [])
@@ -192,6 +191,7 @@ def translate_assessment_item_text(items: dict, catalog: polib.POFile):
     Assessment item translations are considered essential, and thus
     if they're found missing will make that exercise as unavailable.
     """
+
     # TODO (aronasorman): implement tests
     def gettext(s):
         """
@@ -302,7 +302,6 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog):
 
 
 def convert_dicts_to_models(nodes):
-
     def _make_extra_fields_value(present_fields, node_dict):
         """
         Generate the JSON string that goes into an item's extra_fields value.
@@ -350,7 +349,6 @@ def save_models(nodes, db):
 
 
 def save_catalog(catalog: dict, zf: zipfile.ZipFile, name: str):
-
     mofile = polib.MOFile()
     for msgid, msgstr in catalog.items():
         entry = polib.POEntry(msgid=msgid, msgstr=msgstr)
@@ -363,11 +361,11 @@ def save_catalog(catalog: dict, zf: zipfile.ZipFile, name: str):
 
 
 def populate_parent_foreign_keys(nodes):
-    node_keys = {node.slug: node for node in nodes}
+    node_keys = {node.path: node for node in nodes}
 
     for node in node_keys.values():
         path = pathlib.Path(node.path)
-        parent_slug = path.parent.name
+        parent_slug = str(path.parent)
         try:
             parent = node_keys[parent_slug]
             node.parent = parent
@@ -391,5 +389,5 @@ def separate_exercise_types(node_data):
         return node["kind"] == NodeType.exercise and node["uses_assessment_items"]
 
     return (id for id, n in node_data if _is_html_exercise(n)), \
-        (id for id, n in node_data if _is_assessment_exercise(n)), \
-        node_data
+           (id for id, n in node_data if _is_assessment_exercise(n)), \
+           node_data

@@ -1,4 +1,3 @@
-
 import collections
 import copy
 import filecmp
@@ -9,34 +8,27 @@ import logging
 import os
 import re
 import shutil
-import subprocess
 import urllib
 import tempfile
 import zipfile
 from functools import reduce
 from multiprocessing.pool import ThreadPool as Pool
-
 import polib
 import requests
 import ujson
 from babel.messages.catalog import Catalog
-from babel.messages.pofile import read_po
-
 from contentpacks.utils import download_and_cache_file, cache_file
 
 NUM_PROCESSES = 5
 
-
 LangpackResources = collections.namedtuple(
     "LangpackResources",
-    ["topics",
-     "contents",
-     "exercises",
+    ["node_data",
      "subtitles",
      "kalite_catalog",
      "ka_catalog",
      "dubbed_video_mapping"
-    ])
+     ])
 
 
 # monkey patch polib.POEntry.merge
@@ -51,16 +43,14 @@ def new_merge(self, other):
     self.old_merge(other)
     self.msgstr = other.msgstr if other.msgstr else self.msgstr
 
+
 POEntry_class = polib.POEntry
 POEntry_class.old_merge = POEntry_class.merge
 POEntry_class.merge = new_merge
 
 
 def retrieve_language_resources(version: str, sublangargs: dict) -> LangpackResources:
-
-    content_data = retrieve_kalite_content_data()
-    exercise_data = retrieve_kalite_exercise_data()
-    topic_data = retrieve_kalite_topic_data()
+    node_data = retrieve_kalite_data()
 
     video_ids = list(content_data.keys())
     # subtitle_list = retrieve_subtitles(video_ids, lang)
@@ -77,19 +67,22 @@ def retrieve_language_resources(version: str, sublangargs: dict) -> LangpackReso
         crowdin_project_name = "ka-lite"
         crowdin_secret_key = os.environ["KALITE_CROWDIN_SECRET_KEY"]
         includes = version
-        kalite_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code=sublangargs["interface_lang"], includes=includes, force=True)
+        kalite_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key,
+                                               lang_code=sublangargs["interface_lang"], includes=includes, force=True)
 
         # retrieve Khan Academy po files from CrowdIn
         crowdin_project_name = "khanacademy"
         crowdin_secret_key = os.environ["KA_CROWDIN_SECRET_KEY"]
         includes = []
-        ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code=sublangargs["content_lang"], force=True)
+        ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key,
+                                           lang_code=sublangargs["content_lang"], force=True)
 
-    return LangpackResources(topic_data, content_data, exercise_data, subtitle_list, kalite_catalog, ka_catalog, dubbed_video_mapping)
+    return LangpackResources(node_data, subtitle_list, kalite_catalog, ka_catalog,
+                             dubbed_video_mapping)
 
 
 def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
-    #videos => contains list of youtube ids
+    # videos => contains list of youtube ids
     """return list of youtubeids that were downloaded"""
     downloaded_videos = []
     not_downloaded_videos = []
@@ -100,7 +93,7 @@ def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
         )
 
         try:
-            response =  requests.get(request_url)
+            response = requests.get(request_url)
             response.raise_for_status()
         except requests.exceptions.HTTPError:
             print("Skipping {}".format(youtube_id))
@@ -112,7 +105,8 @@ def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
             continue
         else:
             amara_id = content["objects"][0]["id"]
-            subtitle_download_uri = "https://www.amara.org/api/videos/%s/languages/%s/subtitles/?format=vtt" %(amara_id, lang)
+            subtitle_download_uri = "https://www.amara.org/api/videos/%s/languages/%s/subtitles/?format=vtt" % (
+            amara_id, lang)
             try:
                 response_code = urllib.request.urlopen(subtitle_download_uri)
 
@@ -154,8 +148,8 @@ def retrieve_dubbed_video_mapping(video_ids: [str], lang: str) -> dict:
     return dubbed_video_mapping
 
 
-def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="en", force=False, includes="*.po") -> polib.POFile:
-
+def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="en", force=False,
+                          includes="*.po") -> polib.POFile:
     request_url_template = ("https://api.crowdin.com/api/"
                             "project/{project_id}/download/"
                             "{lang_code}.zip?key={key}")
