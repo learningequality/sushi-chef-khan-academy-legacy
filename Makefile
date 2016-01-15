@@ -5,6 +5,7 @@ supported: pex
 	./makecontentpacks ka-lite pt-BR 0.15 --out=out/pt-BR.zip
 	./makecontentpacks ka-lite de 0.15 --out=out/de.zip
 	./makecontentpacks ka-lite fr 0.15 --out=out/fr.zip
+	./makecontentpacks ka-lite zh 0.15 --out=out/fr.zip --contentlang=zh-TW --interfacelang=zh-CN
 
 all: supported
 
