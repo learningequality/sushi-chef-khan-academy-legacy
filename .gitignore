@@ -63,3 +63,4 @@ venv
 .hypothesis
 
 makecontentpacks
+out/
