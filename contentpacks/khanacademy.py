@@ -215,12 +215,6 @@ def _get_video_ids(content_data: dict) -> [str]:
     return sorted(video_ids)
 
 
-def _retrieve_ka_topic_tree(lang="en"):
-    """
-    Retrieve the full topic tree straight from KA.
-    """
-    url = None
-    path = download_and_cache_file
 
 
 first_cap_re = re.compile('(.)([A-Z][a-z]+)')
