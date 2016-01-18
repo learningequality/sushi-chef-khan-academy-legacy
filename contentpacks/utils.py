@@ -1,5 +1,6 @@
 import copy
 import os
+import pkgutil
 import urllib.parse
 import urllib.request
 from urllib.parse import urlparse
@@ -31,6 +32,42 @@ NODE_FIELDS_TO_TRANSLATE = [
     "description",
     "display_name",
 ]
+
+
+LANGUAGELOOKUP_DATA = pkgutil.get_data('contentpacks', "resources/languagelookup.json")
+
+
+class Catalog(dict):
+    """
+    Just like a dict, but computes some additional metadata specific to i18n catalog files.
+    """
+
+    def __init__(self, pofile=None):
+        """
+        Extract the strings from the given pofile, and computes the metadata.
+        """
+        if not pofile:
+            pofile = []
+            self.percent_translated = 0
+        else:
+
+            self.update({m.msgid: m.msgstr for m in pofile if m.translated()})
+
+            # compute metadata -- needs to be after we add the translated strings
+            self.percent_translated = self.compute_translated(pofile)
+
+        super().__init__()
+
+    def compute_translated(self, pofile: polib._BaseFile) -> int:
+        """
+        Returns the percentage of strings translated. Returned number is between 0
+        to 100.
+
+        """
+        trans_count = len(self)
+        all_strings_count = len(pofile)
+
+        return (trans_count / all_strings_count) * 100
 
 
 def cache_file(func):
@@ -79,7 +116,6 @@ def translate_nodes(nodes: list, catalog: Catalog) -> list:
     """
     nodes = copy.deepcopy(nodes)
     for node in nodes:
-
 
         for field in NODE_FIELDS_TO_TRANSLATE:
             msgid = node.get(field)
@@ -151,7 +187,7 @@ def smart_translate_item_data(item_data: dict, gettext):
         if 'content' in item_data:
             item_data['content'] = gettext(item_data['content']) if item_data['content'] else ""
 
-        for field, field_data in item_data.iteritems():
+        for field, field_data in item_data.items():
             if isinstance(field_data, dict):
                 item_data[field] = smart_translate_item_data(field_data)
             elif isinstance(field_data, list):
@@ -188,7 +224,7 @@ def remove_untranslated_exercises(nodes, html_ids, translated_assessment_data):
             continue
 
 
-def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog):
+def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata):
     with zipfile.ZipFile(dest, "w") as zf, tempfile.NamedTemporaryFile() as dbf:
         db = SqliteDatabase(dbf.name)
         db.connect()
@@ -208,6 +244,8 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog):
         # save_subtitles(subtitle_path, zf)
 
         save_db(db, zf)
+
+        save_metadata(zf, metadata)
 
     return dest
 
@@ -302,3 +340,48 @@ def separate_exercise_types(node_data):
     return (id for id, n in node_data if _is_html_exercise(n)), \
            (id for id, n in node_data if _is_assessment_exercise(n)), \
            node_data
+
+
+def generate_kalite_language_pack_metadata(lang: str, version: str, interface_catalog: Catalog, content_catalog: Catalog):
+    """
+    Create the language pack metadata based on the files passed in.
+    """
+    metadata = {
+        "code": lang,
+        'software_version': version,
+        'language_pack_version': 1,
+        'percent_translated': interface_catalog.percent_translated,
+        'topic_tree_translated': content_catalog.percent_translated,
+        'subtitle_count': 0,
+        "name": get_lang_name(lang),
+        'native_name': get_lang_native_name(lang),
+    }
+
+    return metadata
+
+
+def get_lang_name(lang):
+    langlookup = ujson.loads(LANGUAGELOOKUP_DATA)
+
+    try:
+        return langlookup[lang]["name"]
+    except KeyError:
+        print("No name found for {}. Defaulting to DEBUG.".format(lang))
+        return "DEBUG"
+
+
+def get_lang_native_name(lang):
+    langlookup = ujson.loads(LANGUAGELOOKUP_DATA)
+
+    try:
+        return langlookup[lang]["native_name"]
+    except KeyError:
+        print("No native name found for {}. Defaulting to DEBUG.".format(lang))
+        return "DEBUG"
+
+
+def save_metadata(zf, metadata):
+    dump = ujson.dumps(metadata)
+    metadata_name = "metadata.json"
+    zf.writestr(metadata_name, dump)
+

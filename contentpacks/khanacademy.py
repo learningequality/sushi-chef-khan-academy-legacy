@@ -18,8 +18,8 @@ import polib
 import requests
 import json
 import ujson
-from babel.messages.catalog import Catalog
-from contentpacks.utils import download_and_cache_file, cache_file
+
+from contentpacks.utils import download_and_cache_file, Catalog, cache_file
 
 NUM_PROCESSES = 5
 
@@ -63,12 +63,13 @@ def retrieve_language_resources(version: str, sublangargs: dict) -> LangpackReso
     # retrieve KA Lite po files from CrowdIn
     interface_lang = sublangargs["interface_lang"]
     if interface_lang == "en":
-        kalite_catalog = {}
-        ka_catalog = {}
+        kalite_catalog = Catalog()
+        ka_catalog = Catalog()
     else:
         crowdin_project_name = "ka-lite"
         crowdin_secret_key = os.environ["KALITE_CROWDIN_SECRET_KEY"]
-        includes = version
+
+        includes = "*{}*.po".format(version)
         kalite_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key,
                                                lang_code=sublangargs["interface_lang"], includes=includes, force=True)
 
@@ -190,7 +191,7 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="e
 
     shutil.rmtree(zip_extraction_path)
 
-    msgid_mapping = {m.msgid: m.msgstr for m in main_pofile if m.translated()}
+    msgid_mapping = Catalog(main_pofile)
 
     return msgid_mapping
 
