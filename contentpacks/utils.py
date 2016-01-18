@@ -26,25 +26,10 @@ class NodeType:
     topic = "Topic"
 
 
-EXERCISE_FIELDS_TO_TRANSLATE = [
-    "description",
-    "title",
-    "display_name",
-]
-
-CONTENT_FIELDS_TO_TRANSLATE = [
-    "title",
-    "description",
-]
-
 NODE_FIELDS_TO_TRANSLATE = [
     "title",
     "description",
-]
-
-TOPIC_FIELDS_TO_TRANSLATE = [
-    "title",
-    "description",
+    "display_name",
 ]
 
 
@@ -83,72 +68,28 @@ def download_and_cache_file(url, path) -> str:
     urllib.request.urlretrieve(url, path)
 
 
-def translate_exercises(exercise_data: dict, catalog: polib.POFile) -> dict:
-    # fully copy, so we don't need mess with anyone else using
-    # exercise_data in its pristine form
-    exercise_data = copy.deepcopy(exercise_data)
+def translate_nodes(nodes: list, catalog: Catalog) -> list:
+    """Translates all fields across all nodes:
 
-    for key, exercise in exercise_data.items():
-        for field in EXERCISE_FIELDS_TO_TRANSLATE:
-            msgid = exercise[field]
-            exercise_data[key][field] = catalog.msgid_mapping.get(msgid, "")
-
-    return exercise_data
-
-
-def translate_nodes(nodes, catalog):
-    """Translates the following fields which are common across all nodes:
-
-    title
-    description
-
-    (see NODE_FIELDS_TO_TRANSLATE for a more up-to-date list)
+    (see NODE_FIELDS_TO_TRANSLATE for list)
 
     Note that translation in these fields is nonessential -- meaning
     that even if they're not translated they're not a dealbreaker, and
     thus won't be eliminated from the topic tree.
-
     """
-    for slug, node in nodes:
+    nodes = copy.deepcopy(nodes)
+    for node in nodes:
 
-        node = copy.copy(node)
+
         for field in NODE_FIELDS_TO_TRANSLATE:
-            original_text = node[field]
-            try:
-                node[field] = catalog[original_text]
-            except KeyError:
-                print("could not translate {field} for {title}".format(field=field, title=node["title"]))
+            msgid = node.get(field)
+            if msgid:
+                try:
+                    node[field] = catalog[msgid]
+                except KeyError:
+                    print("could not translate {field} for {title}".format(field=field, title=node["title"]))
 
-        yield slug, node
-
-
-def translate_topics(topic_data: dict, catalog: polib.POFile) -> dict:
-    topic_data = copy.deepcopy(topic_data)
-
-    def _translate_topic(topic):
-        for field in TOPIC_FIELDS_TO_TRANSLATE:
-            fieldval = topic.get(field)
-            if field in topic:
-                topic[field] = catalog.msgid_mapping.get(fieldval, fieldval)
-
-        topic['children'] = [_translate_topic(child) for child in topic.get('children', [])]
-        return topic
-
-    _translate_topic(topic_data)
-    return topic_data
-
-
-def translate_contents(content_data: dict, catalog: polib.POFile) -> dict:
-    content_data = copy.deepcopy(content_data)
-
-    for key, content in content_data.items():
-        for field in CONTENT_FIELDS_TO_TRANSLATE:
-            msgid = content[field]
-            content_data[key][field] = catalog.msgid_mapping.get(msgid, "")
-
-    return content_data
-
-
+    return nodes
 
 
 def translate_assessment_item_text(items: dict, catalog: polib.POFile):
@@ -298,7 +239,7 @@ def convert_dicts_to_models(nodes):
 
         return item
 
-    yield from (convert_dict_to_model(node) for _, node in nodes)
+    yield from (convert_dict_to_model(node) for node in nodes)
 
 
 def save_models(nodes, db):

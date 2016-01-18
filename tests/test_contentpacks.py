@@ -9,11 +9,8 @@ from hypothesis.strategies import integers, lists, sampled_from, sets, text, \
 
 from contentpacks.khanacademy import _combine_catalogs, _get_video_ids, \
     retrieve_dubbed_video_mapping, retrieve_html_exercises, \
-    retrieve_kalite_content_data, retrieve_kalite_exercise_data, \
-    retrieve_kalite_topic_data, retrieve_translations, retrieve_subtitles
-from contentpacks.utils import CONTENT_FIELDS_TO_TRANSLATE, \
-    EXERCISE_FIELDS_TO_TRANSLATE, TOPIC_FIELDS_TO_TRANSLATE, translate_contents, \
-    translate_exercises, translate_topics
+    retrieve_kalite_data, retrieve_translations, retrieve_subtitles
+from contentpacks.utils import NODE_FIELDS_TO_TRANSLATE, translate_nodes
 
 
 logging.basicConfig()
@@ -168,17 +165,18 @@ class Test_translating_kalite_data:
         cls.ka_catalog = retrieve_translations("khanacademy", "dummy", lang_code="es-ES", includes="*learn.*.po")
 
     @vcr.use_cassette("tests/fixtures/cassettes/translate_topics.yml")
-    def test_translate_topics(self):
-        topic_data = retrieve_kalite_data()
-        translated_topic_data = translate_topics(
-            topic_data,
+    def test_translate_nodes(self):
+        node_data = retrieve_kalite_data()
+        translated_node_data = translate_nodes(
+            node_data,
             self.ka_catalog,
         )
 
-        def _test_topic_children(translated_topic, untranslated_topic):
-            for field in TOPIC_FIELDS_TO_TRANSLATE:
-                untranslated_fieldval = untranslated_topic.get(field)
-                translated_fieldval = translated_topic.get(field)
+        for translated_node, untranslated_node in zip(translated_node_data,
+                                                    node_data):
+            for field in NODE_FIELDS_TO_TRANSLATE:
+                untranslated_fieldval = untranslated_node.get(field)
+                translated_fieldval = translated_node.get(field)
 
                 assert (translated_fieldval ==
                         self.ka_catalog.msgid_mapping.get(
@@ -186,45 +184,12 @@ class Test_translating_kalite_data:
                             untranslated_fieldval)
                 )
 
-                for translated, untranslated in zip(translated_topic.get("children", []),
-                                                    untranslated_topic.get("children", [])):
-                    _test_topic_children(translated, untranslated)
-
-        _test_topic_children(translated_topic_data, topic_data)
-
-    @vcr.use_cassette("tests/fixtures/cassettes/translate_contents.yml")
-    def test_translate_contents(self):
-        content_data = retrieve_kalite_data()
-        translated_content_data = translate_contents(
-            content_data,
-            self.ka_catalog,
-        )
-
-        for content_id in translated_content_data:
-            for field in CONTENT_FIELDS_TO_TRANSLATE:
-                translated_fieldval = translated_content_data[content_id][field]
-                untranslated_fieldval = content_data[content_id][field]
-                assert translated_fieldval == self.ka_catalog.msgid_mapping.get(untranslated_fieldval, "")
-
-    @vcr.use_cassette("tests/fixtures/cassettes/translate_exercises.yml", filter_query_parameters=["key"])
-    def test_translating_kalite_exercise_data(self):
-        exercise_data = retrieve_kalite_data()
-        ka_catalog = retrieve_translations("khanacademy", "dummy", lang_code="es-ES", includes="*learn.*.po")
-
-        translated_exercise_data = translate_exercises(exercise_data, ka_catalog)
-
-        for exercise_id in translated_exercise_data:
-            for field in EXERCISE_FIELDS_TO_TRANSLATE:
-                translated_fieldval = translated_exercise_data[exercise_id][field]
-                untranslated_fieldval = exercise_data[exercise_id][field]
-                assert translated_fieldval == ka_catalog.msgid_mapping.get(untranslated_fieldval, "")
-
 
 class Test_retrieve_html_exercises:
 
     @vcr.use_cassette("tests/fixtures/cassettes/test_retrieve_html_exercises_setup.yml")
     def setup(self):
-        self.exercise_data = retrieve_kalite_exercise_data()
+        self.exercise_data = retrieve_kalite_data()
         self.khan_exercises = [key for key, e in self.exercise_data.items() if not e.get("uses_assessment_items")]
         self.khan_exercises.sort()
 
