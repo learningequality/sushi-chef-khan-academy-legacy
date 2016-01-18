@@ -11,10 +11,12 @@ import shutil
 import urllib
 import tempfile
 import zipfile
+from collections import OrderedDict
 from functools import reduce
 from multiprocessing.pool import ThreadPool as Pool
 import polib
 import requests
+import json
 import ujson
 from babel.messages.catalog import Catalog
 from contentpacks.utils import download_and_cache_file, cache_file
@@ -207,14 +209,12 @@ def _combine_catalogs(*catalogs):
     return catalog
 
 
-def _get_video_ids(content_data: dict) -> [str]:
+def _get_video_ids(node_data: list) -> [str]:
     """
     Returns a list of video ids given the KA content dict.
     """
-    video_ids = list(key for key in content_data.keys() if content_data[key]["kind"] == "Video")
+    video_ids = list(node.get("id") for node in node_data if node.get("kind") == "Video")
     return sorted(video_ids)
-
-
 
 
 first_cap_re = re.compile('(.)([A-Z][a-z]+)')
@@ -226,15 +226,13 @@ def convert_camel_case(name) -> str:
     return all_cap_re.sub(r'\1_\2', s1).lower()
 
 
-node_data = None
-
-
 def convert_all_nodes_to_camel_case(nodes) -> list:
     for i, node in enumerate(nodes):
         new_node = {}
         for k, v in node.items():
             new_node[convert_camel_case(k)] = v
         nodes[i] = new_node
+    return nodes
 
 
 # Khan Academy specific blacklists
@@ -357,7 +355,9 @@ def download_and_clean_kalite_data(url, path) -> str:
         hidden = node.pop("hide")
         dnp = node.pop("do_not_publish")
         deleted = node.pop("deleted")
-        if not (hidden or dnp or deleted):
+        # We want to remove all of these, except the root node,
+        # the only node we do hide, but we use for defining the overall KA channel
+        if not (hidden or dnp or deleted) or node.get("id") == "x00000000":
             topic_nodes.append(node)
 
     node_data["topics"] = topic_nodes
@@ -368,7 +368,7 @@ def download_and_clean_kalite_data(url, path) -> str:
 
     # Flatten node_data
 
-    node_data = [node for node_list in node_data for node in node_list]
+    node_data = [node for node_list in node_data.values() for node in node_list]
 
     # Modify slugs by kind to give more readable URLs
 
@@ -447,15 +447,18 @@ def retrieve_kalite_data(lang=None, force=False) -> list:
     else:
         url = "http://www.khanacademy.org/api/v2/topics/topictree?projection={projection}"
 
-    projection = {
-        "topics": [{key: 1 for key in topic_attributes}],
-        "exercises": [{key: 1 for key in exercise_attributes}],
-        "videos": [{key: 1 for key in video_attributes}]
-    }
+    projection = OrderedDict([
+        ("topics", [OrderedDict((key, 1) for key in topic_attributes)]),
+        ("exercises", [OrderedDict((key, 1) for key in exercise_attributes)]),
+        ("videos", [OrderedDict((key, 1) for key in video_attributes)])
+    ])
 
-    url = url.format(projection=ujson.dumps(projection))
+    url = url.format(projection=json.dumps(projection))
 
-    node_data = download_and_clean_kalite_data(url, ignorecache=force, filename="nodes.json")
+    node_data_path = download_and_clean_kalite_data(url, ignorecache=force, filename="nodes.json")
+
+    with open(node_data_path, 'r') as f:
+        node_data = ujson.load(f)
 
     return node_data
 
