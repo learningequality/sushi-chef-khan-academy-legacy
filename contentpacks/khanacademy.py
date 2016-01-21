@@ -196,20 +196,6 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="e
     return msgid_mapping
 
 
-def _combine_catalogs(*catalogs):
-    catalog = Catalog()
-
-    for oldcatalog in catalogs:
-        print("processing %s" % oldcatalog)
-        catalog._messages.update(oldcatalog._messages)
-        # manually call the gc here so we don't occupy too much
-        # memory, and avoid having one huge gc in the future by
-        # dumping a po file after it's read
-        gc.collect()
-
-    return catalog
-
-
 def _get_video_ids(node_data: list) -> [str]:
     """
     Returns a list of video ids given the KA content dict.

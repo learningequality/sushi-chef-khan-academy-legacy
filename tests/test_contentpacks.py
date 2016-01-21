@@ -6,7 +6,7 @@ from hypothesis import assume, given
 from hypothesis.strategies import integers, lists, sampled_from, sets, text, \
     tuples
 
-from contentpacks.khanacademy import _combine_catalogs, _get_video_ids, \
+from contentpacks.khanacademy import _get_video_ids, \
     retrieve_dubbed_video_mapping, retrieve_html_exercises, \
     retrieve_kalite_data, retrieve_translations, retrieve_subtitles
 from contentpacks.utils import NODE_FIELDS_TO_TRANSLATE, translate_nodes, Catalog
@@ -66,26 +66,6 @@ class Test_retrieve_translations:
         catalog = retrieve_translations(project_id, project_key)
 
         assert isinstance(catalog, Catalog)
-
-
-class Test__combine_catalogs:
-
-    @given(text(), integers(), integers())
-    def test_total_message_count(self, txt, msgcount1, msgcount2):
-        assume(0 < msgcount1 <= msgcount2 <= 100)
-
-        catalog1 = Catalog()
-        for n in range(msgcount1):
-            catalog1.add(id=str(n), string=txt)
-
-        catalog2 = Catalog()
-        for n in range(msgcount2):
-            catalog2.add(id=str(n + 1000), string=txt)  # we add 1000 to make sure the ids are unique
-
-        newcatalog = _combine_catalogs(catalog1, catalog2)
-
-        # the +1 is to account for the empty message, which gets added automatically.
-        assert len(list(newcatalog)) == msgcount1 + msgcount2 + 1
 
 
 class Test__get_video_ids:
