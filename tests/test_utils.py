@@ -11,7 +11,7 @@ from contentpacks.utils import NODE_FIELDS_TO_TRANSLATE, \
     download_and_cache_file, translate_nodes, \
     translate_assessment_item_text, NodeType, remove_untranslated_exercises, \
     convert_dicts_to_models, save_catalog, populate_parent_foreign_keys, \
-    save_db
+    save_db, save_models
 
 from helpers import generate_catalog
 from peewee import SqliteDatabase, Using
@@ -152,6 +152,8 @@ class Test_populate_parent_foreign_keys:
     @vcr.use_cassette("tests/fixtures/cassettes/kalite/node_data.json.yml")
     def test_all_nodes_have_parent_values(self):
         nodes = convert_dicts_to_models(retrieve_kalite_data())
+        db = SqliteDatabase(":memory:")
+        save_models(list(nodes), db)
         new_nodes = list(populate_parent_foreign_keys(nodes))
 
         for node in new_nodes:
