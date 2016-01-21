@@ -12,10 +12,11 @@ dependencies:
 
 test:
   override:
-    - make supported
+    - py.test
 
 deployment:
   pantry:
     branch: master
     commands:
+      - make supported
       - make publish
