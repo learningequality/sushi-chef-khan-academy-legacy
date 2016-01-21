@@ -32,16 +32,16 @@ class Test_translate_nodes:
     @vcr.use_cassette("tests/fixtures/cassettes/kalite/node_data.json.yml")
     def test_translates_selected_fields(self):
         node_data = retrieve_kalite_data()
-        node_dict = {node.get("slug"): node for node in node_data}
+        node_dict = {node.get("path"): node for node in node_data}
         catalog = generate_catalog()
 
         translated_nodes = translate_nodes(node_data, catalog)
 
-        for slug, node in translated_nodes:
+        for node in translated_nodes:
             for field in NODE_FIELDS_TO_TRANSLATE:
                 translated_fieldval = node.get(field, "")
-                untranslated_fieldval = node_dict[slug],get(field, "")
-                assert translated_fieldval == catalog.msgid_mapping.get(untranslated_fieldval,
+                untranslated_fieldval = node_dict[node.get("path")].get(field, "")
+                assert translated_fieldval == catalog.get(untranslated_fieldval,
                                                                         untranslated_fieldval)
 
 

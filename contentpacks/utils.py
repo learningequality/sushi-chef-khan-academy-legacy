@@ -46,6 +46,8 @@ class Catalog(dict):
         """
         Extract the strings from the given pofile, and computes the metadata.
         """
+        # Add an entry for the empty message
+        self[""] = ""
         if not pofile:
             pofile = []
             self.percent_translated = 0
@@ -146,7 +148,7 @@ def translate_assessment_item_text(items: dict, catalog: polib.POFile):
         translation for s has been found.
         """
         try:
-            trans = catalog.msgid_mapping[s]
+            trans = catalog[s]
         except KeyError:
             raise NotTranslatable("String has no translation: {}".format(s))
 

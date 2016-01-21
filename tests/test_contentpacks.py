@@ -2,7 +2,6 @@ import logging
 import os
 
 import vcr
-from babel.messages.catalog import Catalog
 from hypothesis import assume, given
 from hypothesis.strategies import integers, lists, sampled_from, sets, text, \
     tuples
@@ -10,7 +9,7 @@ from hypothesis.strategies import integers, lists, sampled_from, sets, text, \
 from contentpacks.khanacademy import _combine_catalogs, _get_video_ids, \
     retrieve_dubbed_video_mapping, retrieve_html_exercises, \
     retrieve_kalite_data, retrieve_translations, retrieve_subtitles
-from contentpacks.utils import NODE_FIELDS_TO_TRANSLATE, translate_nodes
+from contentpacks.utils import NODE_FIELDS_TO_TRANSLATE, translate_nodes, Catalog
 
 
 logging.basicConfig()
@@ -93,10 +92,10 @@ class Test__get_video_ids:
 
     @given(lists(tuples(text(min_size=1), sampled_from(["Exercise", "Video", "Topic"]))))
     def test_given_list_returns_only_videos(self, contents):
-        content = [{"kind": kind, "id": id} for id, kind in contents]
-        video_count = len([node for node in content if content.get("kind") == "Video"])
+        contents = [{"kind": kind, "id": id} for id, kind in contents]
+        video_count = len([node for node in contents if node.get("kind") == "Video"])
 
-        assert len(_get_video_ids(content)) == video_count
+        assert len(_get_video_ids(contents)) == video_count
 
     @vcr.use_cassette("tests/fixtures/cassettes/kalite/node_data.json.yml")
     def test_returns_something_in_production_json(self):
@@ -179,7 +178,7 @@ class Test_translating_kalite_data:
                 translated_fieldval = translated_node.get(field)
 
                 assert (translated_fieldval ==
-                        self.ka_catalog.msgid_mapping.get(
+                        self.ka_catalog.get(
                             untranslated_fieldval,
                             untranslated_fieldval)
                 )
@@ -190,7 +189,8 @@ class Test_retrieve_html_exercises:
     @vcr.use_cassette("tests/fixtures/cassettes/test_retrieve_html_exercises_setup.yml")
     def setup(self):
         self.exercise_data = retrieve_kalite_data()
-        self.khan_exercises = [key for key, e in self.exercise_data.items() if not e.get("uses_assessment_items")]
+        self.khan_exercises = [e.get("id") for e in self.exercise_data if not e.get("uses_assessment_items")\
+                               and e.get("kind") == "Exercise"]
         self.khan_exercises.sort()
 
     @vcr.use_cassette("tests/fixtures/cassettes/test_retrieve_html_exercises.yml")
