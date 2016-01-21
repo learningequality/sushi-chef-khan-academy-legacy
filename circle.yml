@@ -8,7 +8,7 @@ machine:
 
 dependencies:
   override:
-    - pip install pex
+    - pip install -r requirements_dev.txt
 
 test:
   override:
