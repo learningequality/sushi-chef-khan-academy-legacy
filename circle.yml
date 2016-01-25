@@ -8,14 +8,15 @@ machine:
 
 dependencies:
   override:
-    - pip install pex
+    - pip install -r requirements_dev.txt
 
 test:
   override:
-    - make supported
+    - py.test tests/
 
 deployment:
   pantry:
     branch: master
     commands:
+      - make supported
       - make publish

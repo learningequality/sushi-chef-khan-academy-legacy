@@ -1,37 +1,36 @@
-
 import collections
 import copy
 import filecmp
 import fnmatch
 import gc
 import glob
+import logging
 import os
+import re
 import shutil
 import urllib
 import tempfile
 import zipfile
+from collections import OrderedDict
+from functools import reduce
 from multiprocessing.pool import ThreadPool as Pool
-
 import polib
 import requests
+import json
 import ujson
 
-from contentpacks.utils import download_and_cache_file, Catalog
-
+from contentpacks.utils import download_and_cache_file, Catalog, cache_file
 
 NUM_PROCESSES = 5
 
-
 LangpackResources = collections.namedtuple(
     "LangpackResources",
-    ["topics",
-     "contents",
-     "exercises",
+    ["node_data",
      "subtitles",
      "kalite_catalog",
      "ka_catalog",
      "dubbed_video_mapping"
-    ])
+     ])
 
 
 # monkey patch polib.POEntry.merge
@@ -46,16 +45,14 @@ def new_merge(self, other):
     self.old_merge(other)
     self.msgstr = other.msgstr if other.msgstr else self.msgstr
 
+
 POEntry_class = polib.POEntry
 POEntry_class.old_merge = POEntry_class.merge
 POEntry_class.merge = new_merge
 
 
 def retrieve_language_resources(version: str, sublangargs: dict) -> LangpackResources:
-
-    content_data = retrieve_kalite_content_data()
-    exercise_data = retrieve_kalite_exercise_data()
-    topic_data = retrieve_kalite_topic_data()
+    node_data = retrieve_kalite_data()
 
     video_ids = list(content_data.keys())
     # subtitle_list = retrieve_subtitles(video_ids, lang)
@@ -71,20 +68,24 @@ def retrieve_language_resources(version: str, sublangargs: dict) -> LangpackReso
     else:
         crowdin_project_name = "ka-lite"
         crowdin_secret_key = os.environ["KALITE_CROWDIN_SECRET_KEY"]
+
         includes = "*{}*.po".format(version)
-        kalite_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code=sublangargs["interface_lang"], includes=includes, force=True)
+        kalite_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key,
+                                               lang_code=sublangargs["interface_lang"], includes=includes, force=True)
 
         # retrieve Khan Academy po files from CrowdIn
         crowdin_project_name = "khanacademy"
         crowdin_secret_key = os.environ["KA_CROWDIN_SECRET_KEY"]
         includes = []
-        ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code=sublangargs["content_lang"], force=True)
+        ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key,
+                                           lang_code=sublangargs["content_lang"], force=True)
 
-    return LangpackResources(topic_data, content_data, exercise_data, subtitle_list, kalite_catalog, ka_catalog, dubbed_video_mapping)
+    return LangpackResources(node_data, subtitle_list, kalite_catalog, ka_catalog,
+                             dubbed_video_mapping)
 
 
 def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
-    #videos => contains list of youtube ids
+    # videos => contains list of youtube ids
     """return list of youtubeids that were downloaded"""
     downloaded_videos = []
     not_downloaded_videos = []
@@ -95,7 +96,7 @@ def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
         )
 
         try:
-            response =  requests.get(request_url)
+            response = requests.get(request_url)
             response.raise_for_status()
         except requests.exceptions.HTTPError:
             print("Skipping {}".format(youtube_id))
@@ -107,7 +108,8 @@ def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
             continue
         else:
             amara_id = content["objects"][0]["id"]
-            subtitle_download_uri = "https://www.amara.org/api/videos/%s/languages/%s/subtitles/?format=vtt" %(amara_id, lang)
+            subtitle_download_uri = "https://www.amara.org/api/videos/%s/languages/%s/subtitles/?format=vtt" % (
+            amara_id, lang)
             try:
                 response_code = urllib.request.urlopen(subtitle_download_uri)
 
@@ -149,8 +151,8 @@ def retrieve_dubbed_video_mapping(video_ids: [str], lang: str) -> dict:
     return dubbed_video_mapping
 
 
-def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="en", force=False, includes="*.po") -> polib.POFile:
-
+def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="en", force=False,
+                          includes="*.po") -> polib.POFile:
     request_url_template = ("https://api.crowdin.com/api/"
                             "project/{project_id}/download/"
                             "{lang_code}.zip?key={key}")
@@ -194,74 +196,263 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="e
     return msgid_mapping
 
 
-def _combine_catalogs(*catalogs):
-    catalog = Catalog()
-
-    for oldcatalog in catalogs:
-        print("processing %s" % oldcatalog)
-        catalog._messages.update(oldcatalog._messages)
-        # manually call the gc here so we don't occupy too much
-        # memory, and avoid having one huge gc in the future by
-        # dumping a po file after it's read
-        gc.collect()
-
-    return catalog
-
-
-def _get_video_ids(content_data: dict) -> [str]:
+def _get_video_ids(node_data: list) -> [str]:
     """
     Returns a list of video ids given the KA content dict.
     """
-    video_ids = list(key for key in content_data.keys() if content_data[key]["kind"] == "Video")
+    video_ids = list(node.get("id") for node in node_data if node.get("kind") == "Video")
     return sorted(video_ids)
 
 
-def _retrieve_ka_topic_tree(lang="en"):
+first_cap_re = re.compile('(.)([A-Z][a-z]+)')
+all_cap_re = re.compile('([a-z0-9])([A-Z])')
+
+
+def convert_camel_case(name) -> str:
+    s1 = first_cap_re.sub(r'\1_\2', name)
+    return all_cap_re.sub(r'\1_\2', s1).lower()
+
+
+def convert_all_nodes_to_camel_case(nodes) -> list:
+    for i, node in enumerate(nodes):
+        new_node = {}
+        for k, v in node.items():
+            new_node[convert_camel_case(k)] = v
+        nodes[i] = new_node
+    return nodes
+
+
+# Khan Academy specific blacklists
+
+slug_blacklist = ["new-and-noteworthy", "talks-and-interviews", "coach-res"]  # not relevant
+slug_blacklist += ["cs", "towers-of-hanoi"]  # not (yet) compatible
+slug_blacklist += ["cc-third-grade-math", "cc-fourth-grade-math", "cc-fifth-grade-math", "cc-sixth-grade-math",
+                   "cc-seventh-grade-math", "cc-eighth-grade-math"]  # common core
+slug_blacklist += ["MoMA", "getty-museum", "stanford-medicine", "crash-course1", "mit-k12", "hour-of-code",
+                   "metropolitan-museum", "bitcoin", "tate", "crash-course1", "crash-course-bio-ecology",
+                   "british-museum", "aspeninstitute", "asian-art-museum", "amnh", "nova"]  # partner content
+
+# TODO(jamalex): re-check these videos later and remove them from here if they've recovered
+slug_blacklist += ["mortgage-interest-rates", "factor-polynomials-using-the-gcf", "inflation-overview",
+                   "time-value-of-money", "changing-a-mixed-number-to-an-improper-fraction",
+                   "applying-the-metric-system"]  # errors on video downloads
+
+
+# 'Mortgage interest rates' at http://s3.amazonaws.com/KA-youtube-converted/vy_pvstdBhg.mp4/vy_pvstdBhg.mp4...
+# 'Inflation overview' at http://s3.amazonaws.com/KA-youtube-converted/-Z5kkfrEc8I.mp4/-Z5kkfrEc8I.mp4...
+# 'Factor expressions using the GCF' at http://s3.amazonaws.com/KA-youtube-converted/_sIuZHYrdWM.mp4/_sIuZHYrdWM.mp4...
+# 'Time value of money' at http://s3.amazonaws.com/KA-youtube-converted/733mgqrzNKs.mp4/733mgqrzNKs.mp4...
+# 'Applying the metric system' at http://s3.amazonaws.com/KA-youtube-converted/CDvPPsB3nEM.mp4/CDvPPsB3nEM.mp4...
+# 'Mixed numbers: changing to improper fractions' at http://s3.amazonaws.com/KA-youtube-converted/xkg7370cpjs.mp4/xkg7370cpjs.mp4...
+
+slug_key = {
+    "Topic": "slug",
+    "Video": "readable_id",
+    "Exercise": "name",
+}
+
+def modify_slugs(nodes) -> list:
+    for node in nodes:
+        node["slug"] = node.get(slug_key.get(node.get("kind")))
+    return nodes
+
+id_key = {
+    "Topic": "slug",
+    "Video": "youtube_id",
+    "Exercise": "name",
+}
+
+def modify_ids(nodes) -> list:
+    for node in nodes:
+        node["id"] = node.get(id_key.get(node.get("kind")))
+    return nodes
+
+def apply_black_list(nodes) -> list:
+    return [node for node in nodes if node.get("slug") not in slug_blacklist]
+
+def group_by_slug(count_dict, item):
+    # Build a dictionary, keyed by slug, of items that share that slug
+    if item.get("slug") in count_dict:
+        count_dict[item.get("slug")].append(item)
+    else:
+        count_dict[item.get("slug")] = [item]
+    return count_dict
+
+def create_paths_remove_orphans_and_empty_topics(nodes) -> list:
+    node_dict = {node.get("id"): node for node in nodes}
+    # Set the slug on the root node to "khan"
+    node_dict["x00000000"]["slug"] = "khan"
+
+    node_list = []
+
+    def recurse_nodes(node, parent_path=""):
+
+        """
+        :param node: dict
+        :param parent_path: str
+        """
+        node["path"] = parent_path + node.get("slug") + "/"
+
+        children = node.pop("child_data", [])
+
+        if children:
+            children = [node_dict.get(child.get("id")) for child in children if node_dict.get(child.get("id"))]
+
+            counts = reduce(group_by_slug, children, {})
+            for items in counts.values():
+                # Slug has more than one item!
+                if len(items) > 1:
+                    i = 1
+                    # Rename the items
+                    for item in items:
+                        if item.get("kind") != "Video":
+                            # Don't change video slugs, as that will break internal links from KA.
+                            item["slug"] = item["slug"] + "_{i}".format(i=i)
+                            item["path"] = node.get("path") + item["slug"] + "/"
+                            i += 1
+
+        for child in children:
+            recurse_nodes(child, node.get("path"))
+
+        if children or node.get("kind") != "Topic":
+            node_list.append(node)
+
+    recurse_nodes(node_dict["x00000000"])
+
+    return node_list
+
+@cache_file
+def download_and_clean_kalite_data(url, path) -> str:
+    data = requests.get(url)
+    attempts = 1
+    while data.status_code != 200 and attempts <= 5:
+        data = requests.get(url)
+        attempts += 1
+
+    if data.status_code != 200:
+        raise requests.exceptions.RequestException
+
+    node_data = ujson.loads(data.content)
+
+    # Convert all keys of nodes to snake case from camel case.
+    for key in node_data:
+        node_data[key] = convert_all_nodes_to_camel_case(node_data[key])
+
+    # Remove any topic nodes that are hidden, deleted, or set to 'do_not_publish'
+    # Also remove those flags from the nodes themselves.
+
+    topic_nodes = []
+
+    for node in node_data["topics"]:
+        hidden = node.pop("hide")
+        dnp = node.pop("do_not_publish")
+        deleted = node.pop("deleted")
+        # We want to remove all of these, except the root node,
+        # the only node we do hide, but we use for defining the overall KA channel
+        if not (hidden or dnp or deleted) or node.get("id") == "x00000000":
+            topic_nodes.append(node)
+
+    node_data["topics"] = topic_nodes
+
+    # Hack to hardcode the mp4 format flag on Videos.
+    for node in node_data["videos"]:
+        node["format"] = "mp4"
+
+    # Flatten node_data
+
+    node_data = [node for node_list in node_data.values() for node in node_list]
+
+    # Modify slugs by kind to give more readable URLs
+
+    node_data = modify_slugs(node_data)
+
+    # Remove blacklisted items
+
+    node_data = apply_black_list(node_data)
+
+    # Create paths, deduplicate slugs, remove orphaned content and childless topics
+
+    node_data = create_paths_remove_orphans_and_empty_topics(node_data)
+
+    # Modify id keys to match KA Lite id formats
+
+    node_data = modify_ids(node_data)
+
+    # Save node_data to disk
+
+    with open(path, "w") as f:
+        return ujson.dump(node_data, f)
+
+
+topic_attributes = [
+    'childData',
+    'deleted',
+    'description',
+    'doNotPublish',
+    'hide',
+    'id',
+    'kind',
+    'slug',
+    'title'
+]
+
+exercise_attributes = [
+    'allAssessmentItems',
+    'curatedRelatedVideos',
+    'description',
+    'displayName',
+    'fileName',
+    'id',
+    'kind',
+    'name',
+    'prerequisites',
+    'slug',
+    'title',
+    'usesAssessmentItems'
+]
+
+video_attributes = [
+    'description',
+    'downloadSize',
+    'duration',
+    'id',
+    'imageUrl',
+    'keywords',
+    'kind',
+    'licenseName',
+    'readableId',
+    'relatedExerciseUrl',
+    'relativeUrl',
+    'sha',
+    'slug',
+    'title',
+    'youtubeId'
+]
+
+
+def retrieve_kalite_data(lang=None, force=False) -> list:
     """
-    Retrieve the full topic tree straight from KA.
+    Retrieve the KA content data direct from KA.
     """
-    url = None
-    path = download_and_cache_file
+    if lang:
+        url = "http://www.khanacademy.org/api/v2/topics/topictree?lang={lang}&projection={projection}".format(lang=lang)
+    else:
+        url = "http://www.khanacademy.org/api/v2/topics/topictree?projection={projection}"
 
+    projection = OrderedDict([
+        ("topics", [OrderedDict((key, 1) for key in topic_attributes)]),
+        ("exercises", [OrderedDict((key, 1) for key in exercise_attributes)]),
+        ("videos", [OrderedDict((key, 1) for key in video_attributes)])
+    ])
 
-def retrieve_kalite_content_data(url=None, force=False) -> dict:
-    """
-    Retrieve the KA Lite contents.json file in the master branch.  If
-    url is given, download from that url instead.
-    """
-    if not url:
-        url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/contents.json"
+    url = url.format(projection=json.dumps(projection))
 
-    path = download_and_cache_file(url, ignorecache=force)
-    with open(path) as f:
-        return ujson.load(f)
+    node_data_path = download_and_clean_kalite_data(url, ignorecache=force, filename="nodes.json")
 
+    with open(node_data_path, 'r') as f:
+        node_data = ujson.load(f)
 
-def retrieve_kalite_topic_data(url=None, force=False):
-    """
-    Retrieve the KA Lite topics.json file in the master branch.  If
-    url is given, download from that url instead.
-    """
-    if not url:
-        url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/topics.json"
-
-    path = download_and_cache_file(url, ignorecache=force)
-    with open(path) as f:
-        return ujson.load(f)
-
-
-def retrieve_kalite_exercise_data(url=None, force=False) -> dict:
-    """
-    Retrieve the KA Lite exercises.json file in the master branch.  If
-    url is given, download from that url instead.
-    """
-    print("downloading exercise data")
-    if not url:
-        url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/exercises.json"
-
-    path = download_and_cache_file(url, ignorecache=force)
-    with open(path) as f:
-        return ujson.load(f)
+    return node_data
 
 
 def apply_dubbed_video_map(content_data: dict, dubmap: dict) -> dict:

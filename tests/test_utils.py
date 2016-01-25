@@ -5,16 +5,15 @@ import ujson
 import tempfile
 import zipfile
 
-from contentpacks.khanacademy import retrieve_kalite_content_data, \
-    retrieve_kalite_exercise_data, retrieve_kalite_topic_data
+from contentpacks.khanacademy import retrieve_kalite_data
 from contentpacks.models import Item
 from contentpacks.utils import NODE_FIELDS_TO_TRANSLATE, \
-    download_and_cache_file, flatten_topic_tree, translate_nodes, \
+    download_and_cache_file, translate_nodes, \
     translate_assessment_item_text, NodeType, remove_untranslated_exercises, \
     convert_dicts_to_models, save_catalog, populate_parent_foreign_keys, \
-    save_db
+    save_db, save_models
 
-from helpers import cvcr, generate_node_list, generate_catalog
+from helpers import generate_catalog
 from peewee import SqliteDatabase, Using
 
 
@@ -28,32 +27,21 @@ class Test_download_and_cache_file:
         assert os.path.exists(path)
 
 
-class Test_flatten_topic_tree:
-
-    @cvcr.use_cassette()
-    def test_returns_all_contents_and_exercises(self):
-        topic_root = retrieve_kalite_topic_data()
-        contents = retrieve_kalite_content_data()
-        exercises = retrieve_kalite_exercise_data()
-
-        topic_list = list(flatten_topic_tree(topic_root, contents, exercises))
-
-        assert len(topic_list) >= len(contents) + len(exercises)
-
-
 class Test_translate_nodes:
 
+    @vcr.use_cassette("tests/fixtures/cassettes/kalite/node_data.json.yml")
     def test_translates_selected_fields(self):
-        node_data = dict(generate_node_list())
+        node_data = retrieve_kalite_data()
+        node_dict = {node.get("path"): node for node in node_data}
         catalog = generate_catalog()
 
-        translated_nodes = translate_nodes(node_data.items(), catalog)
+        translated_nodes = translate_nodes(node_data, catalog)
 
-        for slug, node in translated_nodes:
+        for node in translated_nodes:
             for field in NODE_FIELDS_TO_TRANSLATE:
-                translated_fieldval = node[field]
-                untranslated_fieldval = node_data[slug][field]
-                assert translated_fieldval == catalog.msgid_mapping.get(untranslated_fieldval,
+                translated_fieldval = node.get(field, "")
+                untranslated_fieldval = node_dict[node.get("path")].get(field, "")
+                assert translated_fieldval == catalog.get(untranslated_fieldval,
                                                                         untranslated_fieldval)
 
 
@@ -138,8 +126,9 @@ class Test_remove_untranslated_exercise:
 
 class Test_convert_dicts_to_models:
 
+    @vcr.use_cassette("tests/fixtures/cassettes/kalite/node_data.json.yml")
     def test_raises_no_errors_on_actual_data(self):
-        nodes = list(generate_node_list())
+        nodes = retrieve_kalite_data()
         new_nodes = list(convert_dicts_to_models(nodes))
 
         # see if we can have peewee validate the models
@@ -160,8 +149,11 @@ class Test_save_catalog:
 
 class Test_populate_parent_foreign_keys:
 
+    @vcr.use_cassette("tests/fixtures/cassettes/kalite/node_data.json.yml")
     def test_all_nodes_have_parent_values(self):
-        nodes = convert_dicts_to_models(generate_node_list())
+        nodes = convert_dicts_to_models(retrieve_kalite_data())
+        db = SqliteDatabase(":memory:")
+        save_models(list(nodes), db)
         new_nodes = list(populate_parent_foreign_keys(nodes))
 
         for node in new_nodes:

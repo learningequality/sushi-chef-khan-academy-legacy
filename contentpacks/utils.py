@@ -6,7 +6,6 @@ import urllib.request
 from urllib.parse import urlparse
 from contentpacks.models import Item
 from peewee import Using, SqliteDatabase
-
 import polib
 import ujson
 import zipfile
@@ -27,25 +26,11 @@ class NodeType:
     video = "Video"
     topic = "Topic"
 
-EXERCISE_FIELDS_TO_TRANSLATE = [
-    "description",
-    "title",
-    "display_name",
-]
-
-CONTENT_FIELDS_TO_TRANSLATE = [
-    "title",
-    "description",
-]
 
 NODE_FIELDS_TO_TRANSLATE = [
     "title",
     "description",
-]
-
-TOPIC_FIELDS_TO_TRANSLATE = [
-    "title",
-    "description",
+    "display_name",
 ]
 
 
@@ -61,6 +46,8 @@ class Catalog(dict):
         """
         Extract the strings from the given pofile, and computes the metadata.
         """
+        # Add an entry for the empty message
+        self[""] = ""
         if not pofile:
             pofile = []
             self.percent_translated = 0
@@ -85,126 +72,62 @@ class Catalog(dict):
         return (trans_count / all_strings_count) * 100
 
 
-def download_and_cache_file(url, cachedir=None, ignorecache=False, filename=None) -> str:
+def cache_file(func):
+    """
+    Execute the decorated function only if the file in question is not already cached.
+    Returns the path to the file. Always download the file if ignorecache is True.
+    All decorated functions must only accept 2 args, 'url' and 'path'.
+    """
+    def func_wrapper(url, cachedir=None, ignorecache=False, filename=None):
+            if not cachedir:
+                cachedir = os.path.join(os.getcwd(), "build")
+
+            os.makedirs(cachedir, exist_ok=True)
+
+            if not filename:
+                filename = os.path.basename(urlparse(url).path)
+
+            path = os.path.join(cachedir, filename)
+
+            if ignorecache or not os.path.exists(path):
+                func(url, path)
+
+            return path
+
+    return func_wrapper
+
+
+@cache_file
+def download_and_cache_file(url, path) -> str:
     """
     Download the given url if it's not saved in cachedir. Returns the
     path to the file. Always download the file if ignorecache is True.
     """
 
-    if not cachedir:
-        cachedir = os.path.join(os.getcwd(), "build")
-
-    os.makedirs(cachedir, exist_ok=True)
-
-    if not filename:
-        filename = os.path.basename(urlparse(url).path)
-
-    path = os.path.join(cachedir, filename)
-    
-    if ignorecache or not os.path.exists(path):
-        urllib.request.urlretrieve(url, path)
-
-    return path
+    urllib.request.urlretrieve(url, path)
 
 
+def translate_nodes(nodes: list, catalog: Catalog) -> list:
+    """Translates all fields across all nodes:
 
-def translate_exercises(exercise_data: dict, catalog: polib.POFile) -> dict:
-    # fully copy, so we don't need mess with anyone else using
-    # exercise_data in its pristine form
-    exercise_data = copy.deepcopy(exercise_data)
-
-    for key, exercise in exercise_data.items():
-        for field in EXERCISE_FIELDS_TO_TRANSLATE:
-            msgid = exercise[field]
-            exercise_data[key][field] = catalog.msgid_mapping.get(msgid, "")
-
-    return exercise_data
-
-
-def translate_nodes(nodes, catalog):
-    """Translates the following fields which are common across all nodes:
-
-    title
-    description
-
-    (see NODE_FIELDS_TO_TRANSLATE for a more up-to-date list)
+    (see NODE_FIELDS_TO_TRANSLATE for list)
 
     Note that translation in these fields is nonessential -- meaning
     that even if they're not translated they're not a dealbreaker, and
     thus won't be eliminated from the topic tree.
-
     """
-    for slug, old_node in nodes:
+    nodes = copy.deepcopy(nodes)
+    for node in nodes:
 
-        node = copy.copy(old_node)
         for field in NODE_FIELDS_TO_TRANSLATE:
-            original_text = old_node[field]
-            try:
-                node[field] = catalog[original_text]
-            except KeyError:
-                print("could not translate {field} for {title}".format(field=field, title=old_node["title"]))
+            msgid = node.get(field)
+            if msgid:
+                try:
+                    node[field] = catalog[msgid]
+                except KeyError:
+                    print("could not translate {field} for {title}".format(field=field, title=node["title"]))
 
-        yield slug, node
-
-
-def translate_topics(topic_data: dict, catalog: polib.POFile) -> dict:
-    topic_data = copy.deepcopy(topic_data)
-
-    def _translate_topic(topic):
-        for field in TOPIC_FIELDS_TO_TRANSLATE:
-            fieldval = topic.get(field)
-            if field in topic:
-                topic[field] = catalog.msgid_mapping.get(fieldval, fieldval)
-
-        topic['children'] = [_translate_topic(child) for child in topic.get('children', [])]
-        return topic
-
-    _translate_topic(topic_data)
-    return topic_data
-
-
-def translate_contents(content_data: dict, catalog: polib.POFile) -> dict:
-    content_data = copy.deepcopy(content_data)
-
-    for key, content in content_data.items():
-        for field in CONTENT_FIELDS_TO_TRANSLATE:
-            msgid = content[field]
-            content_data[key][field] = catalog.msgid_mapping.get(msgid, "")
-
-    return content_data
-
-
-def flatten_topic_tree(topic_root, contents, exercises):
-
-    def _flatten_topic(node):
-        childless_topic = copy.copy(node)
-        children = childless_topic.pop("children", [])
-
-        kind = childless_topic["kind"]
-        node_id = childless_topic["id"]
-        slug = childless_topic["slug"]
-
-        if kind == NodeType.topic:
-            # get the slugs of the children so we can refer to them
-            children_slugs = [c["slug"] for c in children]
-            childless_topic["children"] = children_slugs
-            yield slug, childless_topic
-
-        elif kind == NodeType.exercise:
-            exercise = exercises[node_id]
-            yield slug, exercise
-
-        elif kind == NodeType.video:
-            video = contents[node_id]
-            yield slug, video
-
-        else:
-            raise UnexpectedKindError("Unexpected node kind: {}".format(kind))
-
-        for child in children:
-            yield from _flatten_topic(child)
-
-    return _flatten_topic(topic_root)
+    return nodes
 
 
 def translate_assessment_item_text(items: dict, catalog: polib.POFile):
@@ -217,6 +140,7 @@ def translate_assessment_item_text(items: dict, catalog: polib.POFile):
     Assessment item translations are considered essential, and thus
     if they're found missing will make that exercise as unavailable.
     """
+
     # TODO (aronasorman): implement tests
     def gettext(s):
         """
@@ -224,7 +148,7 @@ def translate_assessment_item_text(items: dict, catalog: polib.POFile):
         translation for s has been found.
         """
         try:
-            trans = catalog.msgid_mapping[s]
+            trans = catalog[s]
         except KeyError:
             raise NotTranslatable("String has no translation: {}".format(s))
 
@@ -329,7 +253,6 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
 
 
 def convert_dicts_to_models(nodes):
-
     def _make_extra_fields_value(present_fields, node_dict):
         """
         Generate the JSON string that goes into an item's extra_fields value.
@@ -356,7 +279,7 @@ def convert_dicts_to_models(nodes):
 
         return item
 
-    yield from (convert_dict_to_model(node) for _, node in nodes)
+    yield from (convert_dict_to_model(node) for node in nodes)
 
 
 def save_models(nodes, db):
@@ -377,7 +300,6 @@ def save_models(nodes, db):
 
 
 def save_catalog(catalog: dict, zf: zipfile.ZipFile, name: str):
-
     mofile = polib.MOFile()
     for msgid, msgstr in catalog.items():
         entry = polib.POEntry(msgid=msgid, msgstr=msgstr)
@@ -390,11 +312,11 @@ def save_catalog(catalog: dict, zf: zipfile.ZipFile, name: str):
 
 
 def populate_parent_foreign_keys(nodes):
-    node_keys = {node.slug: node for node in nodes}
+    node_keys = {node.path: node for node in nodes}
 
     for node in node_keys.values():
         path = pathlib.Path(node.path)
-        parent_slug = path.parent.name
+        parent_slug = str(path.parent)
         try:
             parent = node_keys[parent_slug]
             node.parent = parent
@@ -418,8 +340,8 @@ def separate_exercise_types(node_data):
         return node["kind"] == NodeType.exercise and node["uses_assessment_items"]
 
     return (id for id, n in node_data if _is_html_exercise(n)), \
-        (id for id, n in node_data if _is_assessment_exercise(n)), \
-        node_data
+           (id for id, n in node_data if _is_assessment_exercise(n)), \
+           node_data
 
 
 def generate_kalite_language_pack_metadata(lang: str, version: str, interface_catalog: Catalog, content_catalog: Catalog):
@@ -464,3 +386,4 @@ def save_metadata(zf, metadata):
     dump = ujson.dumps(metadata)
     metadata_name = "metadata.json"
     zf.writestr(metadata_name, dump)
+

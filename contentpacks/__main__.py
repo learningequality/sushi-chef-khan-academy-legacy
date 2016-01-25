@@ -19,11 +19,7 @@ from contentpacks.utils import translate_nodes, flatten_topic_tree, \
 
 def make_language_pack(lang, version, sublangargs, filename):
 
-    topic_data, content_data, exercise_data, subtitles, interface_catalog, content_catalog, dubmap = retrieve_language_resources(version, sublangargs)
-
-    node_data = list(
-        flatten_topic_tree(topic_data, content_data, exercise_data)
-    )
+    node_data, subtitles, interface_catalog, content_catalog, dubmap = retrieve_language_resources(version, sublangargs)
 
     node_data = translate_nodes(node_data, content_catalog)
     node_data = list(node_data)
