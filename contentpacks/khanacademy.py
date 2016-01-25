@@ -324,8 +324,13 @@ def create_paths_remove_orphans_and_empty_topics(nodes) -> list:
 @cache_file
 def download_and_clean_kalite_data(url, path) -> str:
     data = requests.get(url)
-    while data.status_code != 200:
+    attempts = 1
+    while data.status_code != 200 and attempts <= 5:
         data = requests.get(url)
+        attempts += 1
+
+    if data.status_code != 200:
+        raise requests.exceptions.RequestException
 
     node_data = ujson.loads(data.content)
 
