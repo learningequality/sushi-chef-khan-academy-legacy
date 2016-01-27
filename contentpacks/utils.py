@@ -1,10 +1,11 @@
 import copy
 import os
 import pkgutil
+import re
 import urllib.parse
 import urllib.request
 from urllib.parse import urlparse
-from contentpacks.models import Item
+from contentpacks.models import Item, AssessmentItem
 from peewee import Using, SqliteDatabase
 import polib
 import ujson
@@ -78,19 +79,19 @@ def cache_file(func):
     Returns the path to the file. Always download the file if ignorecache is True.
     All decorated functions must only accept 2 args, 'url' and 'path'.
     """
-    def func_wrapper(url, cachedir=None, ignorecache=False, filename=None):
+    def func_wrapper(url, cachedir=None, ignorecache=False, filename=None, **kwargs):
             if not cachedir:
                 cachedir = os.path.join(os.getcwd(), "build")
-
-            os.makedirs(cachedir, exist_ok=True)
 
             if not filename:
                 filename = os.path.basename(urlparse(url).path)
 
             path = os.path.join(cachedir, filename)
 
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+
             if ignorecache or not os.path.exists(path):
-                func(url, path)
+                func(url, path, **kwargs)
 
             return path
 
@@ -130,7 +131,7 @@ def translate_nodes(nodes: list, catalog: Catalog) -> list:
     return nodes
 
 
-def translate_assessment_item_text(items: dict, catalog: polib.POFile):
+def translate_assessment_item_text(items: list, catalog: Catalog):
     """
     Expects a dict with assessment ids as key and the item data as
     value, along with a catalog file from retrieve_language_resources
@@ -154,7 +155,7 @@ def translate_assessment_item_text(items: dict, catalog: polib.POFile):
 
         return trans
 
-    for id, item in items.items():
+    for item in items:
         item = copy.copy(item)
 
         item_data = ujson.loads(item["item_data"])
@@ -164,7 +165,7 @@ def translate_assessment_item_text(items: dict, catalog: polib.POFile):
             continue
         else:
             item["item_data"] = ujson.dumps(translated_item_data)
-            yield id, item
+            yield item
 
 
 def smart_translate_item_data(item_data: dict, gettext):
@@ -199,7 +200,7 @@ def smart_translate_item_data(item_data: dict, gettext):
 
 
 def remove_untranslated_exercises(nodes, html_ids, translated_assessment_data):
-    item_data_ids = set(translated_assessment_data.keys())
+    item_data_ids = set([item.get("id") for item in translated_assessment_data])
     html_ids = set(html_ids)
 
     def is_translated_exercise(ex):
@@ -217,16 +218,45 @@ def remove_untranslated_exercises(nodes, html_ids, translated_assessment_data):
                     return False
             return True
 
-    for slug, node in nodes:
+    for node in nodes:
         if node["kind"] != NodeType.exercise:
-            yield slug, node
+            yield node
         elif is_translated_exercise(node):
-            yield slug, node
+            yield node
         else:
             continue
 
 
-def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata):
+def remove_unavailable_topics(nodes):
+
+    node_dict = {node.get("path"): node for node in nodes}
+
+    node_list = []
+
+    def recurse_nodes(node):
+
+        """
+        :param node: dict
+        """
+
+        path_re = re.compile(node.get("path") + "[a-z0-9A-Z\-_]+/\Z")
+
+        children = [node_dict[key] for key in node_dict.keys() if path_re.match(key)]
+
+        for child in children:
+            recurse_nodes(child)
+
+        if children or node.get("kind") != "Topic":
+            node_list.append(node)
+
+    root_key = next(key for key in node_dict.keys() if re.match("[a-z0-9A-Z\-_]+/\Z", key))
+
+    recurse_nodes(node_dict[root_key])
+
+    return node_list
+
+
+def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata, assessment_items, assessment_files):
     with zipfile.ZipFile(dest, "w") as zf, tempfile.NamedTemporaryFile() as dbf:
         db = SqliteDatabase(dbf.name)
         db.connect()
@@ -238,6 +268,10 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
                                              # avoid nesting them.
         nodes = populate_parent_foreign_keys(nodes)
         list(save_models(nodes, db))
+
+        assessment_items = convert_dicts_to_assessment_items(assessment_items)
+        list(save_assessment_items(assessment_items, db))
+
         db.close()
         dbf.flush()
 
@@ -248,6 +282,9 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
         save_db(db, zf)
 
         save_metadata(zf, metadata)
+
+        for file_path in assessment_files:
+            save_assessment_file(file_path, zf)
 
     return dest
 
@@ -282,6 +319,10 @@ def convert_dicts_to_models(nodes):
     yield from (convert_dict_to_model(node) for node in nodes)
 
 
+def convert_dicts_to_assessment_items(assessment_items):
+    yield from (AssessmentItem(**item) for item in assessment_items)
+
+
 def save_models(nodes, db):
     """
     Save all the models in nodes into the db specified.
@@ -297,6 +338,23 @@ def save_models(nodes, db):
                 print("Cannot save {path}, exception: {e}".format(path=node.path, e=e))
 
             yield node
+
+
+def save_assessment_items(assessment_items, db):
+    """
+    Save all the models in nodes into the db specified.
+    """
+    # aron: I didn't bother writing tests for this, since it's such a simple
+    # function!
+    db.create_table(AssessmentItem, safe=True)
+    with Using(db, [AssessmentItem]):
+        for item in assessment_items:
+            try:
+                item.save()
+            except Exception as e:
+                print("Cannot save {id}, exception: {e}".format(id=item.id, e=e))
+
+            yield item
 
 
 def save_catalog(catalog: dict, zf: zipfile.ZipFile, name: str):
@@ -328,6 +386,12 @@ def populate_parent_foreign_keys(nodes):
 
 def save_db(db, zf):
     zf.write(db.database, "content.db")
+
+
+def save_assessment_file(assessment_file, zf):
+    with open(assessment_file, "r") as f:
+        zf.write(f, os.path.join("assessment_resources", os.path.basename(path.dirname(assessment_file)),
+                                 os.path.basename(assessment_file)))
 
 
 def separate_exercise_types(node_data):
