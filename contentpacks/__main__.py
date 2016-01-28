@@ -13,7 +13,7 @@ from pathlib import Path
 
 from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_video_map, retrieve_html_exercises, \
     retrieve_all_assessment_item_data
-from contentpacks.utils import translate_nodes, flatten_topic_tree, \
+from contentpacks.utils import translate_nodes, \
     remove_untranslated_exercises, bundle_language_pack, separate_exercise_types, \
     generate_kalite_language_pack_metadata, translate_assessment_item_text
 
@@ -38,10 +38,6 @@ def make_language_pack(lang, version, sublangargs, filename):
 
     node_data = remove_untranslated_exercises(node_data, translated_html_exercise_ids, assessment_data)
 
-    node_data = remove_unavailable_topics(node_data)
-
-    included_assessment_data = filter_unneeded_assessment_resources(assessment_data, node_data)
-
     pack_metadata = generate_kalite_language_pack_metadata(lang, version, interface_catalog, content_catalog)
 
     if lang != "en":
@@ -49,7 +45,7 @@ def make_language_pack(lang, version, sublangargs, filename):
         all_assessment_files = []
 
     bundle_language_pack(str(filename), node_data, interface_catalog, interface_catalog,
-                         pack_metadata, included_assessment_data, all_assessment_files)
+                         pack_metadata, assessment_data, all_assessment_files)
 
 
 def normalize_sublang_args(args):

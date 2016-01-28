@@ -403,8 +403,8 @@ def separate_exercise_types(node_data):
     def _is_assessment_exercise(node):
         return node["kind"] == NodeType.exercise and node["uses_assessment_items"]
 
-    return (id for id, n in node_data if _is_html_exercise(n)), \
-           (id for id, n in node_data if _is_assessment_exercise(n)), \
+    return (n['id'] for n in node_data if _is_html_exercise(n)), \
+           (n['id'] for n in node_data if _is_assessment_exercise(n)), \
            node_data
 
 
