@@ -11,10 +11,11 @@ Usage:
 from docopt import docopt
 from pathlib import Path
 
-from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_video_map, retrieve_html_exercises
+from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_video_map, retrieve_html_exercises, \
+    retrieve_all_assessment_item_data
 from contentpacks.utils import translate_nodes, flatten_topic_tree, \
     remove_untranslated_exercises, bundle_language_pack, separate_exercise_types, \
-    generate_kalite_language_pack_metadata
+    generate_kalite_language_pack_metadata, translate_assessment_item_text
 
 
 def make_language_pack(lang, version, sublangargs, filename):
@@ -31,16 +32,24 @@ def make_language_pack(lang, version, sublangargs, filename):
     html_exercise_path, translated_html_exercise_ids = retrieve_html_exercises(html_exercise_ids, lang)
 
     # now include only the assessment item resources that we need
-    # all_assessment_resources = get_full_assessment_resource_list()
-    # included_assessment_resources = filter_unneeded_assessment_resources(all_assessment_resources, exercise_data)
+    all_assessment_data, all_assessment_files = retrieve_all_assessment_item_data()
 
-    # node_data = remove_untranslated_exercises(exercise_data, translated_html_exercise_ids, assessment_data)
+    assessment_data = translate_assessment_item_text(all_assessment_data, content_catalog)
 
-    # node_data = remove_unavailable_topics(node_data)
+    node_data = remove_untranslated_exercises(node_data, translated_html_exercise_ids, assessment_data)
+
+    node_data = remove_unavailable_topics(node_data)
+
+    included_assessment_data = filter_unneeded_assessment_resources(assessment_data, node_data)
 
     pack_metadata = generate_kalite_language_pack_metadata(lang, version, interface_catalog, content_catalog)
 
-    bundle_language_pack(str(filename), node_data, interface_catalog, interface_catalog, pack_metadata)
+    if lang != "en":
+        # Only bundle assessment item asset files for the English language pack
+        all_assessment_files = []
+
+    bundle_language_pack(str(filename), node_data, interface_catalog, interface_catalog,
+                         pack_metadata, included_assessment_data, all_assessment_files)
 
 
 def normalize_sublang_args(args):
