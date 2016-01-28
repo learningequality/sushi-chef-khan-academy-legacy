@@ -1,4 +1,5 @@
 import copy
+import logging
 import os
 import pkgutil
 import re
@@ -105,6 +106,8 @@ def download_and_cache_file(url, path) -> str:
     path to the file. Always download the file if ignorecache is True.
     """
 
+    logging.info("Downloading file from {url}".format(url=url))
+
     urllib.request.urlretrieve(url, path)
 
 
@@ -192,9 +195,9 @@ def smart_translate_item_data(item_data: dict, gettext):
 
         for field, field_data in item_data.items():
             if isinstance(field_data, dict):
-                item_data[field] = smart_translate_item_data(field_data)
+                item_data[field] = smart_translate_item_data(field_data, gettext)
             elif isinstance(field_data, list):
-                item_data[field] = map(smart_translate_item_data, field_data)
+                item_data[field] = map(smart_translate_item_data, field_data, gettext)
 
         return item_data
 
@@ -390,7 +393,7 @@ def save_db(db, zf):
 
 def save_assessment_file(assessment_file, zf):
     with open(assessment_file, "r") as f:
-        zf.write(f, os.path.join("assessment_resources", os.path.basename(path.dirname(assessment_file)),
+        zf.write(f, os.path.join("assessment_resources", os.path.basename(os.path.dirname(assessment_file)),
                                  os.path.basename(assessment_file)))
 
 

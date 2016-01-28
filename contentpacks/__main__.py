@@ -3,7 +3,7 @@
 makepack
 
 Usage:
-  makecontentpacks ka-lite <lang> <version> [--subtitlelang=subtitle-lang --contentlang=content-lang --interfacelang=interface-lang --videolang=video-lang --out=outdir]
+  makecontentpacks ka-lite <lang> <version> [--subtitlelang=subtitle-lang --contentlang=content-lang --interfacelang=interface-lang --videolang=video-lang --out=outdir --no-assessment-items]
   makecontentpacks -h | --help
   makecontentpacks --version
 
@@ -18,7 +18,7 @@ from contentpacks.utils import translate_nodes, \
     generate_kalite_language_pack_metadata, translate_assessment_item_text
 
 
-def make_language_pack(lang, version, sublangargs, filename):
+def make_language_pack(lang, version, sublangargs, filename, no_assessment_items):
 
     node_data, subtitles, interface_catalog, content_catalog, dubmap = retrieve_language_resources(version, sublangargs)
 
@@ -40,7 +40,7 @@ def make_language_pack(lang, version, sublangargs, filename):
 
     pack_metadata = generate_kalite_language_pack_metadata(lang, version, interface_catalog, content_catalog)
 
-    if lang != "en":
+    if no_assessment_items:
         # Only bundle assessment item asset files for the English language pack
         all_assessment_files = []
 
@@ -74,7 +74,9 @@ def main():
 
     sublangs = normalize_sublang_args(args)
 
-    make_language_pack(lang, version, sublangs, out)
+    no_assessment_items = args["--no-assessment-items"]
+
+    make_language_pack(lang, version, sublangs, out, no_assessment_items)
 
 
 if __name__ == "__main__":

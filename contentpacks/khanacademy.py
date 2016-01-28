@@ -475,9 +475,11 @@ def download_assessment_item_data(url, path, lang=None, force=False) -> str:
     :param force: refetch assessment item and images even if it exists on disk
     :return: path to assessment item file
     """
-    data = requests.get(url)
     attempts = 1
+    logging.info("Downloading assessment item data from {url}, attempt {attempts}".format(url=url, attempts=attempts))
+    data = requests.get(url)
     while data.status_code != 200 and attempts <= 5:
+        logging.info("Downloading assessment item data from {url}, attempt {attempts}".format(url=url, attempts=attempts))
         data = requests.get(url)
         attempts += 1
 
@@ -666,6 +668,8 @@ def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) ->
 
     threads = [threading.Thread(target=_download_item_data_and_files, args=(node,)
                                 ) for node in node_data if node.get("all_assessment_items")]
+
+    logging.info("Retrieving assessment item data for all assessment items.")
 
     for thread in threads:
         thread.start()
