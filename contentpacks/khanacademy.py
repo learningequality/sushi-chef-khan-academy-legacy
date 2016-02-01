@@ -254,10 +254,12 @@ slug_key = {
     "Exercise": "name",
 }
 
+
 def modify_slugs(nodes) -> list:
     for node in nodes:
         node["slug"] = node.get(slug_key.get(node.get("kind")))
     return nodes
+
 
 id_key = {
     "Topic": "slug",
@@ -265,13 +267,33 @@ id_key = {
     "Exercise": "name",
 }
 
+
 def modify_ids(nodes) -> list:
     for node in nodes:
         node["id"] = node.get(id_key.get(node.get("kind")))
     return nodes
 
+
 def apply_black_list(nodes) -> list:
     return [node for node in nodes if node.get("slug") not in slug_blacklist]
+
+
+def prune_assessment_items(nodes) -> list:
+    node_list = []
+    for node in nodes:
+        if node.get("uses_assessment_items"):
+            assessment_items = []
+            for item in node.get("all_assessment_items", []):
+                if item.get("live"):
+                    assessment_items.append(item)
+            node["all_assessment_items"] = assessment_items
+            if node.get("all_assessment_items"):
+                node_list.append(node)
+        else:
+            node_list.append(node)
+
+    return node_list
+
 
 def group_by_slug(count_dict, item):
     # Build a dictionary, keyed by slug, of items that share that slug
@@ -280,6 +302,7 @@ def group_by_slug(count_dict, item):
     else:
         count_dict[item.get("slug")] = [item]
     return count_dict
+
 
 def create_paths_remove_orphans_and_empty_topics(nodes) -> list:
     node_dict = {node.get("id"): node for node in nodes}
@@ -323,6 +346,7 @@ def create_paths_remove_orphans_and_empty_topics(nodes) -> list:
     recurse_nodes(node_dict["x00000000"])
 
     return node_list
+
 
 @cache_file
 def download_and_clean_kalite_data(url, path) -> str:
@@ -372,6 +396,10 @@ def download_and_clean_kalite_data(url, path) -> str:
     # Remove blacklisted items
 
     node_data = apply_black_list(node_data)
+
+    # Remove non-live assessment items and any consequently 'empty' exercises
+
+    node_data = prune_assessment_items(node_data)
 
     # Create paths, deduplicate slugs, remove orphaned content and childless topics
 

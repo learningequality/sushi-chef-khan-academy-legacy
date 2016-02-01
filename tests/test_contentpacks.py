@@ -10,7 +10,7 @@ from contentpacks.khanacademy import _get_video_ids, \
     retrieve_dubbed_video_mapping, retrieve_html_exercises, \
     retrieve_kalite_data, retrieve_translations, retrieve_subtitles, \
     retrieve_all_assessment_item_data, retrieve_assessment_item_data, \
-    clean_assessment_item, localize_image_urls, localize_content_links
+    clean_assessment_item, localize_image_urls, localize_content_links, prune_assessment_items
 from contentpacks.models import AssessmentItem
 from contentpacks.utils import NODE_FIELDS_TO_TRANSLATE, translate_nodes, Catalog
 
@@ -170,6 +170,21 @@ class Test_retrieve_assessment_item_data:
         expected_string = "Wrong!\n\n\n\nThat's a wrap!"
         assert expected_string  == localize_content_links({"item_data": link_string})["item_data"]
 
+    def test_remove_non_live_assessment_items(self):
+        test_data = [{"uses_assessment_items": True, "all_assessment_items": [{"live": False}, {"live": True}]}]
+        out_data = prune_assessment_items(test_data)
+        assert len(out_data) == 1, "prune_assessment_items does not return single node"
+        assert len(out_data[0].get("all_assessment_items")) == 1, "all_assessment_items wrong length"
+
+    def test_remove_non_live_assessment_item_exercise(self):
+        test_data = [{"uses_assessment_items": True, "all_assessment_items": [{"live": False}]}]
+        out_data = prune_assessment_items(test_data)
+        assert len(out_data) == 0, "prune_assessment_items returns exercise with no assessment items"
+
+    def test_not_remove_non_assessment_item_nodes(self):
+        test_data = [{"uses_assessment_items": False}]
+        out_data = prune_assessment_items(test_data)
+        assert len(out_data) == 1, "prune_assessment_items filters non-asessment item nodes"
 
 @vcr.use_cassette("tests/fixtures/cassettes/kalite/node_data.json.yml")
 def _get_all_video_ids():
