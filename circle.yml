@@ -1,0 +1,22 @@
+machine:
+  python:
+    version: 3.5.0
+  environment:
+    project: ka-lite
+    version: 0.16
+    sshuser: circleci
+
+dependencies:
+  override:
+    - pip install -r requirements_dev.txt
+
+test:
+  override:
+    - py.test tests/
+
+deployment:
+  pantry:
+    branch: master
+    commands:
+      - make supported
+      - make publish

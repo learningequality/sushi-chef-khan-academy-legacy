@@ -61,3 +61,6 @@ target/
 venv
 
 .hypothesis
+
+makecontentpacks
+out/
