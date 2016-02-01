@@ -8,7 +8,10 @@ from hypothesis.strategies import integers, lists, sampled_from, sets, text, \
 
 from contentpacks.khanacademy import _get_video_ids, \
     retrieve_dubbed_video_mapping, retrieve_html_exercises, \
-    retrieve_kalite_data, retrieve_translations, retrieve_subtitles
+    retrieve_kalite_data, retrieve_translations, retrieve_subtitles, \
+    retrieve_all_assessment_item_data, retrieve_assessment_item_data, \
+    clean_assessment_item, localize_image_urls, localize_content_links, prune_assessment_items
+from contentpacks.models import AssessmentItem
 from contentpacks.utils import NODE_FIELDS_TO_TRANSLATE, translate_nodes, Catalog
 
 
@@ -96,6 +99,92 @@ class Test_retrieve_kalite_data:
         data = retrieve_kalite_data()
         assert isinstance(data, list)
 
+
+class Test_retrieve_assessment_item_data:
+
+    def setup(self):
+
+        with vcr.use_cassette("tests/fixtures/cassettes/kalite/node_data.json.yml"):
+            node_data = retrieve_kalite_data()
+            self.assess_node = next(node for node in node_data if node.get("all_assessment_items"))
+            self.assessment_item = self.assess_node.get("all_assessment_items")[0].get("id")
+
+    def test_clean_assessment_item(self):
+        data = {
+            "test": "no",
+            "item_data": "yes!",
+            "id": "100001",
+            "author_names": "author, author!",
+            "shouldn'tbehere": 'nothere',
+        }
+        data = clean_assessment_item(data)
+
+        assert all(a == b for a, b in zip(sorted(data.keys()), sorted(AssessmentItem._meta.get_field_names())))
+
+    def test_retrieve_assessment_item_return_dict(self):
+        with vcr.use_cassette("tests/fixtures/cassettes/kalite/assessment_item_data.json.yml", record_mode="all"):
+            data, paths = retrieve_assessment_item_data(self.assessment_item)
+        assert isinstance(data, dict), "Item data is not of kind dict"
+
+    def test_retrieve_assessment_item_return_list(self):
+        with vcr.use_cassette("tests/fixtures/cassettes/kalite/assessment_item_data.json.yml", record_mode="all"):
+            data, paths = retrieve_assessment_item_data(self.assessment_item)
+        assert isinstance(paths, list), "Paths are not returned as a list"
+
+    def test_retrieve_assessment_item_files_exist(self):
+        with vcr.use_cassette("tests/fixtures/cassettes/kalite/assessment_item_data.json.yml", record_mode="all"):
+            data, paths = retrieve_assessment_item_data(self.assessment_item)
+        for path in paths:
+            assert isinstance(path, str), "Path is not of type str"
+            assert os.path.exists(path), "Downloaded file does not exist"
+
+    def test_retrieve_all_assessment_item_return_list_of_dicts(self):
+        with vcr.use_cassette("tests/fixtures/cassettes/kalite/assessment_item_data.json.yml", record_mode="all"):
+            data, paths = retrieve_all_assessment_item_data(node_data=[self.assess_node])
+        for datum in data:
+            assert isinstance(datum, dict), "Data is not of type dict"
+
+    def test_retrieve_all_assessment_item_return_list_of_str(self):
+        with vcr.use_cassette("tests/fixtures/cassettes/kalite/assessment_item_data.json.yml", record_mode="all"):
+            data, paths = retrieve_all_assessment_item_data(node_data=[self.assess_node])
+        for path in paths:
+            assert isinstance(path, str), "Path is not of type str"
+
+    def test_image_url_converted(self):
+        url_string = "A string with http://example.com/cat_pics.gif"
+        expected_string = "A string with /content/khan/cat/cat_pics.gif"
+        assert expected_string == localize_image_urls({"item_data": url_string})["item_data"]
+
+    def test_multiple_image_urls_in_one_string_converted(self):
+        url_string = "A string with http://example.com/cat_pics.JPEG http://example.com/cat_pics2.gif"
+        expected_string = "A string with /content/khan/cat/cat_pics.JPEG /content/khan/cat/cat_pics2.gif"
+        assert expected_string  == localize_image_urls({"item_data": url_string})["item_data"]
+
+    def test_content_link_converted(self):
+        link_string = "(and so that is the correct answer).**\\n\\n[Watch this video to review](https://www.khanacademy.org/humanities/history/ancient-medieval/Ancient/v/standard-of-ur-c-2600-2400-b-c-e)"
+        expected_string = "(and so that is the correct answer).**\\n\\n[Watch this video to review](/learn/khan/test-prep/ap-art-history/ancient-mediterranean-AP/ancient-near-east-a/standard-of-ur-c-2600-2400-b-c-e/)"
+        assert expected_string  == localize_content_links({"item_data": link_string})["item_data"]
+
+    def test_bad_content_link_removed(self):
+        link_string = "Wrong!\n\n**[Watch video to review](https://www.khanacademy.org/humanities/art-history/v/the-penguin-king-has-risen)**\n\nThat's a wrap!"
+        expected_string = "Wrong!\n\n\n\nThat's a wrap!"
+        assert expected_string  == localize_content_links({"item_data": link_string})["item_data"]
+
+    def test_remove_non_live_assessment_items(self):
+        test_data = [{"uses_assessment_items": True, "all_assessment_items": [{"live": False}, {"live": True}]}]
+        out_data = prune_assessment_items(test_data)
+        assert len(out_data) == 1, "prune_assessment_items does not return single node"
+        assert len(out_data[0].get("all_assessment_items")) == 1, "all_assessment_items wrong length"
+
+    def test_remove_non_live_assessment_item_exercise(self):
+        test_data = [{"uses_assessment_items": True, "all_assessment_items": [{"live": False}]}]
+        out_data = prune_assessment_items(test_data)
+        assert len(out_data) == 0, "prune_assessment_items returns exercise with no assessment items"
+
+    def test_not_remove_non_assessment_item_nodes(self):
+        test_data = [{"uses_assessment_items": False}]
+        out_data = prune_assessment_items(test_data)
+        assert len(out_data) == 1, "prune_assessment_items filters non-asessment item nodes"
 
 @vcr.use_cassette("tests/fixtures/cassettes/kalite/node_data.json.yml")
 def _get_all_video_ids():
