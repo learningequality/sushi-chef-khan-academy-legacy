@@ -6,18 +6,23 @@ import logging
 import os
 import re
 import shutil
+import threading
 import urllib
 import tempfile
 import zipfile
 from collections import OrderedDict
 from functools import reduce
 from multiprocessing.pool import ThreadPool as Pool
+
+import itertools
 import polib
 import requests
 import json
 import ujson
 
+
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file
+from contentpacks.models import AssessmentItem
 
 
 NUM_PROCESSES = 5
@@ -53,7 +58,7 @@ POEntry_class.merge = new_merge
 def retrieve_language_resources(version: str, sublangargs: dict) -> LangpackResources:
     node_data = retrieve_kalite_data()
 
-    video_ids = list(content_data.keys())
+    video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
     # subtitle_list = retrieve_subtitles(video_ids, lang)
     subtitle_list = []
     # dubbed_video_mapping = retrieve_dubbed_video_mapping(video_ids, lang)
@@ -97,7 +102,7 @@ def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
         try:
             response = requests.get(request_url)
             response.raise_for_status()
-        except requests.exceptions.HTTPError:
+        except requests.HTTPError:
             print("Skipping {}".format(youtube_id))
             continue
 
@@ -252,10 +257,12 @@ slug_key = {
     "Exercise": "name",
 }
 
+
 def modify_slugs(nodes) -> list:
     for node in nodes:
         node["slug"] = node.get(slug_key.get(node.get("kind")))
     return nodes
+
 
 id_key = {
     "Topic": "slug",
@@ -263,13 +270,33 @@ id_key = {
     "Exercise": "name",
 }
 
+
 def modify_ids(nodes) -> list:
     for node in nodes:
         node["id"] = node.get(id_key.get(node.get("kind")))
     return nodes
 
+
 def apply_black_list(nodes) -> list:
     return [node for node in nodes if node.get("slug") not in slug_blacklist]
+
+
+def prune_assessment_items(nodes) -> list:
+    node_list = []
+    for node in nodes:
+        if node.get("uses_assessment_items"):
+            assessment_items = []
+            for item in node.get("all_assessment_items", []):
+                if item.get("live"):
+                    assessment_items.append(item)
+            node["all_assessment_items"] = assessment_items
+            if node.get("all_assessment_items"):
+                node_list.append(node)
+        else:
+            node_list.append(node)
+
+    return node_list
+
 
 def group_by_slug(count_dict, item):
     # Build a dictionary, keyed by slug, of items that share that slug
@@ -278,6 +305,7 @@ def group_by_slug(count_dict, item):
     else:
         count_dict[item.get("slug")] = [item]
     return count_dict
+
 
 def create_paths_remove_orphans_and_empty_topics(nodes) -> list:
     node_dict = {node.get("id"): node for node in nodes}
@@ -322,6 +350,7 @@ def create_paths_remove_orphans_and_empty_topics(nodes) -> list:
 
     return node_list
 
+
 @cache_file
 def download_and_clean_kalite_data(url, path) -> str:
     data = requests.get(url)
@@ -331,7 +360,7 @@ def download_and_clean_kalite_data(url, path) -> str:
         attempts += 1
 
     if data.status_code != 200:
-        raise requests.exceptions.RequestException
+        raise requests.RequestException
 
     node_data = ujson.loads(data.content)
 
@@ -371,6 +400,10 @@ def download_and_clean_kalite_data(url, path) -> str:
 
     node_data = apply_black_list(node_data)
 
+    # Remove non-live assessment items and any consequently 'empty' exercises
+
+    node_data = prune_assessment_items(node_data)
+
     # Create paths, deduplicate slugs, remove orphaned content and childless topics
 
     node_data = create_paths_remove_orphans_and_empty_topics(node_data)
@@ -382,7 +415,7 @@ def download_and_clean_kalite_data(url, path) -> str:
     # Save node_data to disk
 
     with open(path, "w") as f:
-        return ujson.dump(node_data, f)
+        ujson.dump(node_data, f)
 
 
 topic_attributes = [
@@ -456,15 +489,236 @@ def retrieve_kalite_data(lang=None, force=False) -> list:
     return node_data
 
 
-def apply_dubbed_video_map(content_data: list, dubmap: dict):
+def clean_assessment_item(assessment_item) -> dict:
+    item = {}
+    for key, val in assessment_item.items():
+        if key in AssessmentItem._meta.get_field_names():
+            item[key] = val
+    return item
+
+
+@cache_file
+def download_assessment_item_data(url, path, lang=None, force=False) -> str:
+    """
+    Retrieve assessment item data and save to disk
+    :param url: url of assessment item
+    :param lang: language to retrieve data in
+    :param force: refetch assessment item and images even if it exists on disk
+    :return: path to assessment item file
+    """
+    attempts = 1
+    logging.info("Downloading assessment item data from {url}, attempt {attempts}".format(url=url, attempts=attempts))
+    data = requests.get(url)
+    while data.status_code != 200 and attempts <= 5:
+        logging.info("Downloading assessment item data from {url}, attempt {attempts}".format(url=url, attempts=attempts))
+        data = requests.get(url)
+        attempts += 1
+
+    if data.status_code != 200:
+        raise requests.RequestException
+
+    item_data = ujson.loads(data.content)
+
+    item_data = clean_assessment_item(item_data)
+
+    with open(path, 'w') as f:
+        ujson.dump(item_data, f)
+
+
+def _get_path_from_filename(filename):
+    return "/content/khan/" + _get_subpath_from_filename(filename)
+
+
+def _get_subpath_from_filename(filename):
+    filename = filename.replace("%20", "_")
+    return "%s/%s" % (filename[0:3], filename)
+
+def _old_image_url_to_content_url(matchobj):
+    url = matchobj.group(0)
+    if url in IMAGE_URLS_NOT_TO_REPLACE:
+        return url
+    return _get_path_from_filename(matchobj.group("filename"))
+
+
+def _old_graphie_url_to_content_url(matchobj):
+    return "web+graphie:" + _get_path_from_filename(matchobj.group("filename"))
+
+
+IMAGE_URL_REGEX = re.compile('https?://[\w\.\-\/]+\/(?P<filename>[\w\.\-%]+\.(png|gif|jpg|jpeg|svg))', flags=re.IGNORECASE)
+
+WEB_GRAPHIE_URL_REGEX = re.compile('web\+graphie://ka\-perseus\-graphie\.s3\.amazonaws\.com\/(?P<filename>\w+)', flags=re.IGNORECASE)
+
+IMAGE_URLS_NOT_TO_REPLACE = {"http://www.dogs.com/photo.jpg",
+                             "https://www.kasandbox.org/programming-images/creatures/OhNoes.png"}
+
+# This is used for image URLs that don't end in an image extension, or are otherwise messed up.
+# Here we can manually map such URLs to a nice, friendly filename that will get used in the assessment item data.
+MANUAL_IMAGE_URL_TO_FILENAME_MAPPING = {
+    "http://www.marineland.com/~/media/UPG/Marineland/Products/Glass%20Aquariums/Cube%20Aquariums/12268%20MCT45B%200509jpg49110640x640.ashx?w=300&h=300&bc=white": "aquarium.jpg",
+    "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcSbTT6DecPnyTp5t-Ar9bgQcwNxLV8F6dvSFDYHKZSs1JINCCRFJw": "ar9bgqcwnxlv8f6dvsfdyhkzss1jinccrfjw.jpg",
+}
+
+# this ugly regex looks for links to content on the KA site, also including the markdown link text and surrounding bold markers (*), e.g.
+# **[Read this essay to review](https://www.khanacademy.org/humanities/art-history/art-history-400-1300-medieval---byzantine-eras/anglo-saxon-england/a/the-lindisfarne-gospels)**
+# TODO(jamalex): answer any questions people might have when this breaks!
+CONTENT_URL_REGEX_PLAIN = "https?://www\.khanacademy\.org/[\/\w\-\%]*/./(?P<slug>[\w\-]+)"
+CONTENT_URL_REGEX = re.compile("(?P<prefix>)" + CONTENT_URL_REGEX_PLAIN + "(?P<suffix>)", flags=re.IGNORECASE)
+CONTENT_LINK_REGEX = re.compile("(?P<prefix>\**\[[^\]\[]+\] ?\(?) ?" + CONTENT_URL_REGEX_PLAIN + "(?P<suffix>\)? ?\**)", flags=re.IGNORECASE)
+
+
+def localize_image_urls(item):
+    for url, filename in MANUAL_IMAGE_URL_TO_FILENAME_MAPPING.items():
+        item["item_data"] = item["item_data"].replace(url, _get_path_from_filename(filename))
+    item["item_data"] = re.sub(IMAGE_URL_REGEX, _old_image_url_to_content_url, item["item_data"])
+    return item
+
+
+def find_all_image_urls(item):
+
+    for url in MANUAL_IMAGE_URL_TO_FILENAME_MAPPING:
+        if url in item["item_data"]:
+            yield url
+
+    for match in re.finditer(IMAGE_URL_REGEX, item["item_data"]):
+        if match.group(0) not in IMAGE_URLS_NOT_TO_REPLACE:
+            yield str(match.group(0))  # match.group(0) means get the entire string
+
+
+def find_all_graphie_urls(item):
+
+    for match in re.finditer(WEB_GRAPHIE_URL_REGEX, item["item_data"]):
+        base_filename = str(match.group(0)).replace("web+graphie:", "https:") # match.group(0) means get the entire string
+        yield base_filename + ".svg"
+        yield base_filename + "-data.json"
+
+
+def localize_graphie_urls(item):
+    item["item_data"] = re.sub(WEB_GRAPHIE_URL_REGEX, _old_graphie_url_to_content_url, item["item_data"])
+    return item
+
+
+def localize_content_links(item):
+    item["item_data"] = re.sub(CONTENT_LINK_REGEX, _old_content_links_to_local_links, item["item_data"])
+    item["item_data"] = re.sub(CONTENT_URL_REGEX, _old_content_links_to_local_links, item["item_data"])
+    return item
+
+
+def _old_content_links_to_local_links(matchobj):
+    # replace links in them to point to local resources, if available, otherwise return an empty string
+    content = _get_content_by_readable_id(matchobj.group("slug"))
+    url = matchobj.group(0)
+    if not content or "path" not in content:
+        if "/a/" not in url and "/p/" not in url:
+            print("Content link target not found:", url)
+        return ""
+
+    return "%s/learn/%s%s" % (matchobj.group("prefix"), content["path"], matchobj.group("suffix"))
+
+
+CONTENT_BY_READABLE_ID = None
+def _get_content_by_readable_id(readable_id):
+    global CONTENT_BY_READABLE_ID
+    if not CONTENT_BY_READABLE_ID:
+        CONTENT_BY_READABLE_ID = dict([(c.get("readable_id"), c) for c in retrieve_kalite_data() if c.get("readable_id")])
+    try:
+        return CONTENT_BY_READABLE_ID[readable_id]
+    except KeyError:
+        return CONTENT_BY_READABLE_ID.get(re.sub("\-+", "-", readable_id).lower())
+
+
+def retrieve_assessment_item_data(assessment_item, lang=None, force=False) -> (dict, [str]):
+    """
+    Retrieve assessment item data and images for a single assessment item.
+    :param assessment_item: id of assessment item
+    :param lang: language to retrieve data in
+    :param force: refetch assessment item and images even if it exists on disk
+    :return: tuple of dict of assessment item data and list of paths to files
+    """
+    if lang:
+        url = "http://www.khanacademy.org/api/v1/assessment_items/{assessment_item}?lang={lang}".format(lang=lang)
+        filename = "assessment_items/{assessment_item}_{lang}.json".format(lang=lang)
+    else:
+        url = "http://www.khanacademy.org/api/v1/assessment_items/{assessment_item}"
+        filename = "assessment_items/{assessment_item}.json"
+    try:
+        url = url.format(assessment_item=assessment_item)
+        filename = filename.format(assessment_item=assessment_item)
+        path = download_assessment_item_data(url, filename=filename, lang=lang, force=force)
+    except requests.RequestException:
+        logging.error("Download failure for assessment item: {assessment_item}".format(assessment_item=assessment_item))
+        raise
+
+    with open(path, "r") as f:
+        item_data = ujson.load(f)
+
+    image_urls = find_all_image_urls(item_data)
+    graphie_urls = find_all_graphie_urls(item_data)
+
+    file_paths = []
+
+    for url in itertools.chain(image_urls, graphie_urls):
+        filename = MANUAL_IMAGE_URL_TO_FILENAME_MAPPING.get(url, os.path.basename(url))
+        filepath = _get_subpath_from_filename(filename)
+        file_paths.append(download_and_cache_file(url, filename=filepath))
+
+    item_data = localize_image_urls(item_data)
+    item_data = localize_content_links(item_data)
+    item_data = localize_graphie_urls(item_data)
+
+    return item_data, file_paths
+
+
+def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) -> ([dict], [str]):
+    """
+    Retrieve Khan Academy assessment items and associated images from KA.
+    :param lang: language to retrieve data in
+    :param force: refetch all assessment items
+    :param node_data: list of dicts containing node data to collect assessment items for
+    :return: a tuple of a list of assessment item data dicts, and a list of filepaths for the zip file
+    """
+    if not node_data:
+        node_data = retrieve_kalite_data(lang=lang)
+
+    assessment_item_data = []
+
+    all_file_paths = []
+
+    # Limit number of simultaneous requests
+    semaphore = threading.BoundedSemaphore(100)
+
+    def _download_item_data_and_files(node):
+        for assessment_item in node.get("all_assessment_items", []):
+            semaphore.acquire()
+            try:
+                item_data, file_paths = retrieve_assessment_item_data(assessment_item.get("id"), lang=lang, force=force)
+                assessment_item_data.append(item_data)
+                all_file_paths.extend(file_paths)
+            except requests.RequestException:
+                pass
+            semaphore.release()
+
+    threads = [threading.Thread(target=_download_item_data_and_files, args=(node,)
+                                ) for node in node_data if node.get("all_assessment_items")]
+
+    logging.info("Retrieving assessment item data for all assessment items.")
+
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    return assessment_item_data, all_file_paths
+
+
+def apply_dubbed_video_map(content_data: list, dubmap: dict) -> list:
     # TODO: stub. Implement more fully next time
 
-    for key,values in content_data:
+    for values in content_data:
         if values["kind"] != NodeType.video:
             continue
         values["youtube_id"] = dubmap.get(values["youtube_id"])
         values["video_id"] = dubmap.get(values["video_id"])
-        yield key,values
+        yield values
 
 
 
