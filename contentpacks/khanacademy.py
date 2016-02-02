@@ -21,7 +21,7 @@ import ujson
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file
 from contentpacks.models import AssessmentItem
 
-NUM_PROCESSES = 5
+NUM_PROCESSES = 10
 
 LangpackResources = collections.namedtuple(
     "LangpackResources",
@@ -103,12 +103,12 @@ def retrieve_subtitle_meta_data(url, path):
         f.write(amara_id)
 
 
-def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
+def retrieve_subtitles(videos: list, lang="en", force=False, threads=NUM_PROCESSES) -> list:
     # videos => contains list of youtube ids
     """return list of youtubeids that were downloaded"""
     downloaded_videos = []
     not_downloaded_videos = []
-    for youtube_id in videos:
+    def _download_subtitle_data(youtube_id):
 
         logging.info("trying to download subtitle for %s" % youtube_id)
         request_url = "https://www.amara.org/api2/partners/videos/?format=json&video_url=http://www.youtube.com/watch?v=%s" % (
@@ -127,6 +127,10 @@ def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
             downloaded_videos.append(youtube_id)
         except (requests.HTTPError, KeyError, urllib.error.HTTPError):
             not_downloaded_videos.append(youtube_id)
+
+    pools = ThreadPool(processes=threads)
+
+    pools.map(_download_subtitle_data, videos)
 
     return downloaded_videos
 
@@ -729,7 +733,7 @@ def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) ->
     return assessment_item_data, all_file_paths
 
 
-def query_remote_content_file_sizes(content_items, threads=10):
+def query_remote_content_file_sizes(content_items, threads=NUM_PROCESSES):
     """
     Query and store the file sizes for downloadable videos, by running HEAD requests against them,
     and reading the `content-length` header. Right now, this is only for the "khan" channel, and hence lives here.
@@ -810,7 +814,7 @@ def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, la
     
     remote_sizes.update(query_remote_content_file_sizes(items_missing_sizes))
 
-    os.makedirs(os.path.dirname(cachedir), exist_ok=True)
+    os.makedirs(cachedir, exist_ok=True)
 
     with open(os.path.join(cachedir, "file_sizes.json"), "w") as f:
         json.dump(remote_sizes, f)
@@ -850,3 +854,25 @@ def retrieve_html_exercises(exercises: [str], lang: str, force=False) -> (str, [
     # filter out Nones, since it means we got an error downloading those exercises
     result = [e for e in translated_exercises if e]
     return (BUILD_DIR, result)
+
+def _list_all_exercises_with_bad_links():
+    """This is a standalone helper method used to provide KA with a list of exercises with bad URLs in them."""
+    url_pattern = r"https?://www\.khanacademy\.org/[\/\w\-]*/./(?P<slug>[\w\-]+)"
+    assessment_items = {item.get("id"): item for item in retrieve_all_assessment_item_data()}
+    for ex in retrieve_kalite_data():
+        if ex.get("kind") == "Exercise":
+            checked_urls = []
+            displayed_title = False
+            for aidict in ex.get("all_assessment_items", []):
+                ai = assessment_items[aidict["id"]]
+                for match in re.finditer(url_pattern, ai["item_data"], flags=re.IGNORECASE):
+                    url = str(match.group(0))
+                    if url in checked_urls:
+                        continue
+                    checked_urls.append(url)
+                    status_code = requests.get(url).status_code
+                    if status_code != 200:
+                        if not displayed_title:
+                            print("EXERCISE: '%s'" % ex["title"], ex["path"])
+                            displayed_title = True
+                        print("\t", status_code, url)
