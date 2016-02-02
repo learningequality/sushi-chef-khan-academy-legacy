@@ -767,7 +767,7 @@ def get_content_length(content):
     return size
 
 
-def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, lang: str, cachedir=None) -> list:
+def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, lang: str, cachedir=None) -> (list, int):
     if not cachedir:
         cachedir = os.path.join(os.getcwd(), "build")
 
@@ -781,15 +781,21 @@ def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, la
 
         dubbed_content = []
 
+        dubbed_count = 0
+
         for item in content_data:
             if dubmap.get(item.get("youtube_id", "")):
                 item["youtube_id"] = dubmap.get(item["youtube_id"])
                 item["video_id"] = dubmap.get(item["video_id"])
+                dubbed_count += 1
             elif item["kind"] == NodeType.video and item["youtube_id"] not in subtitles:
                 continue
             dubbed_content.append(item)
 
         content_data = dubbed_content
+
+    else:
+        dubbed_count = sum(content_datum.get("kind") == NodeType.video for content_datum in content_data)
 
     items_missing_sizes = (item for item in content_data if item.get("youtube_id") not in remote_sizes)
     
@@ -801,7 +807,7 @@ def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, la
     for item in content_data:
         item["remote_size"] = remote_sizes.get(item["youtube_id"])
 
-    return content_data
+    return content_data, dubbed_count
 
 def retrieve_html_exercises(exercises: [str], lang: str, force=False) -> (str, [str]):
     """

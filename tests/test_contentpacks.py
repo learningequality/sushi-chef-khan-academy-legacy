@@ -25,11 +25,12 @@ class Test_apply_dubbed_video_map:
         test_content = [{"video_id": input_id, "youtube_id": input_id}]
 
         test_dubbed = {input_id: output_id}
-        test_list = apply_dubbed_video_map(test_content, test_dubbed, [], "de")
+        test_list, test_count = apply_dubbed_video_map(test_content, test_dubbed, [], "de")
         assert test_list
         assert isinstance(test_list, list)
         assert test_list[0]["video_id"] == output_id
         assert test_list[0]["youtube_id"] == output_id
+        assert test_count == 1
 
 
 class Test_retrieve_subtitles:

@@ -411,7 +411,8 @@ def separate_exercise_types(node_data):
            node_data
 
 
-def generate_kalite_language_pack_metadata(lang: str, version: str, interface_catalog: Catalog, content_catalog: Catalog):
+def generate_kalite_language_pack_metadata(lang: str, version: str, interface_catalog: Catalog,
+                                           content_catalog: Catalog, subtitles: list, dubbed_video_count: int):
     """
     Create the language pack metadata based on the files passed in.
     """
@@ -421,9 +422,10 @@ def generate_kalite_language_pack_metadata(lang: str, version: str, interface_ca
         'language_pack_version': 1,
         'percent_translated': interface_catalog.percent_translated,
         'topic_tree_translated': content_catalog.percent_translated,
-        'subtitle_count': 0,
+        'subtitle_count': len(subtitles),
         "name": get_lang_name(lang),
         'native_name': get_lang_native_name(lang),
+        "video_count": dubbed_video_count,
     }
 
     return metadata

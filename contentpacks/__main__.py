@@ -21,7 +21,7 @@ def make_language_pack(lang, version, sublangargs, filename, no_assessment_items
 
     node_data = translate_nodes(node_data, content_catalog)
     node_data = list(node_data)
-    node_data = list(apply_dubbed_video_map(node_data, dubmap, subtitles, sublangargs["video_lang"]))
+    node_data, dubbed_video_count = apply_dubbed_video_map(node_data, dubmap, subtitles, sublangargs["video_lang"])
 
     html_exercise_ids, assessment_exercise_ids, node_data = separate_exercise_types(node_data)
     html_exercise_path, translated_html_exercise_ids = retrieve_html_exercises(html_exercise_ids, lang)
@@ -33,7 +33,8 @@ def make_language_pack(lang, version, sublangargs, filename, no_assessment_items
 
     node_data = remove_untranslated_exercises(node_data, translated_html_exercise_ids, assessment_data)
 
-    pack_metadata = generate_kalite_language_pack_metadata(lang, version, interface_catalog, content_catalog)
+    pack_metadata = generate_kalite_language_pack_metadata(lang, version, interface_catalog, content_catalog, subtitles,
+                                                           dubbed_video_count)
 
     if no_assessment_items:
         # Only bundle assessment item asset files for the English language pack
