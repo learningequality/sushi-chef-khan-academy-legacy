@@ -809,7 +809,9 @@ def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, la
     items_missing_sizes = (item for item in content_data if item.get("youtube_id") not in remote_sizes)
     
     remote_sizes.update(query_remote_content_file_sizes(items_missing_sizes))
-    
+
+    os.makedirs(os.path.dirname(cachedir), exist_ok=True)
+
     with open(os.path.join(cachedir, "file_sizes.json"), "w") as f:
         json.dump(remote_sizes, f)
     
