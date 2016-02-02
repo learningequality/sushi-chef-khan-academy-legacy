@@ -83,41 +83,50 @@ def retrieve_language_resources(version: str, sublangargs: dict) -> LangpackReso
                              dubbed_video_mapping)
 
 
+@cache_file
+def retrieve_subtitle_meta_data(url, path):
+
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+    except requests.HTTPError:
+        raise
+
+    content = ujson.loads(response.content)
+
+    if not content.get("objects"):
+        raise KeyError
+
+    amara_id = content["objects"][0]["id"]
+
+    with open(path, 'w') as f:
+        f.write(amara_id)
+
+
 def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
     # videos => contains list of youtube ids
     """return list of youtubeids that were downloaded"""
     downloaded_videos = []
     not_downloaded_videos = []
     for youtube_id in videos:
-        print("trying to download subtitle for %s" % youtube_id)
+
+        logging.info("trying to download subtitle for %s" % youtube_id)
         request_url = "https://www.amara.org/api2/partners/videos/?format=json&video_url=http://www.youtube.com/watch?v=%s" % (
             youtube_id
         )
 
         try:
-            response = requests.get(request_url)
-            response.raise_for_status()
-        except requests.HTTPError:
-            print("Skipping {}".format(youtube_id))
-            continue
-
-        content = ujson.loads(response.content)
-        if not content["objects"]:
-            not_downloaded_videos.append(youtube_id)
-            continue
-        else:
-            amara_id = content["objects"][0]["id"]
+            amara_id_file = retrieve_subtitle_meta_data(request_url, filename="subtitles/meta_data/{youtube_id}".format(
+                youtube_id=youtube_id))
+            with open(amara_id_file, 'r') as f:
+                amara_id = f.read()
             subtitle_download_uri = "https://www.amara.org/api/videos/%s/languages/%s/subtitles/?format=vtt" % (
                 amara_id, lang)
-            try:
-                response_code = urllib.request.urlopen(subtitle_download_uri)
-
-            except urllib.error.HTTPError:
-                continue
-            file_dir = os.path.join(os.getcwd(), "build", "subtitles", lang)
-            filename = "{}.vtt".format(youtube_id)
-            download_and_cache_file(subtitle_download_uri, file_dir, filename=filename, ignorecache=force)
+            filename = "subtitles/{lang}/{youtube_id}.vtt".format(lang=lang, youtube_id=youtube_id)
+            download_and_cache_file(subtitle_download_uri, filename=filename, ignorecache=force)
             downloaded_videos.append(youtube_id)
+        except (requests.HTTPError, KeyError, urllib.error.HTTPError):
+            not_downloaded_videos.append(youtube_id)
 
     return downloaded_videos
 
