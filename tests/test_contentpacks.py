@@ -2,7 +2,7 @@ import logging
 import os
 import vcr
 from hypothesis import given
-from hypothesis.strategies import lists, sampled_from, sets, text, \
+from hypothesis.strategies import lists, sampled_from, text, \
     tuples
 
 from contentpacks.khanacademy import _get_video_ids, \
@@ -11,8 +11,7 @@ from contentpacks.khanacademy import _get_video_ids, \
     retrieve_all_assessment_item_data, retrieve_assessment_item_data, \
     clean_assessment_item, localize_image_urls, localize_content_links, prune_assessment_items
 from contentpacks.models import AssessmentItem
-from contentpacks.utils import NODE_FIELDS_TO_TRANSLATE, translate_nodes, Catalog
-
+from contentpacks.utils import NODE_FIELDS_TO_TRANSLATE, translate_nodes, Catalog, NodeType
 
 logging.basicConfig()
 logging.getLogger("vcr").setLevel(logging.DEBUG)
@@ -20,13 +19,17 @@ logging.getLogger("vcr").setLevel(logging.DEBUG)
 
 class Test_apply_dubbed_video_map:
 
-    def test_apply_dubbed(self, test_content, correct_answer):
-       
-        test_dubbed = {"y2-uaPiyoxc":"lhS-nvcK8Co"}
-        test_dict = list(apply_dubbed_video_map(test_content, test_dubbed))
-        assert test_dict
-        assert isinstance(test_dict, list)
-        assert test_dict == correct_answer
+    def test_apply_dubbed(self):
+        input_id = "y2-uaPiyoxc"
+        output_id = "lhS-nvcK8Co"
+        test_content = [{"video_id": input_id, "youtube_id": input_id}]
+
+        test_dubbed = {input_id: output_id}
+        test_list = apply_dubbed_video_map(test_content, test_dubbed, [], "de")
+        assert test_list
+        assert isinstance(test_list, list)
+        assert test_list[0]["video_id"] == output_id
+        assert test_list[0]["youtube_id"] == output_id
 
 
 class Test_retrieve_subtitles:
@@ -34,7 +37,6 @@ class Test_retrieve_subtitles:
     def test_incorrect_youtube_id(self):
         incorrect_list = ["aaa"]
         empty_list = retrieve_subtitles(incorrect_list, force=True)
-        test_list = []
         assert not empty_list
         assert isinstance(empty_list, list)
 
@@ -42,13 +44,12 @@ class Test_retrieve_subtitles:
     def test_correct_youtube_id(self):
         correct_list = ["y2-uaPiyoxc"]
         filled_list = retrieve_subtitles(correct_list, force=True)
-        test_list = ["y2-uaPiyoxc"]
         assert filled_list
         assert isinstance(filled_list, list)
 
     @vcr.use_cassette()
     def test_correct_and_incorrect_youtube_id(self):
-        mixed_list =  ["y2-uaPiyoxc", "asdadsafa"]
+        mixed_list = ["y2-uaPiyoxc", "asdadsafa"]
         filled_list = retrieve_subtitles(mixed_list, force=True)
         test_list = ["y2-uaPiyoxc"]
         assert filled_list
@@ -67,35 +68,26 @@ class Test_retrieve_subtitles:
     @vcr.use_cassette()
     def test_correct_youtube_id_and_incorrect_langpack(self):
         correct_list = ["y2-uaPiyoxc"]
-        empty_list = retrieve_subtitles(correct_list,"falselang", force=True)
-        test_list = []
+        empty_list = retrieve_subtitles(correct_list, "falselang", force=True)
         assert not empty_list
         assert isinstance(empty_list, list)
 
 class Test_retrieve_dubbed_mappings:
     
     @vcr.use_cassette(serializer="yaml")
-    def test_correct_youtube_id_dubbed(self):
-        correct_list = ["y2-uaPiyoxc"]
-        correct_dictionary = {"y2-uaPiyoxc" : "lhS-nvcK8Co"}
-        test_call = retrieve_dubbed_video_mapping(correct_list, "de")
+    def test_only_dubbed(self):
+        test_call = retrieve_dubbed_video_mapping("de")
         assert isinstance(test_call, dict)
         assert test_call
-        assert test_call == correct_dictionary
+        for key, val in test_call.items():
+            assert key != val, "Key and value were identical"
 
     @vcr.use_cassette(serializer="yaml")
-    def test_correct_youtube_id_incorrect_lang_dubbed(self):
-        correct_list = ["y2-uaPiyoxc"]
-        test_call = retrieve_dubbed_video_mapping(correct_list, "asdasda")
+    def test_english_no_dubbed(self):
+        test_call = retrieve_dubbed_video_mapping("en")
         assert isinstance(test_call, dict)
         assert not test_call
 
-    @vcr.use_cassette(serializer="yaml")
-    def test_incorrect_youtube_id_dubbed(self):
-        incorrect_list = ["asfbsaf"]
-        test_call = retrieve_dubbed_video_mapping(incorrect_list, "de")
-        assert isinstance(test_call, dict)
-        assert not test_call
 
 class Test_retrieve_translations:
 
@@ -116,7 +108,7 @@ class Test__get_video_ids:
 
     @given(lists(tuples(text(min_size=1), sampled_from(["Exercise", "Video", "Topic"]))))
     def test_given_list_returns_only_videos(self, contents):
-        contents = [{"kind": kind, "id": id} for id, kind in contents]
+        contents = [{"kind": kind, "id": content_id} for content_id, kind in contents]
         video_count = len([node for node in contents if node.get("kind") == "Video"])
 
         assert len(_get_video_ids(contents)) == video_count
@@ -251,19 +243,11 @@ def _get_all_video_ids():
 
 class Test_retrieve_dubbed_video_mapping:
 
-    video_list = _get_all_video_ids()
+    def test_returns_dict(self):
+        with vcr.use_cassette("tests/fixtures/cassettes/khanacademy/video_api.yml", record_mode="new_episodes"):
+            dubbed_videos = retrieve_dubbed_video_mapping("de")
 
-    @vcr.use_cassette("tests/fixtures/cassettes/khanacademy/video_api.yml", record_mode="new_episodes")
-    @given(sets(elements=sampled_from(video_list)))
-    def test_returns_dict_given_singleton_list(self, video_ids):
-
-        dubbed_videos_set = set(
-            retrieve_dubbed_video_mapping(
-                video_ids,
-                lang="de"
-            ))
-
-        assert dubbed_videos_set.issubset(video_ids)
+        assert isinstance(dubbed_videos, dict)
 
 
 class Test_translating_kalite_data:

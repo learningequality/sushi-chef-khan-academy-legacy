@@ -12,18 +12,14 @@ import tempfile
 import zipfile
 from collections import OrderedDict
 from functools import reduce
-from multiprocessing.pool import ThreadPool as Pool
-
+from multiprocessing.pool import ThreadPool
 import itertools
 import polib
 import requests
 import json
 import ujson
-
-
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file
 from contentpacks.models import AssessmentItem
-
 
 NUM_PROCESSES = 5
 
@@ -59,10 +55,9 @@ def retrieve_language_resources(version: str, sublangargs: dict) -> LangpackReso
     node_data = retrieve_kalite_data()
 
     video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
-    # subtitle_list = retrieve_subtitles(video_ids, lang)
-    subtitle_list = []
-    # dubbed_video_mapping = retrieve_dubbed_video_mapping(video_ids, lang)
-    dubbed_video_mapping = []
+    subtitle_list = retrieve_subtitles(video_ids, sublangargs["video_lang"])
+
+    dubbed_video_mapping = retrieve_dubbed_video_mapping(sublangargs["video_lang"])
 
     # retrieve KA Lite po files from CrowdIn
     interface_lang = sublangargs["interface_lang"]
@@ -113,7 +108,7 @@ def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
         else:
             amara_id = content["objects"][0]["id"]
             subtitle_download_uri = "https://www.amara.org/api/videos/%s/languages/%s/subtitles/?format=vtt" % (
-            amara_id, lang)
+                amara_id, lang)
             try:
                 response_code = urllib.request.urlopen(subtitle_download_uri)
 
@@ -127,32 +122,41 @@ def retrieve_subtitles(videos: list, lang="en", force=False) -> list:
     return downloaded_videos
 
 
-def retrieve_dubbed_video_mapping(video_ids: [str], lang: str) -> dict:
+def retrieve_dubbed_video_mapping(lang: str) -> dict:
     """
     Returns a dictionary mapping between the english id, and its id for
     the dubbed video version given the language.
-
-    Note (aron): optimize later by doing only one request to the topic
-    tree and then filtering videos from there.
+    :param lang: language to fetch dubbed video map for
+    :return: dictionary of all valid mappings, empty if none.
     """
-    url_template = ("http://www.khanacademy.org/api/v1/"
-                    "videos/{video_id}?lang={lang}")
 
-    dubbed_video_mapping = {}
+    if lang != "en":
 
-    for video in video_ids:
-        print("retrieving dubbed video mapping for %s" % video)
-        url = url_template.format(video_id=video, lang=lang)
+        projection = {"videos": [OrderedDict([("youtubeId", 1), ("id", 1)])]}
 
-        r = requests.get(url)
-        r.raise_for_status()
+        url_template = "http://www.khanacademy.org/api/v2/topics/topictree?lang={lang}&projection={projection}"
 
-        deets = r.json()
-        if not deets:
-            continue
+        url = url_template.format(lang=lang, projection=json.dumps(projection))
 
-        if isinstance(deets, dict) and deets["translated_youtube_lang"] == lang:
-            dubbed_video_mapping[video] = deets["translated_youtube_id"]
+        logging.info("Retrieving Dubbed Videos for language {lang}".format(lang=lang))
+
+        dubbed_video_data = {video.get("id"): video.get("youtubeId") for video in
+                             ujson.loads(requests.get(url).content).get("videos", [])}
+
+        logging.info("Retrieving Videos for English to map dubbed video ids")
+
+        url_template = "http://www.khanacademy.org/api/v2/topics/topictree?projection={projection}"
+
+        url = url_template.format(projection=json.dumps(projection))
+
+        english_video_data = {video.get("id"): video.get("youtubeId") for video in
+                              ujson.loads(requests.get(url).content).get("videos", [])}
+
+        dubbed_video_mapping = {english_video_data[id]: youtube_id for id, youtube_id in dubbed_video_data.items()
+                                if english_video_data[id] != youtube_id}
+
+    else:
+        dubbed_video_mapping = {}
 
     return dubbed_video_mapping
 
@@ -242,7 +246,6 @@ slug_blacklist += ["MoMA", "getty-museum", "stanford-medicine", "crash-course1",
 slug_blacklist += ["mortgage-interest-rates", "factor-polynomials-using-the-gcf", "inflation-overview",
                    "time-value-of-money", "changing-a-mixed-number-to-an-improper-fraction",
                    "applying-the-metric-system"]  # errors on video downloads
-
 
 # 'Mortgage interest rates' at http://s3.amazonaws.com/KA-youtube-converted/vy_pvstdBhg.mp4/vy_pvstdBhg.mp4...
 # 'Inflation overview' at http://s3.amazonaws.com/KA-youtube-converted/-Z5kkfrEc8I.mp4/-Z5kkfrEc8I.mp4...
@@ -510,7 +513,8 @@ def download_assessment_item_data(url, path, lang=None, force=False) -> str:
     logging.info("Downloading assessment item data from {url}, attempt {attempts}".format(url=url, attempts=attempts))
     data = requests.get(url)
     while data.status_code != 200 and attempts <= 5:
-        logging.info("Downloading assessment item data from {url}, attempt {attempts}".format(url=url, attempts=attempts))
+        logging.info(
+            "Downloading assessment item data from {url}, attempt {attempts}".format(url=url, attempts=attempts))
         data = requests.get(url)
         attempts += 1
 
@@ -533,6 +537,7 @@ def _get_subpath_from_filename(filename):
     filename = filename.replace("%20", "_")
     return "%s/%s" % (filename[0:3], filename)
 
+
 def _old_image_url_to_content_url(matchobj):
     url = matchobj.group(0)
     if url in IMAGE_URLS_NOT_TO_REPLACE:
@@ -544,9 +549,11 @@ def _old_graphie_url_to_content_url(matchobj):
     return "web+graphie:" + _get_path_from_filename(matchobj.group("filename"))
 
 
-IMAGE_URL_REGEX = re.compile('https?://[\w\.\-\/]+\/(?P<filename>[\w\.\-%]+\.(png|gif|jpg|jpeg|svg))', flags=re.IGNORECASE)
+IMAGE_URL_REGEX = re.compile('https?://[\w\.\-\/]+\/(?P<filename>[\w\.\-%]+\.(png|gif|jpg|jpeg|svg))',
+                             flags=re.IGNORECASE)
 
-WEB_GRAPHIE_URL_REGEX = re.compile('web\+graphie://ka\-perseus\-graphie\.s3\.amazonaws\.com\/(?P<filename>\w+)', flags=re.IGNORECASE)
+WEB_GRAPHIE_URL_REGEX = re.compile('web\+graphie://ka\-perseus\-graphie\.s3\.amazonaws\.com\/(?P<filename>\w+)',
+                                   flags=re.IGNORECASE)
 
 IMAGE_URLS_NOT_TO_REPLACE = {"http://www.dogs.com/photo.jpg",
                              "https://www.kasandbox.org/programming-images/creatures/OhNoes.png"}
@@ -563,7 +570,8 @@ MANUAL_IMAGE_URL_TO_FILENAME_MAPPING = {
 # TODO(jamalex): answer any questions people might have when this breaks!
 CONTENT_URL_REGEX_PLAIN = "https?://www\.khanacademy\.org/[\/\w\-\%]*/./(?P<slug>[\w\-]+)"
 CONTENT_URL_REGEX = re.compile("(?P<prefix>)" + CONTENT_URL_REGEX_PLAIN + "(?P<suffix>)", flags=re.IGNORECASE)
-CONTENT_LINK_REGEX = re.compile("(?P<prefix>\**\[[^\]\[]+\] ?\(?) ?" + CONTENT_URL_REGEX_PLAIN + "(?P<suffix>\)? ?\**)", flags=re.IGNORECASE)
+CONTENT_LINK_REGEX = re.compile("(?P<prefix>\**\[[^\]\[]+\] ?\(?) ?" + CONTENT_URL_REGEX_PLAIN + "(?P<suffix>\)? ?\**)",
+                                flags=re.IGNORECASE)
 
 
 def localize_image_urls(item):
@@ -574,7 +582,6 @@ def localize_image_urls(item):
 
 
 def find_all_image_urls(item):
-
     for url in MANUAL_IMAGE_URL_TO_FILENAME_MAPPING:
         if url in item["item_data"]:
             yield url
@@ -585,9 +592,9 @@ def find_all_image_urls(item):
 
 
 def find_all_graphie_urls(item):
-
     for match in re.finditer(WEB_GRAPHIE_URL_REGEX, item["item_data"]):
-        base_filename = str(match.group(0)).replace("web+graphie:", "https:") # match.group(0) means get the entire string
+        base_filename = str(match.group(0)).replace("web+graphie:",
+                                                    "https:")  # match.group(0) means get the entire string
         yield base_filename + ".svg"
         yield base_filename + "-data.json"
 
@@ -616,10 +623,13 @@ def _old_content_links_to_local_links(matchobj):
 
 
 CONTENT_BY_READABLE_ID = None
+
+
 def _get_content_by_readable_id(readable_id):
     global CONTENT_BY_READABLE_ID
     if not CONTENT_BY_READABLE_ID:
-        CONTENT_BY_READABLE_ID = dict([(c.get("readable_id"), c) for c in retrieve_kalite_data() if c.get("readable_id")])
+        CONTENT_BY_READABLE_ID = dict(
+            [(c.get("readable_id"), c) for c in retrieve_kalite_data() if c.get("readable_id")])
     try:
         return CONTENT_BY_READABLE_ID[readable_id]
     except KeyError:
@@ -710,17 +720,88 @@ def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) ->
     return assessment_item_data, all_file_paths
 
 
-def apply_dubbed_video_map(content_data: list, dubmap: dict) -> list:
-    # TODO: stub. Implement more fully next time
+def query_remote_content_file_sizes(content_items, threads=10):
+    """
+    Query and store the file sizes for downloadable videos, by running HEAD requests against them,
+    and reading the `content-length` header. Right now, this is only for the "khan" channel, and hence lives here.
+    TODO(jamalex): Generalize this to other channels once they're centrally hosted and downloadable.
+    """
 
-    for values in content_data:
-        if values["kind"] != NodeType.video:
-            continue
-        values["youtube_id"] = dubmap.get(values["youtube_id"])
-        values["video_id"] = dubmap.get(values["video_id"])
-        yield values
+    sizes_by_id = {}
+
+    if isinstance(content_items, dict):
+        content_items = content_items.values()
+
+    content_items = [content for content in content_items if content.get("format") in content.get("download_urls", {}) and content.get("youtube_id")]
+
+    pool = ThreadPool(threads)
+    sizes = pool.map(get_content_length, content_items)
+
+    for content, size in zip(content_items, sizes):
+        # TODO(jamalex): This should be generalized from "youtube_id" to support other content types
+        if size:
+            sizes_by_id[content["youtube_id"]] = size
+
+    return sizes_by_id
 
 
+def get_content_length(content):
+    url = content["download_urls"][content["format"]].replace("http://fastly.kastatic.org/", "http://s3.amazonaws.com/") # because fastly is SLOWLY
+    logging.info("Checking remote file size for content '{title}' at {url}...".format(title=content.get("title"), url=url))
+    size = 0
+    for i in range(5):
+        try:
+            size = int(requests.head(url, timeout=60).headers["content-length"])
+            break
+        except requests.Timeout:
+            logging.warning("Timed out on try {i} while checking remote file size for '{title}'!".format(title=content.get("title"), i=i))
+        except requests.ConnectionError:
+            logging.warning("Connection error on try {i} while checking remote file size for '{title}'!".format(title=content.get("title"), i=i))
+        except TypeError:
+            logging.warning("No numeric content-length returned while checking remote file size for '{title}' ({readable_id})!".format(**content))
+            break
+    if size:
+        logging.info("Finished checking remote file size for content '{title}'!".format(title=content.get("title")))
+    else:
+        logging.error("No file size retrieved (timeouts?) for content '{title}'!".format(title=content.get("title")))
+    return size
+
+
+def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, lang: str, cachedir=None) -> list:
+    if not cachedir:
+        cachedir = os.path.join(os.getcwd(), "build")
+
+    try:
+        with open(os.path.join(cachedir, "file_sizes.json"), "r") as f:
+            remote_sizes = json.load(f)
+    except FileNotFoundError:
+        remote_sizes = {}
+
+    if lang != "en":
+
+        dubbed_content = []
+
+        for item in content_data:
+            if dubmap.get(item.get("youtube_id", "")):
+                item["youtube_id"] = dubmap.get(item["youtube_id"])
+                item["video_id"] = dubmap.get(item["video_id"])
+            elif item["kind"] == NodeType.video and item["youtube_id"] not in subtitles:
+                continue
+            dubbed_content.append(item)
+
+        content_data = dubbed_content
+
+    items_missing_sizes = (item for item in content_data if item.get("youtube_id") not in remote_sizes)
+    
+    remote_sizes.update(query_remote_content_file_sizes(items_missing_sizes))
+    
+    with open(os.path.join(cachedir, "file_sizes.json"), "w") as f:
+        json.dump(remote_sizes, f)
+    
+    for item in content_data:
+        item["remote_size"] = remote_sizes.get(item["youtube_id"])
+
+    return content_data
 
 def retrieve_html_exercises(exercises: [str], lang: str, force=False) -> (str, [str]):
     """
@@ -747,7 +828,7 @@ def retrieve_html_exercises(exercises: [str], lang: str, force=False) -> (str, [
         except urllib.error.HTTPError:
             return None
 
-    pool = Pool(processes=NUM_PROCESSES)
+    pool = ThreadPool(processes=NUM_PROCESSES)
     translated_exercises = pool.map(_download_html_exercise, exercises)
     # filter out Nones, since it means we got an error downloading those exercises
     result = [e for e in translated_exercises if e]

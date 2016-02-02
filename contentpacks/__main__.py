@@ -1,4 +1,3 @@
-
 """
 makepack
 
@@ -10,7 +9,6 @@ Usage:
 """
 from docopt import docopt
 from pathlib import Path
-
 from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_video_map, retrieve_html_exercises, \
     retrieve_all_assessment_item_data
 from contentpacks.utils import translate_nodes, \
@@ -19,14 +17,11 @@ from contentpacks.utils import translate_nodes, \
 
 
 def make_language_pack(lang, version, sublangargs, filename, no_assessment_items):
-
     node_data, subtitles, interface_catalog, content_catalog, dubmap = retrieve_language_resources(version, sublangargs)
 
     node_data = translate_nodes(node_data, content_catalog)
     node_data = list(node_data)
-    # node_data = list(
-    #     apply_dubbed_video_map(node_data, dubmap)
-    # )
+    node_data = list(apply_dubbed_video_map(node_data, dubmap, subtitles, sublangargs["video_lang"]))
 
     html_exercise_ids, assessment_exercise_ids, node_data = separate_exercise_types(node_data)
     html_exercise_path, translated_html_exercise_ids = retrieve_html_exercises(html_exercise_ids, lang)
