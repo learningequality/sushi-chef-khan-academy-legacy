@@ -672,7 +672,7 @@ def retrieve_assessment_item_data(assessment_item, lang=None, force=False) -> (d
         raise
 
     with open(path, "r") as f:
-        item_data = ujson.load(f)
+        item_data = json.load(f)
 
     image_urls = find_all_image_urls(item_data)
     graphie_urls = find_all_graphie_urls(item_data)
