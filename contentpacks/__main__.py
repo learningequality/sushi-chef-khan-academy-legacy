@@ -77,7 +77,15 @@ def main():
 
     logging.basicConfig(filename=log_file,level=logging.DEBUG)
 
-    make_language_pack(lang, version, sublangs, out, no_assessment_items)
+    try:
+        make_language_pack(lang, version, sublangs, out, no_assessment_items)
+    except Exception:           # This is allowed, since we want to potentially debug all errors
+        import os
+        if not os.environ.get("DEBUG"):
+            raise
+        else:
+            import pdb
+            pdb.post_mortem()
 
 
 if __name__ == "__main__":
