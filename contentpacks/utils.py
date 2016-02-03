@@ -5,6 +5,7 @@ import pkgutil
 import re
 import urllib.parse
 import urllib.request
+from functools import partial
 from urllib.parse import urlparse
 from contentpacks.models import Item, AssessmentItem
 from peewee import Using, SqliteDatabase
@@ -171,7 +172,7 @@ def translate_assessment_item_text(items: list, catalog: Catalog):
             yield item
 
 
-def smart_translate_item_data(item_data: dict, gettext):
+def smart_translate_item_data(item_data: dict, gettext=None):
     """Auto translate the content fields of a given assessment item data.
 
     An assessment item doesn't have the same fields; they change
@@ -197,7 +198,8 @@ def smart_translate_item_data(item_data: dict, gettext):
             if isinstance(field_data, dict):
                 item_data[field] = smart_translate_item_data(field_data, gettext)
             elif isinstance(field_data, list):
-                item_data[field] = map(smart_translate_item_data, field_data, gettext)
+                translate_item_fn = partial(smart_translate_item_data, gettext=gettext)
+                item_data[field] = map(translate_item_fn, field_data)
 
         return item_data
 
@@ -212,8 +214,7 @@ def remove_untranslated_exercises(nodes, html_ids, translated_assessment_data):
         if ex_id in html_ids:  # translated html exercise
             return True
         elif ex["uses_assessment_items"]:
-            for assessment_raw in ex["all_assessment_items"]:
-                item_data = ujson.loads(assessment_raw)
+            for item_data in ex["all_assessment_items"]:
                 assessment_id = item_data["id"]
                 if assessment_id in item_data_ids:
                     continue
@@ -375,6 +376,8 @@ def save_catalog(catalog: dict, zf: zipfile.ZipFile, name: str):
 def populate_parent_foreign_keys(nodes):
     node_keys = {node.path: node for node in nodes}
 
+    orphan_count = 0
+
     for node in node_keys.values():
         path = pathlib.Path(node.path)
         parent_slug = str(path.parent)
@@ -382,7 +385,8 @@ def populate_parent_foreign_keys(nodes):
             parent = node_keys[parent_slug]
             node.parent = parent
         except KeyError:
-            print("{path} is an orphan.".format(path=node.path))
+            orphan_count += 1
+            print("{path} is an orphan. (number {orphan_count})".format(path=node.path, orphan_count=orphan_count))
 
         yield node
 
@@ -392,9 +396,8 @@ def save_db(db, zf):
 
 
 def save_assessment_file(assessment_file, zf):
-    with open(assessment_file, "r") as f:
-        zf.write(f, os.path.join("assessment_resources", os.path.basename(os.path.dirname(assessment_file)),
-                                 os.path.basename(assessment_file)))
+        zf.write(assessment_file, os.path.join("assessment_resources", os.path.basename(os.path.dirname(
+            assessment_file)), os.path.basename(assessment_file)))
 
 
 def separate_exercise_types(node_data):

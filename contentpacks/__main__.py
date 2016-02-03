@@ -2,7 +2,7 @@
 makepack
 
 Usage:
-  makecontentpacks ka-lite <lang> <version> [--subtitlelang=subtitle-lang --contentlang=content-lang --interfacelang=interface-lang --videolang=video-lang --out=outdir --no-assessment-items]
+  makecontentpacks ka-lite <lang> <version> [--subtitlelang=subtitle-lang --contentlang=content-lang --interfacelang=interface-lang --videolang=video-lang --out=outdir --logging=log_file --no-assessment-items]
   makecontentpacks -h | --help
   makecontentpacks --version
 
@@ -15,6 +15,7 @@ from contentpacks.utils import translate_nodes, \
     remove_untranslated_exercises, bundle_language_pack, separate_exercise_types, \
     generate_kalite_language_pack_metadata, translate_assessment_item_text
 
+import logging
 
 def make_language_pack(lang, version, sublangargs, filename, no_assessment_items):
     node_data, subtitles, interface_catalog, content_catalog, dubmap = retrieve_language_resources(version, sublangargs)
@@ -71,6 +72,10 @@ def main():
     sublangs = normalize_sublang_args(args)
 
     no_assessment_items = args["--no-assessment-items"]
+
+    log_file = args["--logging"] or "debug.log"
+
+    logging.basicConfig(filename=log_file,level=logging.DEBUG)
 
     make_language_pack(lang, version, sublangs, out, no_assessment_items)
 

@@ -5,7 +5,7 @@ from peewee import Model, SqliteDatabase, CharField, TextField, BooleanField,\
 
 class Item(Model):
     title = CharField()
-    description = TextField()
+    description = TextField(default="")
     available = BooleanField()
     files_complete = IntegerField(default=0)
     total_files = IntegerField(default=0)

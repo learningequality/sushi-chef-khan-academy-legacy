@@ -21,7 +21,7 @@ import ujson
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file
 from contentpacks.models import AssessmentItem
 
-NUM_PROCESSES = 10
+NUM_PROCESSES = 5
 
 LangpackResources = collections.namedtuple(
     "LangpackResources",
@@ -709,19 +709,26 @@ def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) ->
     # Limit number of simultaneous requests
     semaphore = threading.BoundedSemaphore(100)
 
-    def _download_item_data_and_files(node):
-        for assessment_item in node.get("all_assessment_items", []):
-            semaphore.acquire()
-            try:
-                item_data, file_paths = retrieve_assessment_item_data(assessment_item.get("id"), lang=lang, force=force)
-                assessment_item_data.append(item_data)
-                all_file_paths.extend(file_paths)
-            except requests.RequestException:
-                pass
-            semaphore.release()
+    def _download_item_data_and_files(assessment_item):
+        semaphore.acquire()
+        try:
+            item_data, file_paths = retrieve_assessment_item_data(assessment_item.get("id"), lang=lang, force=force)
+            assessment_item_data.append(item_data)
+            all_file_paths.extend(file_paths)
+        except requests.RequestException:
+            pass
+        semaphore.release()
 
-    threads = [threading.Thread(target=_download_item_data_and_files, args=(node,)
-                                ) for node in node_data if node.get("all_assessment_items")]
+    # Unique list of assessment_items
+    assessment_items = {}
+    for node in node_data:
+        for assessment_item in node.get("all_assessment_items", []):
+            assessment_items[assessment_item.get("id")] = assessment_item
+
+    assessment_items = assessment_items.values()
+
+    threads = [threading.Thread(target=_download_item_data_and_files, args=(item,)
+                                ) for item in assessment_items]
 
     logging.info("Retrieving assessment item data for all assessment items.")
 
@@ -820,7 +827,7 @@ def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, la
         json.dump(remote_sizes, f)
     
     for item in content_data:
-        item["remote_size"] = remote_sizes.get(item["youtube_id"])
+        item["remote_size"] = remote_sizes.get(item.get("youtube_id"), 0)
 
     return content_data, dubbed_count
 
