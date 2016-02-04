@@ -381,6 +381,8 @@ def populate_parent_foreign_keys(nodes):
     for node in node_keys.values():
         path = pathlib.Path(node.path)
         parent_slug = str(path.parent)
+        # topic tree paths end in a slash, but path.parent removes the trailing slash. Re-add it so parent_slug matches the key in node_keys
+        parent_slug += "/"
         try:
             parent = node_keys[parent_slug]
             node.parent = parent
@@ -458,4 +460,3 @@ def save_metadata(zf, metadata):
     dump = ujson.dumps(metadata)
     metadata_name = "metadata.json"
     zf.writestr(metadata_name, dump)
-
