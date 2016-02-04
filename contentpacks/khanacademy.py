@@ -539,7 +539,8 @@ def download_assessment_item_data(url, path, lang=None, force=False) -> str:
     item_data = clean_assessment_item(item_data)
 
     with open(path, 'w') as f:
-        ujson.dump(item_data, f)
+        json.dump(item_data, f)
+        f.flush()
 
 
 def _get_path_from_filename(filename):
