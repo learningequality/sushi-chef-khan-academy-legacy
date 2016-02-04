@@ -313,6 +313,10 @@ def convert_dicts_to_models(nodes):
 
         item.__dict__.update(**node)
         item.available = False
+
+        # make sure description is a string, not None
+        item.description = item.description or ""
+
         item.extra_fields = _make_extra_fields_value(
             item._meta.get_field_names(),
             node
