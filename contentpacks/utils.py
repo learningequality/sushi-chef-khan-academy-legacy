@@ -260,7 +260,7 @@ def remove_unavailable_topics(nodes):
     return node_list
 
 
-def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata, assessment_items, assessment_files):
+def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata, assessment_items, assessment_files, subtitles):
     with zipfile.ZipFile(dest, "w") as zf, tempfile.NamedTemporaryFile() as dbf:
         db = SqliteDatabase(dbf.name)
         db.connect()
@@ -290,7 +290,20 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
         for file_path in assessment_files:
             save_assessment_file(file_path, zf)
 
+        for subtitle_path in subtitles:
+            save_subtitle(subtitle_path, zf)
+
     return dest
+
+
+def save_subtitle(path: str, zf: zipfile.ZipFile):
+    zip_subtitle_root = pathlib.Path("subtitles/")
+
+    path = pathlib.Path(path)
+    name = path.name
+
+    zip_subtitle_path = zip_subtitle_root / name
+    zf.write(str(path), str(zip_subtitle_path))
 
 
 def convert_dicts_to_models(nodes):

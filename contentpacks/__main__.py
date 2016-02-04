@@ -44,7 +44,7 @@ def make_language_pack(lang, version, sublangargs, filename, no_assessment_items
         all_assessment_files = []
 
     bundle_language_pack(str(filename), node_data, interface_catalog, interface_catalog,
-                         pack_metadata, assessment_data, all_assessment_files)
+                         pack_metadata, assessment_data, all_assessment_files, subtitle_paths)
 
 
 def normalize_sublang_args(args):
