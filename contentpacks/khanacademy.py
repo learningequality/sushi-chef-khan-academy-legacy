@@ -691,7 +691,7 @@ def retrieve_assessment_item_data(assessment_item, lang=None, force=False) -> (d
     return item_data, file_paths
 
 
-def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) -> ([dict], [str]):
+def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) -> ([dict], set):
     """
     Retrieve Khan Academy assessment items and associated images from KA.
     :param lang: language to retrieve data in
@@ -704,7 +704,7 @@ def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) ->
 
     assessment_item_data = []
 
-    all_file_paths = []
+    all_file_paths = set()
 
     # Limit number of simultaneous requests
     semaphore = threading.BoundedSemaphore(100)
@@ -714,7 +714,7 @@ def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) ->
         try:
             item_data, file_paths = retrieve_assessment_item_data(assessment_item.get("id"), lang=lang, force=force)
             assessment_item_data.append(item_data)
-            all_file_paths.extend(file_paths)
+            all_file_paths.update(file_paths)
         except requests.RequestException:
             pass
         semaphore.release()
