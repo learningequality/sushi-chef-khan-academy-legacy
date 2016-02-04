@@ -702,22 +702,17 @@ def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) ->
     if not node_data:
         node_data = retrieve_kalite_data(lang=lang)
 
-    assessment_item_data = []
-
-    all_file_paths = set()
-
-    # Limit number of simultaneous requests
-    semaphore = threading.BoundedSemaphore(100)
+    pool = ThreadPool()
 
     def _download_item_data_and_files(assessment_item):
-        semaphore.acquire()
         try:
             item_data, file_paths = retrieve_assessment_item_data(assessment_item.get("id"), lang=lang, force=force)
-            assessment_item_data.append(item_data)
-            all_file_paths.update(file_paths)
+            return item_data, file_paths
         except requests.RequestException:
-            pass
-        semaphore.release()
+            return {}, []
+        except Exception as e:
+            print("much exception for {}".format(assessment_item.get("id")))
+            return {}, []
 
     # Unique list of assessment_items
     assessment_items = {}
@@ -727,17 +722,17 @@ def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) ->
 
     assessment_items = assessment_items.values()
 
-    threads = [threading.Thread(target=_download_item_data_and_files, args=(item,)
-                                ) for item in assessment_items]
-
     logging.info("Retrieving assessment item data for all assessment items.")
+    data_and_files = pool.map(_download_item_data_and_files, assessment_items)
+    assessment_item_data, all_file_paths = zip(*data_and_files)
 
-    for thread in threads:
-        thread.start()
-    for thread in threads:
-        thread.join()
+    # remove empty assessment_item_data
+    assessment_item_data = (data for data in assessment_item_data if data)
 
-    return assessment_item_data, all_file_paths
+    # all_file_paths is a list of lists, so we need to flatten it first before deduping through set()
+    all_file_paths = itertools.chain.from_iterable(all_file_paths)
+
+    return assessment_item_data, set(all_file_paths)
 
 
 def query_remote_content_file_sizes(content_items, threads=NUM_PROCESSES):
