@@ -103,11 +103,9 @@ def retrieve_subtitle_meta_data(url, path):
         f.write(amara_id)
 
 
-def retrieve_subtitles(videos: list, lang="en", force=False, threads=NUM_PROCESSES) -> list:
+def retrieve_subtitles(videos: list, lang="en", force=False, threads=NUM_PROCESSES) -> dict:
     # videos => contains list of youtube ids
     """return list of youtubeids that were downloaded"""
-    downloaded_videos = []
-    not_downloaded_videos = []
     def _download_subtitle_data(youtube_id):
 
         logging.info("trying to download subtitle for %s" % youtube_id)
@@ -123,16 +121,17 @@ def retrieve_subtitles(videos: list, lang="en", force=False, threads=NUM_PROCESS
             subtitle_download_uri = "https://www.amara.org/api/videos/%s/languages/%s/subtitles/?format=vtt" % (
                 amara_id, lang)
             filename = "subtitles/{lang}/{youtube_id}.vtt".format(lang=lang, youtube_id=youtube_id)
-            download_and_cache_file(subtitle_download_uri, filename=filename, ignorecache=force)
-            downloaded_videos.append(youtube_id)
+            subtitle_path = download_and_cache_file(subtitle_download_uri, filename=filename, ignorecache=force)
+            return youtube_id, subtitle_path
         except (requests.HTTPError, KeyError, urllib.error.HTTPError):
-            not_downloaded_videos.append(youtube_id)
+            pass
 
     pools = ThreadPool(processes=threads)
 
-    pools.map(_download_subtitle_data, videos)
+    poolresult = pools.map(_download_subtitle_data, videos)
+    subtitle_data = dict(s for s in poolresult if s) # remove empty return values
 
-    return downloaded_videos
+    return subtitle_data
 
 
 def retrieve_dubbed_video_mapping(lang: str) -> dict:

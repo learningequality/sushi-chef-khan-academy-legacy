@@ -18,7 +18,9 @@ from contentpacks.utils import translate_nodes, \
 import logging
 
 def make_language_pack(lang, version, sublangargs, filename, no_assessment_items, no_subtitles):
-    node_data, subtitles, interface_catalog, content_catalog, dubmap = retrieve_language_resources(version, sublangargs, no_subtitles)
+    node_data, subtitle_data, interface_catalog, content_catalog, dubmap = retrieve_language_resources(version, sublangargs, no_subtitles)
+
+    subtitles, subtitle_paths = subtitle_data.keys(), subtitle_data.values()
 
     node_data = translate_nodes(node_data, content_catalog)
     node_data = list(node_data)
