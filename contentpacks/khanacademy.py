@@ -123,7 +123,7 @@ def retrieve_subtitles(videos: list, lang="en", force=False, threads=NUM_PROCESS
             filename = "subtitles/{lang}/{youtube_id}.vtt".format(lang=lang, youtube_id=youtube_id)
             subtitle_path = download_and_cache_file(subtitle_download_uri, filename=filename, ignorecache=force)
             return youtube_id, subtitle_path
-        except (requests.HTTPError, KeyError, urllib.error.HTTPError):
+        except (requests.HTTPError, KeyError, urllib.error.HTTPError, urllib.error.URLError):
             pass
 
     pools = ThreadPool(processes=threads)
