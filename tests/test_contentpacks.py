@@ -37,25 +37,27 @@ class Test_retrieve_subtitles:
     @vcr.use_cassette()
     def test_incorrect_youtube_id(self):
         incorrect_list = ["aaa"]
-        empty_list = retrieve_subtitles(incorrect_list, force=True)
-        assert not empty_list
-        assert isinstance(empty_list, list)
+        empty_dict = retrieve_subtitles(incorrect_list, force=True)
+        assert not empty_dict
+        assert isinstance(empty_dict, dict)
 
     @vcr.use_cassette()
     def test_correct_youtube_id(self):
         correct_list = ["y2-uaPiyoxc"]
-        filled_list = retrieve_subtitles(correct_list, force=True)
-        assert filled_list
-        assert isinstance(filled_list, list)
+        filled_dict = retrieve_subtitles(correct_list, force=True)
+        assert filled_dict
+        assert isinstance(filled_dict, dict)
 
     @vcr.use_cassette()
     def test_correct_and_incorrect_youtube_id(self):
         mixed_list = ["y2-uaPiyoxc", "asdadsafa"]
-        filled_list = retrieve_subtitles(mixed_list, force=True)
-        test_list = ["y2-uaPiyoxc"]
-        assert filled_list
-        assert isinstance(filled_list, list)
-        assert filled_list == test_list
+        filled_dict = retrieve_subtitles(mixed_list, force=True)
+        test_id = "y2-uaPiyoxc"
+        assert filled_dict
+        assert isinstance(filled_dict, dict)
+        for id, path in filled_dict.items():
+            assert id == test_id
+            assert os.path.exists(path)
 
     @vcr.use_cassette()
     def test_directory_made(self):
@@ -69,9 +71,9 @@ class Test_retrieve_subtitles:
     @vcr.use_cassette()
     def test_correct_youtube_id_and_incorrect_langpack(self):
         correct_list = ["y2-uaPiyoxc"]
-        empty_list = retrieve_subtitles(correct_list, "falselang", force=True)
-        assert not empty_list
-        assert isinstance(empty_list, list)
+        empty_dict = retrieve_subtitles(correct_list, "falselang", force=True)
+        assert not empty_dict
+        assert isinstance(empty_dict, dict)
 
 class Test_retrieve_dubbed_mappings:
     

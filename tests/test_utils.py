@@ -112,7 +112,7 @@ class Test_remove_untranslated_exercise:
             {"kind": NodeType.exercise,
                             "id": "translated",
                             "uses_assessment_items": True,
-                            "all_assessment_items": [ujson.dumps({"id": "jebs"})],
+                            "all_assessment_items": [{"id": "jebs"}],
             }
         ]
 
