@@ -7,6 +7,8 @@ machine:
     sshuser: circleci
 
 dependencies:
+  cache_directories:
+    - "build"
   override:
     - pip install -r requirements_dev.txt
 
