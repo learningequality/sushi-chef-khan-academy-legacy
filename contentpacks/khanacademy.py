@@ -710,8 +710,8 @@ def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) ->
             return item_data, file_paths
         except requests.RequestException:
             return {}, []
-        except Exception as e:
-            print("much exception for {}".format(assessment_item.get("id")))
+        except json.JSONDecodeError:
+            print("got a JSONDecodeError for {}".format(assessment_item.get("id")))
             return {}, []
 
     # Unique list of assessment_items
