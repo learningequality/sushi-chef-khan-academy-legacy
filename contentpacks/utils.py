@@ -5,6 +5,7 @@ import pkgutil
 import re
 import urllib.parse
 import urllib.request
+from functools import partial
 from urllib.parse import urlparse
 from contentpacks.models import Item, AssessmentItem
 from peewee import Using, SqliteDatabase
@@ -171,7 +172,7 @@ def translate_assessment_item_text(items: list, catalog: Catalog):
             yield item
 
 
-def smart_translate_item_data(item_data: dict, gettext):
+def smart_translate_item_data(item_data: dict, gettext=None):
     """Auto translate the content fields of a given assessment item data.
 
     An assessment item doesn't have the same fields; they change
@@ -197,7 +198,8 @@ def smart_translate_item_data(item_data: dict, gettext):
             if isinstance(field_data, dict):
                 item_data[field] = smart_translate_item_data(field_data, gettext)
             elif isinstance(field_data, list):
-                item_data[field] = map(smart_translate_item_data, field_data, gettext)
+                translate_item_fn = partial(smart_translate_item_data, gettext=gettext)
+                item_data[field] = map(translate_item_fn, field_data)
 
         return item_data
 
@@ -212,8 +214,7 @@ def remove_untranslated_exercises(nodes, html_ids, translated_assessment_data):
         if ex_id in html_ids:  # translated html exercise
             return True
         elif ex["uses_assessment_items"]:
-            for assessment_raw in ex["all_assessment_items"]:
-                item_data = ujson.loads(assessment_raw)
+            for item_data in ex["all_assessment_items"]:
                 assessment_id = item_data["id"]
                 if assessment_id in item_data_ids:
                     continue
@@ -259,7 +260,7 @@ def remove_unavailable_topics(nodes):
     return node_list
 
 
-def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata, assessment_items, assessment_files):
+def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata, assessment_items, assessment_files, subtitles):
     with zipfile.ZipFile(dest, "w") as zf, tempfile.NamedTemporaryFile() as dbf:
         db = SqliteDatabase(dbf.name)
         db.connect()
@@ -289,7 +290,20 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
         for file_path in assessment_files:
             save_assessment_file(file_path, zf)
 
+        for subtitle_path in subtitles:
+            save_subtitle(subtitle_path, zf)
+
     return dest
+
+
+def save_subtitle(path: str, zf: zipfile.ZipFile):
+    zip_subtitle_root = pathlib.Path("subtitles/")
+
+    path = pathlib.Path(path)
+    name = path.name
+
+    zip_subtitle_path = zip_subtitle_root / name
+    zf.write(str(path), str(zip_subtitle_path))
 
 
 def convert_dicts_to_models(nodes):
@@ -312,6 +326,10 @@ def convert_dicts_to_models(nodes):
 
         item.__dict__.update(**node)
         item.available = False
+
+        # make sure description is a string, not None
+        item.description = item.description or ""
+
         item.extra_fields = _make_extra_fields_value(
             item._meta.get_field_names(),
             node
@@ -375,14 +393,19 @@ def save_catalog(catalog: dict, zf: zipfile.ZipFile, name: str):
 def populate_parent_foreign_keys(nodes):
     node_keys = {node.path: node for node in nodes}
 
+    orphan_count = 0
+
     for node in node_keys.values():
         path = pathlib.Path(node.path)
         parent_slug = str(path.parent)
+        # topic tree paths end in a slash, but path.parent removes the trailing slash. Re-add it so parent_slug matches the key in node_keys
+        parent_slug += "/"
         try:
             parent = node_keys[parent_slug]
             node.parent = parent
         except KeyError:
-            print("{path} is an orphan.".format(path=node.path))
+            orphan_count += 1
+            print("{path} is an orphan. (number {orphan_count})".format(path=node.path, orphan_count=orphan_count))
 
         yield node
 
@@ -392,9 +415,8 @@ def save_db(db, zf):
 
 
 def save_assessment_file(assessment_file, zf):
-    with open(assessment_file, "r") as f:
-        zf.write(f, os.path.join("assessment_resources", os.path.basename(os.path.dirname(assessment_file)),
-                                 os.path.basename(assessment_file)))
+        zf.write(assessment_file, os.path.join("assessment_resources", os.path.basename(os.path.dirname(
+            assessment_file)), os.path.basename(assessment_file)))
 
 
 def separate_exercise_types(node_data):
@@ -411,7 +433,8 @@ def separate_exercise_types(node_data):
            node_data
 
 
-def generate_kalite_language_pack_metadata(lang: str, version: str, interface_catalog: Catalog, content_catalog: Catalog):
+def generate_kalite_language_pack_metadata(lang: str, version: str, interface_catalog: Catalog,
+                                           content_catalog: Catalog, subtitles: list, dubbed_video_count: int):
     """
     Create the language pack metadata based on the files passed in.
     """
@@ -421,9 +444,10 @@ def generate_kalite_language_pack_metadata(lang: str, version: str, interface_ca
         'language_pack_version': 1,
         'percent_translated': interface_catalog.percent_translated,
         'topic_tree_translated': content_catalog.percent_translated,
-        'subtitle_count': 0,
+        'subtitle_count': len(subtitles),
         "name": get_lang_name(lang),
         'native_name': get_lang_native_name(lang),
+        "video_count": dubbed_video_count,
     }
 
     return metadata
@@ -453,4 +477,3 @@ def save_metadata(zf, metadata):
     dump = ujson.dumps(metadata)
     metadata_name = "metadata.json"
     zf.writestr(metadata_name, dump)
-

@@ -1,0 +1,209 @@
+{
+    "version": 1,
+    "interactions": [
+        {
+            "response": {
+                "headers": {
+                    "Connection": [
+                        "keep-alive"
+                    ],
+                    "Allow": [
+                        "GET, POST, HEAD, OPTIONS"
+                    ],
+                    "X-Frame-Options": [
+                        "SAMEORIGIN"
+                    ],
+                    "Vary": [
+                        "Accept, Cookie"
+                    ],
+                    "X-Request-Start": [
+                        "1448918115.547"
+                    ],
+                    "Set-Cookie": [
+                        "unisub-user-uuid=8bcd6fc008199056c583c809440c68aa68702398; expires=Tue, 29-Nov-2016 20:59:42 GMT; Max-Age=31536000; Path=/"
+                    ],
+                    "Node": [
+                        "amara.org"
+                    ],
+                    "P3P": [
+                        "CP=\"CURa ADMa DEVa OUR IND DSP CAO COR\""
+                    ],
+                    "Content-Type": [
+                        "application/json"
+                    ],
+                    "Content-Language": [
+                        "en-us"
+                    ]
+                },
+                "body": {
+                    "string": "{\"meta\":{\"previous\":null,\"next\":null,\"offset\":0,\"limit\":20,\"total_count\":1},\"objects\":[{\"id\":\"tN65feSFokIB\",\"video_type\":\"Y\",\"primary_audio_language_code\":\"en\",\"original_language\":\"en\",\"title\":\"Counting with small numbers\",\"description\":\"Counting with small numbers\",\"duration\":56,\"thumbnail\":\"https://i.ytimg.com/vi/y2-uaPiyoxc/hqdefault.jpg\",\"created\":\"2015-03-27T22:29:42Z\",\"team\":null,\"project\":null,\"all_urls\":[\"http://www.youtube.com/watch?v=y2-uaPiyoxc\"],\"metadata\":{},\"languages\":[{\"code\":\"el\",\"name\":\"Greek\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/el/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/el/\"},{\"code\":\"en\",\"name\":\"English\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/en/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/en/\"},{\"code\":\"vi\",\"name\":\"Vietnamese\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/vi/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/vi/\"},{\"code\":\"is\",\"name\":\"Icelandic\",\"visible\":false,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/is/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/is/\"},{\"code\":\"it\",\"name\":\"Italian\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/it/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/it/\"},{\"code\":\"ar\",\"name\":\"Arabic\",\"visible\":true,\"dir\":\"rtl\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/ar/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/ar/\"},{\"code\":\"cs\",\"name\":\"Czech\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/cs/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/cs/\"},{\"code\":\"et\",\"name\":\"Estonian\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/et/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/et/\"},{\"code\":\"id\",\"name\":\"Indonesian\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/id/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/id/\"},{\"code\":\"ru\",\"name\":\"Russian\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/ru/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/ru/\"},{\"code\":\"nl\",\"name\":\"Dutch\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/nl/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/nl/\"},{\"code\":\"pt\",\"name\":\"Portuguese\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/pt/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/pt/\"},{\"code\":\"zh-cn\",\"name\":\"Chinese, Simplified\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/zh-cn/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/zh-cn/\"},{\"code\":\"lt\",\"name\":\"Lithuanian\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/lt/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/lt/\"},{\"code\":\"th\",\"name\":\"Thai\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/th/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/th/\"},{\"code\":\"pl\",\"name\":\"Polish\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/pl/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/pl/\"},{\"code\":\"ta\",\"name\":\"Tamil\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/ta/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/ta/\"},{\"code\":\"fr\",\"name\":\"French\",\"visible\":false,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/fr/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/fr/\"},{\"code\":\"bg\",\"name\":\"Bulgarian\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/bg/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/bg/\"},{\"code\":\"hr\",\"name\":\"Croatian\",\"visible\":false,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/hr/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/hr/\"},{\"code\":\"bn\",\"name\":\"Bengali\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/bn/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/bn/\"},{\"code\":\"de\",\"name\":\"German\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/de/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/de/\"},{\"code\":\"da\",\"name\":\"Danish\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/da/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/da/\"},{\"code\":\"fi\",\"name\":\"Finnish\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/fi/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/fi/\"},{\"code\":\"hu\",\"name\":\"Hungarian\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/hu/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/hu/\"},{\"code\":\"ja\",\"name\":\"Japanese\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/ja/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/ja/\"},{\"code\":\"he\",\"name\":\"Hebrew\",\"visible\":true,\"dir\":\"rtl\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/he/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/he/\"},{\"code\":\"ka\",\"name\":\"Georgian\",\"visible\":false,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/ka/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/ka/\"},{\"code\":\"kk\",\"name\":\"Kazakh\",\"visible\":false,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/kk/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/kk/\"},{\"code\":\"sr\",\"name\":\"Serbian\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/sr/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/sr/\"},{\"code\":\"ko\",\"name\":\"Korean\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/ko/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/ko/\"},{\"code\":\"zh-hant\",\"name\":\"Chinese (Traditional Han)\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/zh-hant/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/zh-hant/\"},{\"code\":\"sk\",\"name\":\"Slovak\",\"visible\":false,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/sk/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/sk/\"},{\"code\":\"uk\",\"name\":\"Ukrainian\",\"visible\":true,\"dir\":\"ltr\",\"subtitles_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/uk/subtitles/\",\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/languages/uk/\"}],\"resource_uri\":\"https://www.amara.org/api/videos/tN65feSFokIB/\"}]}"
+                },
+                "status": {
+                    "message": "OK",
+                    "code": 200
+                }
+            },
+            "request": {
+                "headers": {
+                    "Connection": [
+                        "keep-alive"
+                    ],
+                    "Accept-Encoding": [
+                        "gzip, deflate"
+                    ],
+                    "Accept": [
+                        "*/*"
+                    ],
+                    "User-Agent": [
+                        "python-requests/2.8.1"
+                    ]
+                },
+                "uri": "https://www.amara.org/api2/partners/videos/?format=json&video_url=http://www.youtube.com/watch?v=y2-uaPiyoxc",
+                "method": "GET",
+                "body": null
+            }
+        },
+        {
+            "response": {
+                "headers": {
+                    "Access-Control-Max-Age": [
+                        "86400"
+                    ],
+                    "Allow": [
+                        "GET, POST, HEAD, OPTIONS"
+                    ],
+                    "X-Frame-Options": [
+                        "SAMEORIGIN"
+                    ],
+                    "Vary": [
+                        "Accept, Cookie"
+                    ],
+                    "Access-Control-Allow-Origin": [
+                        "*"
+                    ],
+                    "Set-Cookie": [
+                        "unisub-user-uuid=feb4ac970701d20bbc60ed4d881ef96660c367b1; expires=Tue, 29-Nov-2016 20:59:42 GMT; Max-Age=31536000; Path=/"
+                    ],
+                    "Content-Type": [
+                        "text/vtt; charset=utf-8"
+                    ],
+                    "X-Request-Start": [
+                        "1448918116.036"
+                    ],
+                    "Access-Control-Allow-Methods": [
+                        "POST, GET, OPTIONS"
+                    ],
+                    "Content-Language": [
+                        "en-us"
+                    ],
+                    "Connection": [
+                        "Close"
+                    ],
+                    "Access-Control-Allow-Headers": [
+                        "X-API-KEY, X-APIKEY, X-API-USERNAME"
+                    ],
+                    "Node": [
+                        "amara.org"
+                    ],
+                    "P3P": [
+                        "CP=\"CURa ADMa DEVa OUR IND DSP CAO COR\""
+                    ]
+                },
+                "body": {
+                    "string": "WEBVTT\n\nNOTE Paragraph\n\n00:00:00.193 --> 00:00:03.311\nPut seven squirrels in the box.\n\n00:00:03.311 --> 00:00:04.505\nAlright\n\n00:00:04.525 --> 00:00:05.657\nso that's one,\n\n00:00:05.657 --> 00:00:06.787\ntwo,\n\n00:00:07.447 --> 00:00:09.177\nthree,\n\n00:00:09.717 --> 00:00:11.277\nfour,\n\n00:00:11.597 --> 00:00:12.877\nfive,\n\n00:00:12.877 --> 00:00:14.197\nsix,\n\n00:00:14.197 --> 00:00:15.997\nseven squirrels.\n\n00:00:15.997 --> 00:00:19.647\nI've put seven squirrels in the box.\n\n00:00:19.934 --> 00:00:22.198\nLet's keep going. This is lots of fun.\n\n00:00:22.198 --> 00:00:24.538\nPut four squirrels in the box.\n\n00:00:24.772 --> 00:00:26.602\nThat's even easier than putting seven.\n\n00:00:27.039 --> 00:00:27.619\nOne,\n\n00:00:27.619 --> 00:00:28.149\ntwo,\n\n00:00:28.367 --> 00:00:29.507\nthree,\n\n00:00:30.112 --> 00:00:33.232\nfour. I just click on the squirrel and drag it into the box.\n\n00:00:33.502 --> 00:00:37.222\nAlright, hopefully we'll see more animals \u2013 oh here we go. Horses.\n\n00:00:37.531 --> 00:00:40.551\nPut nine horses in the box.\n\n00:00:40.766 --> 00:00:41.876\nOne,\n\n00:00:41.996 --> 00:00:43.336\ntwo,\n\n00:00:43.426 --> 00:00:44.476\nthree,\n\n00:00:44.476 --> 00:00:45.336\nfour,\n\n00:00:45.336 --> 00:00:46.826\nfive,\n\n00:00:46.833 --> 00:00:47.833\nsix,\n\n00:00:47.833 --> 00:00:48.723\nseven,\n\n00:00:48.723 --> 00:00:49.563\neight,\n\n00:00:49.563 --> 00:00:52.933\nnine horses.\n\n00:00:52.933 --> 00:00:54.673\nIt's lot of fun."
+                },
+                "status": {
+                    "message": "OK",
+                    "code": 200
+                }
+            },
+            "request": {
+                "headers": {
+                    "Connection": [
+                        "close"
+                    ],
+                    "Host": [
+                        "www.amara.org"
+                    ],
+                    "User-Agent": [
+                        "Python-urllib/3.5"
+                    ]
+                },
+                "uri": "https://www.amara.org/api/videos/tN65feSFokIB/languages/en/subtitles/?format=vtt",
+                "method": "GET",
+                "body": null
+            }
+        },
+        {
+            "response": {
+                "headers": {
+                    "Access-Control-Max-Age": [
+                        "86400"
+                    ],
+                    "Allow": [
+                        "GET, POST, HEAD, OPTIONS"
+                    ],
+                    "X-Frame-Options": [
+                        "SAMEORIGIN"
+                    ],
+                    "Vary": [
+                        "Accept, Cookie"
+                    ],
+                    "Access-Control-Allow-Origin": [
+                        "*"
+                    ],
+                    "Set-Cookie": [
+                        "unisub-user-uuid=53985503c4b78efcd2a1e9ff93bf9c510c43a0c2; expires=Tue, 29-Nov-2016 20:59:43 GMT; Max-Age=31536000; Path=/"
+                    ],
+                    "Content-Type": [
+                        "text/vtt; charset=utf-8"
+                    ],
+                    "X-Request-Start": [
+                        "1448918116.273"
+                    ],
+                    "Access-Control-Allow-Methods": [
+                        "POST, GET, OPTIONS"
+                    ],
+                    "Content-Language": [
+                        "en-us"
+                    ],
+                    "Connection": [
+                        "Close"
+                    ],
+                    "Access-Control-Allow-Headers": [
+                        "X-API-KEY, X-APIKEY, X-API-USERNAME"
+                    ],
+                    "Node": [
+                        "amara.org"
+                    ],
+                    "P3P": [
+                        "CP=\"CURa ADMa DEVa OUR IND DSP CAO COR\""
+                    ]
+                },
+                "body": {
+                    "string": "WEBVTT\n\nNOTE Paragraph\n\n00:00:00.193 --> 00:00:03.311\nPut seven squirrels in the box.\n\n00:00:03.311 --> 00:00:04.505\nAlright\n\n00:00:04.525 --> 00:00:05.657\nso that's one,\n\n00:00:05.657 --> 00:00:06.787\ntwo,\n\n00:00:07.447 --> 00:00:09.177\nthree,\n\n00:00:09.717 --> 00:00:11.277\nfour,\n\n00:00:11.597 --> 00:00:12.877\nfive,\n\n00:00:12.877 --> 00:00:14.197\nsix,\n\n00:00:14.197 --> 00:00:15.997\nseven squirrels.\n\n00:00:15.997 --> 00:00:19.647\nI've put seven squirrels in the box.\n\n00:00:19.934 --> 00:00:22.198\nLet's keep going. This is lots of fun.\n\n00:00:22.198 --> 00:00:24.538\nPut four squirrels in the box.\n\n00:00:24.772 --> 00:00:26.602\nThat's even easier than putting seven.\n\n00:00:27.039 --> 00:00:27.619\nOne,\n\n00:00:27.619 --> 00:00:28.149\ntwo,\n\n00:00:28.367 --> 00:00:29.507\nthree,\n\n00:00:30.112 --> 00:00:33.232\nfour. I just click on the squirrel and drag it into the box.\n\n00:00:33.502 --> 00:00:37.222\nAlright, hopefully we'll see more animals \u2013 oh here we go. Horses.\n\n00:00:37.531 --> 00:00:40.551\nPut nine horses in the box.\n\n00:00:40.766 --> 00:00:41.876\nOne,\n\n00:00:41.996 --> 00:00:43.336\ntwo,\n\n00:00:43.426 --> 00:00:44.476\nthree,\n\n00:00:44.476 --> 00:00:45.336\nfour,\n\n00:00:45.336 --> 00:00:46.826\nfive,\n\n00:00:46.833 --> 00:00:47.833\nsix,\n\n00:00:47.833 --> 00:00:48.723\nseven,\n\n00:00:48.723 --> 00:00:49.563\neight,\n\n00:00:49.563 --> 00:00:52.933\nnine horses.\n\n00:00:52.933 --> 00:00:54.673\nIt's lot of fun."
+                },
+                "status": {
+                    "message": "OK",
+                    "code": 200
+                }
+            },
+            "request": {
+                "headers": {
+                    "Connection": [
+                        "close"
+                    ],
+                    "Host": [
+                        "www.amara.org"
+                    ],
+                    "User-Agent": [
+                        "Python-urllib/3.5"
+                    ]
+                },
+                "uri": "https://www.amara.org/api/videos/tN65feSFokIB/languages/en/subtitles/?format=vtt",
+                "method": "GET",
+                "body": null
+            }
+        }
+    ]
+}
