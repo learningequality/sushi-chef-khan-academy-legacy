@@ -799,11 +799,10 @@ def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, la
         dubbed_count = 0
 
         for item in content_data:
-            if dubmap.get(item.get("youtube_id", "")):
+            if dubmap.get(item.get("youtube_id", "")): # has a dubbed video
                 item["youtube_id"] = dubmap.get(item["youtube_id"])
-                item["video_id"] = dubmap.get(item["video_id"])
                 dubbed_count += 1
-            elif item["kind"] == NodeType.video and item["youtube_id"] not in subtitles:
+            elif item["kind"] == NodeType.video and item["youtube_id"] not in subtitles: # no subtitles
                 continue
             dubbed_content.append(item)
 
