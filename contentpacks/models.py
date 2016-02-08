@@ -19,6 +19,7 @@ class Item(Model):
     youtube_id = CharField(null=True)
     size_on_disk = IntegerField(default=0)
     remote_size = IntegerField(default=0)
+    sort_order = FloatField()
 
     def __init__(self, *args, **kwargs):
         # kwargs = parse_model_data(kwargs)

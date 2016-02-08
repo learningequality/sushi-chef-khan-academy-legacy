@@ -132,8 +132,14 @@ class Test_retrieve_kalite_data:
 
     @vcr.use_cassette("tests/fixtures/cassettes/kalite/node_data.json.yml")
     def test_returns_dict(self):
-        data = retrieve_kalite_data()
+        data = retrieve_kalite_data(force=True)
         assert isinstance(data, list)
+
+    @vcr.use_cassette("tests/fixtures/cassettes/kalite/node_data.json.yml")
+    def test_no_repeated_sort(self):
+        data = retrieve_kalite_data(force=True)
+        sorts = set([node.get("sort_order") for node in data])
+        assert len(data) == len(sorts)
 
 
 class Test_retrieve_assessment_item_data:

@@ -1,4 +1,5 @@
 import collections
+import copy
 import filecmp
 import fnmatch
 import glob
@@ -329,18 +330,23 @@ def create_paths_remove_orphans_and_empty_topics(nodes) -> list:
 
     node_list = []
 
-    def recurse_nodes(node, parent_path=""):
+    def recurse_nodes(node, parent_path="", node_count=0.0):
 
         """
         :param node: dict
         :param parent_path: str
+        :param node_count: float
         """
         node["path"] = parent_path + node.get("slug") + "/"
+
+        node["sort_order"] = node_count
+
+        print(node_count)
 
         children = node.pop("child_data", [])
 
         if children:
-            children = [node_dict.get(child.get("id")) for child in children if node_dict.get(child.get("id"))]
+            children = [copy.deepcopy(node_dict.get(child.get("id"))) for child in children if node_dict.get(child.get("id"))]
 
             counts = reduce(group_by_slug, children, {})
             for items in counts.values():
@@ -356,10 +362,13 @@ def create_paths_remove_orphans_and_empty_topics(nodes) -> list:
                             i += 1
 
         for child in children:
-            recurse_nodes(child, node.get("path"))
+            node_count += 1
+            node_count = recurse_nodes(child, node.get("path"), node_count)
 
         if children or node.get("kind") != "Topic":
             node_list.append(node)
+
+        return node_count
 
     recurse_nodes(node_dict["x00000000"])
 
