@@ -1,6 +1,5 @@
-from peewee import Model, SqliteDatabase, CharField, TextField, BooleanField,\
-    ForeignKeyField, PrimaryKeyField, Using, IntegerField, \
-    OperationalError
+from peewee import Model, CharField, TextField, BooleanField,\
+    ForeignKeyField, PrimaryKeyField, IntegerField, FloatField
 
 
 class Item(Model):
@@ -19,9 +18,9 @@ class Item(Model):
     youtube_id = CharField(null=True)
     size_on_disk = IntegerField(default=0)
     remote_size = IntegerField(default=0)
+    sort_order = FloatField(default=0.0)
 
     def __init__(self, *args, **kwargs):
-        # kwargs = parse_model_data(kwargs)
         super(Item, self).__init__(*args, **kwargs)
 
 
