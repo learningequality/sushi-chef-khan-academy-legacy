@@ -55,7 +55,7 @@ def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: b
     node_data = retrieve_kalite_data()
 
     video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
-    subtitle_list = retrieve_subtitles(video_ids, sublangargs["video_lang"]) if not no_subtitles else []
+    subtitle_data = retrieve_subtitles(video_ids, sublangargs["video_lang"]) if not no_subtitles else {}
 
     dubbed_video_mapping = retrieve_dubbed_video_mapping(sublangargs["video_lang"])
 
@@ -79,7 +79,7 @@ def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: b
         ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key,
                                            lang_code=sublangargs["content_lang"], force=True)
 
-    return LangpackResources(node_data, subtitle_list, kalite_catalog, ka_catalog,
+    return LangpackResources(node_data, subtitle_data, kalite_catalog, ka_catalog,
                              dubbed_video_mapping)
 
 
