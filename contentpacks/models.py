@@ -1,6 +1,5 @@
-from peewee import Model, SqliteDatabase, CharField, TextField, BooleanField,\
-    ForeignKeyField, PrimaryKeyField, Using, IntegerField, \
-    OperationalError
+from peewee import Model, CharField, TextField, BooleanField,\
+    ForeignKeyField, PrimaryKeyField, IntegerField, FloatField
 
 
 class Item(Model):
@@ -22,7 +21,6 @@ class Item(Model):
     sort_order = FloatField()
 
     def __init__(self, *args, **kwargs):
-        # kwargs = parse_model_data(kwargs)
         super(Item, self).__init__(*args, **kwargs)
 
 
