@@ -153,7 +153,7 @@ def retrieve_dubbed_video_mapping(lang: str) -> dict:
         logging.info("Retrieving Dubbed Videos for language {lang}".format(lang=lang))
 
         dubbed_video_data = {video.get("id"): video.get("youtubeId") for video in
-                             ujson.loads(requests.get(url).content).get("videos", [])}
+                             json.loads(requests.get(url).content.decode()).get("videos", [])}
 
         logging.info("Retrieving Videos for English to map dubbed video ids")
 
@@ -162,7 +162,7 @@ def retrieve_dubbed_video_mapping(lang: str) -> dict:
         url = url_template.format(projection=json.dumps(projection))
 
         english_video_data = {video.get("id"): video.get("youtubeId") for video in
-                              ujson.loads(requests.get(url).content).get("videos", [])}
+                            json.loads(requests.get(url).content.decode()).get("videos", [])}
 
         dubbed_video_mapping = {english_video_data[id]: youtube_id for id, youtube_id in dubbed_video_data.items()
                                 if english_video_data[id] != youtube_id}
