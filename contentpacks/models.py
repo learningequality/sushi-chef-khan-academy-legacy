@@ -18,7 +18,7 @@ class Item(Model):
     youtube_id = CharField(null=True)
     size_on_disk = IntegerField(default=0)
     remote_size = IntegerField(default=0)
-    sort_order = FloatField()
+    sort_order = FloatField(default=0.0)
 
     def __init__(self, *args, **kwargs):
         super(Item, self).__init__(*args, **kwargs)
