@@ -346,6 +346,9 @@ def create_paths_remove_orphans_and_empty_topics(nodes) -> list:
         children = node.pop("child_data", [])
 
         if children:
+            # Use a deepcopy here, in order to create an entirely separate node, not referencing any child objects
+            # This avoids any nested data in the node data being shared across nodes.
+            # Our chosen strategy of duplicating content nodes that appear twice in the topic tree requires this.
             children = [copy.deepcopy(node_dict.get(child.get("id"))) for child in children if node_dict.get(child.get("id"))]
 
             counts = reduce(group_by_slug, children, {})

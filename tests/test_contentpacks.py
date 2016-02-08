@@ -137,6 +137,10 @@ class Test_retrieve_kalite_data:
 
     @vcr.use_cassette("tests/fixtures/cassettes/kalite/node_data.json.yml")
     def test_no_repeated_sort(self):
+        """
+        Check that the sort_order keys across the entire topic tree have no repetition.
+        This means that we can use sort_order both locally and globally to sort nodes.
+        """
         data = retrieve_kalite_data(force=True)
         sorts = set([node.get("sort_order") for node in data])
         assert len(data) == len(sorts)
