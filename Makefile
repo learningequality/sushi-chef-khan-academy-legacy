@@ -6,7 +6,7 @@ supported: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite de 0.15 --out=out/de.zip --no-assessment-items
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite fr 0.15 --out=out/fr.zip --no-assessment-items
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite zh 0.15 --out=out/zh.zip --contentlang=zh-TW --interfacelang=zh-CN --no-assessment-items
- 	unzip -p out/en.zip content.db > content.db
+	unzip -p out/en.zip content.db > content.db
 	./makecontentpacks collectmetadata.py out/
 
 all: supported
