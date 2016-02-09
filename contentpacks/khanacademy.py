@@ -56,7 +56,7 @@ def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: b
     node_data = retrieve_kalite_data()
 
     video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
-    subtitle_list = retrieve_subtitles(video_ids, sublangargs["video_lang"]) if not no_subtitles else []
+    subtitle_data = retrieve_subtitles(video_ids, sublangargs["video_lang"]) if not no_subtitles else {}
 
     dubbed_video_mapping = retrieve_dubbed_video_mapping(sublangargs["video_lang"])
 
@@ -80,7 +80,7 @@ def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: b
         ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key,
                                            lang_code=sublangargs["content_lang"], force=True)
 
-    return LangpackResources(node_data, subtitle_list, kalite_catalog, ka_catalog,
+    return LangpackResources(node_data, subtitle_data, kalite_catalog, ka_catalog,
                              dubbed_video_mapping)
 
 
@@ -124,7 +124,7 @@ def retrieve_subtitles(videos: list, lang="en", force=False, threads=NUM_PROCESS
             filename = "subtitles/{lang}/{youtube_id}.vtt".format(lang=lang, youtube_id=youtube_id)
             subtitle_path = download_and_cache_file(subtitle_download_uri, filename=filename, ignorecache=force)
             return youtube_id, subtitle_path
-        except (requests.HTTPError, KeyError, urllib.error.HTTPError):
+        except (requests.HTTPError, KeyError, urllib.error.HTTPError, urllib.error.URLError):
             pass
 
     pools = ThreadPool(processes=threads)
@@ -154,7 +154,7 @@ def retrieve_dubbed_video_mapping(lang: str) -> dict:
         logging.info("Retrieving Dubbed Videos for language {lang}".format(lang=lang))
 
         dubbed_video_data = {video.get("id"): video.get("youtubeId") for video in
-                             ujson.loads(requests.get(url).content).get("videos", [])}
+                             json.loads(requests.get(url).content.decode()).get("videos", [])}
 
         logging.info("Retrieving Videos for English to map dubbed video ids")
 
@@ -163,7 +163,7 @@ def retrieve_dubbed_video_mapping(lang: str) -> dict:
         url = url_template.format(projection=json.dumps(projection))
 
         english_video_data = {video.get("id"): video.get("youtubeId") for video in
-                              ujson.loads(requests.get(url).content).get("videos", [])}
+                            json.loads(requests.get(url).content.decode()).get("videos", [])}
 
         dubbed_video_mapping = {english_video_data[id]: youtube_id for id, youtube_id in dubbed_video_data.items()
                                 if english_video_data[id] != youtube_id}
@@ -811,11 +811,10 @@ def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, la
         dubbed_count = 0
 
         for item in content_data:
-            if dubmap.get(item.get("youtube_id", "")):
+            if dubmap.get(item.get("youtube_id", "")): # has a dubbed video
                 item["youtube_id"] = dubmap.get(item["youtube_id"])
-                item["video_id"] = dubmap.get(item["video_id"])
                 dubbed_count += 1
-            elif item["kind"] == NodeType.video and item["youtube_id"] not in subtitles:
+            elif item["kind"] == NodeType.video and item["youtube_id"] not in subtitles: # no subtitles
                 continue
             dubbed_content.append(item)
 
