@@ -8,7 +8,7 @@ import urllib.request
 from functools import partial
 from urllib.parse import urlparse
 from contentpacks.models import Item, AssessmentItem
-from peewee import Using, SqliteDatabase
+from peewee import Using, SqliteDatabase, fn
 import polib
 import ujson
 import zipfile
@@ -271,7 +271,10 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
                                              # the evaluation of each
                                              # save_models call, in order to
                                              # avoid nesting them.
-        nodes = populate_parent_foreign_keys(nodes)
+        nodes = list(populate_parent_foreign_keys(nodes))
+        list(save_models(nodes, db))
+
+        nodes = recurse_availability_up_tree(nodes, db)
         list(save_models(nodes, db))
 
         assessment_items = convert_dicts_to_assessment_items(assessment_items)
@@ -491,3 +494,54 @@ def save_metadata(zf, metadata):
     dump = ujson.dumps(metadata)
     metadata_name = "metadata.json"
     zf.writestr(metadata_name, dump)
+
+
+def recurse_availability_up_tree(nodes, db) -> [Item]:
+
+    logging.info("Marking availability.")
+
+    nodes = list(nodes)
+
+    def _recurse_availability_up_tree(node):
+
+        available = node.available
+        if not node.parent:
+            return node
+        else:
+            parent = node.parent
+        Parent = Item.alias()
+        children = Item.select().join(Parent, on=(Item.parent == Parent.pk)).where(Item.parent == parent.pk)
+        if not available:
+            children_available = children.where(Item.available == True).count() > 0
+            available = children_available
+
+        files_complete = children.aggregate(fn.SUM(Item.files_complete))
+
+        child_remote = children.where(((Item.available == False) & (Item.kind != "Topic")) | (Item.kind == "Topic")).aggregate(fn.SUM(Item.remote_size))
+        child_on_disk = children.aggregate(fn.SUM(Item.size_on_disk))
+
+        if parent.available != available:
+            parent.available = available
+        if parent.files_complete != files_complete:
+            parent.files_complete = files_complete
+        # Ensure that the aggregate sizes are not None
+        if parent.remote_size != child_remote and child_remote:
+            parent.remote_size = child_remote
+        # Ensure that the aggregate sizes are not None
+        if parent.size_on_disk != child_on_disk and child_on_disk:
+            parent.size_on_disk = child_on_disk
+        if parent.is_dirty():
+            parent.save()
+            _recurse_availability_up_tree(parent)
+
+        return node
+
+    with Using(db, [Item]):
+        # at this point, the only thing that can affect a topic's availability
+        # are exercises. Videos and other content's availability can only be
+        # determined by what's in the client. So, loop over exercises and skip
+        # all other nodes (topics will be recursed upwards).
+        for node in (n for n in nodes if n.kind == NodeType.exercise):
+            _recurse_availability_up_tree(node)
+
+    return nodes
