@@ -30,11 +30,11 @@ def make_language_pack(lang, version, sublangargs, filename, no_assessment_items
     html_exercise_path, translated_html_exercise_ids = retrieve_html_exercises(html_exercise_ids, lang)
 
     # now include only the assessment item resources that we need
-    all_assessment_data, all_assessment_files = retrieve_all_assessment_item_data()
+    all_assessment_data, all_assessment_files = retrieve_all_assessment_item_data() if not no_assessment_items else ([], set())
 
-    assessment_data = translate_assessment_item_text(all_assessment_data, content_catalog)
+    assessment_data = translate_assessment_item_text(all_assessment_data, content_catalog) if lang != "en" else all_assessment_data
 
-    node_data = remove_untranslated_exercises(node_data, translated_html_exercise_ids, assessment_data)
+    node_data = remove_untranslated_exercises(node_data, translated_html_exercise_ids, assessment_data) if lang != "en" else node_data
 
     pack_metadata = generate_kalite_language_pack_metadata(lang, version, interface_catalog, content_catalog, subtitles,
                                                            dubbed_video_count)
@@ -78,7 +78,7 @@ def main():
 
     log_file = args["--logging"] or "debug.log"
 
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     try:
         make_language_pack(lang, version, sublangs, out, no_assessment_items, no_subtitles)
