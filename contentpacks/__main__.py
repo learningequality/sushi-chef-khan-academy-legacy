@@ -78,7 +78,7 @@ def main():
 
     log_file = args["--logging"] or "debug.log"
 
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     try:
         make_language_pack(lang, version, sublangs, out, no_assessment_items, no_subtitles)
