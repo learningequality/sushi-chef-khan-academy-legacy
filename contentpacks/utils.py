@@ -266,6 +266,7 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
         db.connect()
 
         nodes = convert_dicts_to_models(nodes)
+        nodes = mark_exercises_as_available(nodes)
         nodes = list(save_models(nodes, db)) # we have to make sure to force
                                              # the evaluation of each
                                              # save_models call, in order to
@@ -325,6 +326,7 @@ def convert_dicts_to_models(nodes):
         item = Item(**node)
 
         item.__dict__.update(**node)
+
         item.available = False
 
         # make sure description is a string, not None
@@ -338,6 +340,18 @@ def convert_dicts_to_models(nodes):
         return item
 
     yield from (convert_dict_to_model(node) for node in nodes)
+
+
+def mark_exercises_as_available(nodes):
+    '''
+    Mark all exercises as available. Unavailable exercises should've been
+    removed from the topic tree by this point.
+
+    '''
+    for node in nodes:
+        if node.kind == NodeType.exercise:
+            node.available = True
+        yield node
 
 
 def convert_dicts_to_assessment_items(assessment_items):
