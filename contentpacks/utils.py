@@ -130,7 +130,7 @@ def translate_nodes(nodes: list, catalog: Catalog) -> list:
                 try:
                     node[field] = catalog[msgid]
                 except KeyError:
-                    print("could not translate {field} for {title}".format(field=field, title=node["title"]))
+                    logging.debug("could not translate {field} for {title}".format(field=field, title=node["title"]))
 
     return nodes
 
@@ -373,7 +373,7 @@ def save_models(nodes, db):
             try:
                 node.save()
             except Exception as e:
-                print("Cannot save {path}, exception: {e}".format(path=node.path, e=e))
+                logging.warning("Cannot save {path}, exception: {e}".format(path=node.path, e=e))
 
             yield node
 
@@ -390,7 +390,7 @@ def save_assessment_items(assessment_items, db):
             try:
                 item.save()
             except Exception as e:
-                print("Cannot save {id}, exception: {e}".format(id=item.id, e=e))
+                logging.warning("Cannot save {id}, exception: {e}".format(id=item.id, e=e))
 
             yield item
 
@@ -422,7 +422,7 @@ def populate_parent_foreign_keys(nodes):
             node.parent = parent
         except KeyError:
             orphan_count += 1
-            print("{path} is an orphan. (number {orphan_count})".format(path=node.path, orphan_count=orphan_count))
+            logging.warning("{path} is an orphan. (number {orphan_count})".format(path=node.path, orphan_count=orphan_count))
 
         yield node
 
@@ -476,7 +476,7 @@ def get_lang_name(lang):
     try:
         return langlookup[lang]["name"]
     except KeyError:
-        print("No name found for {}. Defaulting to DEBUG.".format(lang))
+        logging.warning("No name found for {}. Defaulting to DEBUG.".format(lang))
         return "DEBUG"
 
 
@@ -486,7 +486,7 @@ def get_lang_native_name(lang):
     try:
         return langlookup[lang]["native_name"]
     except KeyError:
-        print("No native name found for {}. Defaulting to DEBUG.".format(lang))
+        logging.warning("No native name found for {}. Defaulting to DEBUG.".format(lang))
         return "DEBUG"
 
 

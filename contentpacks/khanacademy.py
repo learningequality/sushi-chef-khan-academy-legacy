@@ -184,7 +184,7 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="e
         lang_code=lang_code,
         key=crowdin_secret_key,
     )
-    print(request_url)
+    logging.debug("Retrieving translations from {}".format(request_url))
     zip_path = download_and_cache_file(request_url, ignorecache=force)
     zip_extraction_path = tempfile.mkdtemp()
 
@@ -341,7 +341,7 @@ def create_paths_remove_orphans_and_empty_topics(nodes) -> list:
 
         node["sort_order"] = node_count
 
-        print(node_count)
+        logging.debug("Node count: {}".format(node_count))
 
         children = node.pop("child_data", [])
 
@@ -641,7 +641,7 @@ def _old_content_links_to_local_links(matchobj):
     url = matchobj.group(0)
     if not content or "path" not in content:
         if "/a/" not in url and "/p/" not in url:
-            print("Content link target not found:", url)
+            logging.debug("Content link target not found:", url)
         return ""
 
     return "%s/learn/%s%s" % (matchobj.group("prefix"), content["path"], matchobj.group("suffix"))
@@ -723,7 +723,7 @@ def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) ->
         except requests.RequestException:
             return {}, []
         except json.JSONDecodeError:
-            print("got a JSONDecodeError for {}".format(assessment_item.get("id")))
+            logging.warning("got a JSONDecodeError for {}".format(assessment_item.get("id")))
             return {}, []
 
     # Unique list of assessment_items
@@ -886,6 +886,5 @@ def _list_all_exercises_with_bad_links():
                     status_code = requests.get(url).status_code
                     if status_code != 200:
                         if not displayed_title:
-                            print("EXERCISE: '%s'" % ex["title"], ex["path"])
+                            logging.debug("bad link for exercise: '%s'" % ex["title"], ex["path"])
                             displayed_title = True
-                        print("\t", status_code, url)
