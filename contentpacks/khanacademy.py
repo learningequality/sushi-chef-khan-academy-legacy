@@ -555,7 +555,7 @@ def download_assessment_item_data(url, path, lang=None, force=False) -> str:
 
 
 def _get_path_from_filename(filename):
-    return "/content/khan/" + _get_subpath_from_filename(filename)
+    return "/content/assessment/khan/" + _get_subpath_from_filename(filename)
 
 
 def _get_subpath_from_filename(filename):
