@@ -432,7 +432,7 @@ def save_db(db, zf):
 
 
 def save_assessment_file(assessment_file, zf):
-        zf.write(assessment_file, os.path.join("assessment_resources", os.path.basename(os.path.dirname(
+        zf.write(assessment_file, os.path.join("khan", os.path.basename(os.path.dirname(
             assessment_file)), os.path.basename(assessment_file)))
 
 
