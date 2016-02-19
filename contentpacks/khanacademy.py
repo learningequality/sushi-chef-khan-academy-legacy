@@ -834,6 +834,8 @@ def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, la
     
     for item in content_data:
         item["remote_size"] = remote_sizes.get(item.get("youtube_id"), 0)
+        if item["remote_size"]:
+            item["total_files"] = 1
 
     return content_data, dubbed_count
 
