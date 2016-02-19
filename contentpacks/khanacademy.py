@@ -165,8 +165,8 @@ def retrieve_dubbed_video_mapping(lang: str) -> dict:
         english_video_data = {video.get("id"): video.get("youtubeId") for video in
                             json.loads(requests.get(url).content.decode()).get("videos", [])}
 
-        dubbed_video_mapping = {english_video_data[id]: youtube_id for id, youtube_id in dubbed_video_data.items()
-                                if english_video_data[id] != youtube_id}
+        dubbed_video_mapping = {english_video_data[id]: {"youtube_id": youtube_id, "download_size": "download_size"}
+                                for id, youtube_id in dubbed_video_data.items() if english_video_data[id] != youtube_id}
 
     else:
         dubbed_video_mapping = {}
@@ -798,11 +798,11 @@ def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, la
     if not cachedir:
         cachedir = os.path.join(os.getcwd(), "build")
 
-    try:
-        with open(os.path.join(cachedir, "file_sizes.json"), "r") as f:
-            remote_sizes = json.load(f)
-    except FileNotFoundError:
-        remote_sizes = {}
+    # try:
+    #     with open(os.path.join(cachedir, "file_sizes.json"), "r") as f:
+    #         remote_sizes = json.load(f)
+    # except FileNotFoundError:
+    #     remote_sizes = {}
 
     if lang != "en":
 
@@ -812,7 +812,7 @@ def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, la
 
         for item in content_data:
             if dubmap.get(item.get("youtube_id", "")): # has a dubbed video
-                item["youtube_id"] = dubmap.get(item["youtube_id"])
+                item.update(dubmap.get(item["youtube_id"]))
                 dubbed_count += 1
             elif item["kind"] == NodeType.video and item["youtube_id"] not in subtitles: # no subtitles
                 continue
@@ -823,17 +823,8 @@ def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, la
     else:
         dubbed_count = sum(content_datum.get("kind") == NodeType.video for content_datum in content_data)
 
-    items_missing_sizes = (item for item in content_data if item.get("youtube_id") not in remote_sizes)
-    
-    remote_sizes.update(query_remote_content_file_sizes(items_missing_sizes))
-
-    os.makedirs(cachedir, exist_ok=True)
-
-    with open(os.path.join(cachedir, "file_sizes.json"), "w") as f:
-        json.dump(remote_sizes, f)
-    
     for item in content_data:
-        item["remote_size"] = remote_sizes.get(item.get("youtube_id"), 0)
+        item["remote_size"] = item.pop("download_size", 0)
         if item["remote_size"]:
             item["total_files"] = 1
 
