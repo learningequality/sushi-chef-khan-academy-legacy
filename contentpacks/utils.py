@@ -515,15 +515,15 @@ def recurse_availability_up_tree(nodes, db) -> [Item]:
             children_available = children.where(Item.available == True).count() > 0
             available = children_available
 
-        files_complete = children.aggregate(fn.SUM(Item.files_complete))
+        total_files = children.aggregate(fn.SUM(Item.total_files))
 
         child_remote = children.where(((Item.available == False) & (Item.kind != "Topic")) | (Item.kind == "Topic")).aggregate(fn.SUM(Item.remote_size))
         child_on_disk = children.aggregate(fn.SUM(Item.size_on_disk))
 
         if parent.available != available:
             parent.available = available
-        if parent.files_complete != files_complete:
-            parent.files_complete = files_complete
+        if parent.total_files != total_files:
+            parent.total_files = total_files
         # Ensure that the aggregate sizes are not None
         if parent.remote_size != child_remote and child_remote:
             parent.remote_size = child_remote
