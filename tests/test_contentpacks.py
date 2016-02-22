@@ -24,7 +24,7 @@ class Test_apply_dubbed_video_map:
         output_id = "lhS-nvcK8Co"
         test_content = [{"youtube_id": input_id}]
 
-        test_dubbed = {input_id: output_id}
+        test_dubbed = {input_id: {"youtube_id": output_id, "download_size": 9001}}
         test_list, test_count = apply_dubbed_video_map(test_content, test_dubbed, [], "de")
         assert test_list
         assert isinstance(test_list, list)
@@ -197,12 +197,12 @@ class Test_retrieve_assessment_item_data:
 
     def test_image_url_converted(self):
         url_string = "A string with http://example.com/cat_pics.gif"
-        expected_string = "A string with /content/khan/cat/cat_pics.gif"
+        expected_string = "A string with /content/assessment/khan/cat/cat_pics.gif"
         assert expected_string == localize_image_urls({"item_data": url_string})["item_data"]
 
     def test_multiple_image_urls_in_one_string_converted(self):
         url_string = "A string with http://example.com/cat_pics.JPEG http://example.com/cat_pics2.gif"
-        expected_string = "A string with /content/khan/cat/cat_pics.JPEG /content/khan/cat/cat_pics2.gif"
+        expected_string = "A string with /content/assessment/khan/cat/cat_pics.JPEG /content/assessment/khan/cat/cat_pics2.gif"
         assert expected_string == localize_image_urls({"item_data": url_string})["item_data"]
 
     def test_content_link_converted(self):
