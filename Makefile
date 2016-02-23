@@ -1,6 +1,9 @@
-supported: pex
+contentpack: pex
 	mkdir -p out/
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite en 0.15 --out=out/en.zip
+	python minimize-content-pack.py out/en.zip out/en-minimal.zip
+
+langpacks: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite es-ES 0.15 --out=out/es-ES.zip --no-assessment-items
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite pt-BR 0.15 --out=out/pt-BR.zip --no-assessment-items
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite de 0.15 --out=out/de.zip --no-assessment-items
