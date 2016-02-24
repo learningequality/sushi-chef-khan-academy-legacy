@@ -1,7 +1,8 @@
 contentpack: pex
 	mkdir -p out/
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite en 0.15 --out=out/en.zip
-	python minimize-content-pack.py out/en.zip out/en-minimal.zip
+	./makecontentpacks minimize-content-pack.py out/en.zip out/en-minimal.zip
+	./makecontentpacks extract_khan_assessment.py out/en.zip
 
 langpacks: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite es-ES 0.15 --out=out/es-ES.zip --no-assessment-items
@@ -21,6 +22,6 @@ pex: sdist
 	pex --python=python3 -r requirements.txt -o makecontentpacks --disable-cache --no-wheel dist/content-pack-maker-`python setup.py --version`.tar.gz
 
 publish:
-	scp -P 4242 out/*.zip $(sshuser)@pantry.learningequality.org:/var/www/downloads/$(project)/$(version)/content/contentpacks/
+	scp -P 4242 out/en*.zip $(sshuser)@pantry.learningequality.org:/var/www/downloads/$(project)/$(version)/content/contentpacks/
+	scp -P 4242 out/khan_assessment.zip $(sshuser)@pantry.learningequality.org:/var/www/downloads/$(project)/$(version)/content/
 	scp -P 4242 all_metadata.json $(sshuser)@pantry.learningequality.org:/var/www/downloads/$(project)/$(version)/content/contentpacks/
-  scp -P 4242 content.db $(sshuser)@pantry.learningequality.org:/var/www/downloads/$(project)/$(version)/content/contentpacks/
