@@ -717,13 +717,17 @@ def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) ->
     pool = ThreadPool()
 
     def _download_item_data_and_files(assessment_item):
+        item_id = assessment_item.get("id")
         try:
-            item_data, file_paths = retrieve_assessment_item_data(assessment_item.get("id"), lang=lang, force=force)
+            item_data, file_paths = retrieve_assessment_item_data(item_id, lang=lang, force=force)
             return item_data, file_paths
         except requests.RequestException:
             return {}, []
         except json.JSONDecodeError:
-            logging.warning("got a JSONDecodeError for {}".format(assessment_item.get("id")))
+            logging.warning("got a JSONDecodeError for {}".format(item_id))
+            return {}, []
+        except urllib.error.HTTPError as e:
+            logging.warning("querying assessment item {} got an error: ".format(item_id, e))
             return {}, []
 
     # Unique list of assessment_items
