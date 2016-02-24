@@ -36,7 +36,7 @@ def main():
 
     contentpackpath = Path(args["<old-content-pack-path>"])
     outpath = Path(args["<out-path>"] or
-                   "minimal.zip")
+                   "out/minimal.zip")
     outpath = outpath.expanduser()
 
     minimize_content_pack(contentpackpath, outpath)
