@@ -3,8 +3,9 @@ import logging
 import os
 import pkgutil
 import re
+import requests
+import shutil
 import urllib.parse
-import urllib.request
 from functools import partial
 from urllib.parse import urlparse
 from contentpacks.models import Item, AssessmentItem
@@ -101,7 +102,7 @@ def cache_file(func):
 
 
 @cache_file
-def download_and_cache_file(url, path) -> str:
+def download_and_cache_file(url: str, path: str, headers: dict={}) -> str:
     """
     Download the given url if it's not saved in cachedir. Returns the
     path to the file. Always download the file if ignorecache is True.
@@ -109,7 +110,13 @@ def download_and_cache_file(url, path) -> str:
 
     logging.info("Downloading file from {url}".format(url=url))
 
-    urllib.request.urlretrieve(url, path)
+    r = requests.get(url, stream=True, headers=headers)
+    r.raise_for_status()
+
+    with open(path, "wb") as f:
+        shutil.copyfileobj(r.raw, f)
+
+    return path
 
 
 def translate_nodes(nodes: list, catalog: Catalog) -> list:
