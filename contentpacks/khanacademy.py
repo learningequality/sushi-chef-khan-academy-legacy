@@ -19,6 +19,9 @@ import polib
 import requests
 import json
 import ujson
+
+from math import ceil, log, exp
+
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file
 from contentpacks.models import AssessmentItem
 
@@ -379,6 +382,35 @@ def create_paths_remove_orphans_and_empty_topics(nodes) -> list:
 
 
 @cache_file
+def download_exercise_data(url, path) -> str:
+    data = requests.get(url)
+
+    attempts = 1
+    while data.status_code != 200 and attempts <= 5:
+        data = requests.get(url)
+        attempts += 1
+
+    if data.status_code != 200:
+        raise requests.RequestException
+
+    exercise_data = ujson.loads(data.content)
+
+    with open(path, "w") as f:
+        ujson.dump(exercise_data, f)
+
+
+def retrieve_exercise_dict(lang=None, force=False) -> str:
+    url = "https://www.khanacademy.org/api/internal/exercises" + ("?lang={lang}".format(lang=lang) if lang else "")
+
+    exercise_data_path = download_exercise_data(url, ignorecache=force, filename="exercises.json")
+
+    with open(exercise_data_path, 'r') as f:
+        exercise_data = ujson.load(f)
+
+    return {ex.get("id"): ex for ex in exercise_data}
+
+
+@cache_file
 def download_and_clean_kalite_data(url, path) -> str:
     data = requests.get(url)
     attempts = 1
@@ -414,6 +446,13 @@ def download_and_clean_kalite_data(url, path) -> str:
     # Hack to hardcode the mp4 format flag on Videos.
     for node in node_data["videos"]:
         node["format"] = "mp4"
+
+    # Hack to add basepoints to all Exercise data.
+    ex_dict = retrieve_exercise_dict()
+
+    for node in node_data["exercises"]:
+        seconds_per_fast_problem = ex_dict.get(node.get("id"), {}).get("seconds_per_fast_problem", 0)
+        node["basepoints"] = ceil(7 * log(max(exp(5. / 7), seconds_per_fast_problem)))
 
     # Flatten node_data
 
