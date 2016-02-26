@@ -61,7 +61,11 @@ def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: b
     video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
     subtitle_data = retrieve_subtitles(video_ids, sublangargs["video_lang"]) if not no_subtitles else {}
 
-    dubbed_video_mapping = retrieve_dubbed_video_mapping(sublangargs["video_lang"])
+    try:
+        dubbed_video_mapping = retrieve_dubbed_video_mapping(sublangargs["video_lang"])
+    except requests.exceptions.HTTPError as e:
+        logging.warning("Got an error from the KA API: {}".format(e))
+        logging.warning("I'll keep trying until they finally hand us a 200 OK.")
 
     # retrieve KA Lite po files from CrowdIn
     interface_lang = sublangargs["interface_lang"]
@@ -125,9 +129,11 @@ def retrieve_subtitles(videos: list, lang="en", force=False, threads=NUM_PROCESS
             subtitle_download_uri = "https://www.amara.org/api/videos/%s/languages/%s/subtitles/?format=vtt" % (
                 amara_id, lang)
             filename = "subtitles/{lang}/{youtube_id}.vtt".format(lang=lang, youtube_id=youtube_id)
-            subtitle_path = download_and_cache_file(subtitle_download_uri, filename=filename, ignorecache=force)
+            subtitle_path = download_and_cache_file(subtitle_download_uri, filename=filename, ignorecache=False)
+            logging.info("subtitle path: {}".format(subtitle_path))
             return youtube_id, subtitle_path
-        except (requests.HTTPError, KeyError, urllib.error.HTTPError, urllib.error.URLError):
+        except (requests.HTTPError, KeyError, urllib.error.HTTPError, urllib.error.URLError) as e:
+            logging.info("got error while downloading subtitles: {}".format(e))
             pass
 
     pools = ThreadPool(processes=threads)
@@ -148,7 +154,7 @@ def retrieve_dubbed_video_mapping(lang: str) -> dict:
 
     if lang != "en":
 
-        projection = {"videos": [OrderedDict([("youtubeId", 1), ("id", 1)])]}
+        projection = {"videos": [OrderedDict([("youtubeId", 1), ("id", 1), ("downloadSize", 1)])]}
 
         url_template = "http://www.khanacademy.org/api/v2/topics/topictree?lang={lang}&projection={projection}"
 
@@ -156,8 +162,9 @@ def retrieve_dubbed_video_mapping(lang: str) -> dict:
 
         logging.info("Retrieving Dubbed Videos for language {lang}".format(lang=lang))
 
-        dubbed_video_data = {video.get("id"): video.get("youtubeId") for video in
-                             json.loads(requests.get(url).content.decode()).get("videos", [])}
+        r = requests.get(url)
+        r.raise_for_status()
+        dubbed_video_data = r.json()
 
         logging.info("Retrieving Videos for English to map dubbed video ids")
 
@@ -168,8 +175,8 @@ def retrieve_dubbed_video_mapping(lang: str) -> dict:
         english_video_data = {video.get("id"): video.get("youtubeId") for video in
                             json.loads(requests.get(url).content.decode()).get("videos", [])}
 
-        dubbed_video_mapping = {english_video_data[id]: {"youtube_id": youtube_id, "download_size": "download_size"}
-                                for id, youtube_id in dubbed_video_data.items() if english_video_data[id] != youtube_id}
+        dubbed_video_mapping = {english_video_data[video.get("id")]: {"youtube_id": video.get("youtubeId"), "download_size": video.get("downloadSize")}
+                                for video in dubbed_video_data.get('videos', []) if english_video_data[video.get("id")] != video.get("youtubeId")}
 
     else:
         dubbed_video_mapping = {}
@@ -700,7 +707,7 @@ def _get_content_by_readable_id(readable_id):
         return CONTENT_BY_READABLE_ID.get(re.sub("\-+", "-", readable_id).lower())
 
 
-def retrieve_assessment_item_data(assessment_item, lang=None, force=False) -> (dict, [str]):
+def retrieve_assessment_item_data(assessment_item, lang=None, force=False, no_item_data=False, no_item_resources=False) -> (dict, [str]):
     """
     Retrieve assessment item data and images for a single assessment item.
     :param assessment_item: id of assessment item
@@ -708,6 +715,9 @@ def retrieve_assessment_item_data(assessment_item, lang=None, force=False) -> (d
     :param force: refetch assessment item and images even if it exists on disk
     :return: tuple of dict of assessment item data and list of paths to files
     """
+    if no_item_data:
+        return {}, []
+
     if lang:
         url = "http://www.khanacademy.org/api/v1/assessment_items/{assessment_item}?lang={lang}".format(lang=lang)
         filename = "assessment_items/{assessment_item}_{lang}.json".format(lang=lang)
@@ -727,13 +737,14 @@ def retrieve_assessment_item_data(assessment_item, lang=None, force=False) -> (d
 
     image_urls = find_all_image_urls(item_data)
     graphie_urls = find_all_graphie_urls(item_data)
+    urls = list(itertools.chain(image_urls, graphie_urls))
 
-    file_paths = []
-
-    for url in itertools.chain(image_urls, graphie_urls):
+    def _download_image_urls(url):
         filename = MANUAL_IMAGE_URL_TO_FILENAME_MAPPING.get(url, os.path.basename(url))
         filepath = _get_subpath_from_filename(filename)
-        file_paths.append(download_and_cache_file(url, filename=filepath))
+        return download_and_cache_file(url, filename=filepath)
+
+    file_paths = [] if no_item_resources else list(map(_download_image_urls, urls))
 
     item_data = localize_image_urls(item_data)
     item_data = localize_content_links(item_data)
@@ -742,7 +753,7 @@ def retrieve_assessment_item_data(assessment_item, lang=None, force=False) -> (d
     return item_data, file_paths
 
 
-def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) -> ([dict], set):
+def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None, no_item_data=False, no_item_resources=False) -> ([dict], set):
     """
     Retrieve Khan Academy assessment items and associated images from KA.
     :param lang: language to retrieve data in
@@ -758,7 +769,7 @@ def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None) ->
     def _download_item_data_and_files(assessment_item):
         item_id = assessment_item.get("id")
         try:
-            item_data, file_paths = retrieve_assessment_item_data(item_id, lang=lang, force=force)
+            item_data, file_paths = retrieve_assessment_item_data(item_id, lang=lang, force=force, no_item_data=no_item_data, no_item_resources=no_item_resources)
             return item_data, file_paths
         except requests.RequestException:
             return {}, []
@@ -895,7 +906,8 @@ def retrieve_html_exercises(exercises: [str], lang: str, force=False) -> (str, [
             en_file = download_and_cache_file(en_url, cachedir=EN_BUILD_DIR, ignorecache=force)
             if not filecmp.cmp(lang_file, en_file, shallow=False):
                 return exercise_id
-        except urllib.error.HTTPError:
+        except requests.exceptions.HTTPError as e:
+            logging.warning("Failed to fetch html for exercise {}, exception: {}".format(exercise_id, e))
             return None
 
     pool = ThreadPool(processes=NUM_PROCESSES)

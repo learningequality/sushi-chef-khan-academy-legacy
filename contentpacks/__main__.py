@@ -2,7 +2,7 @@
 makepack
 
 Usage:
-  makecontentpacks ka-lite <lang> <version> [--subtitlelang=subtitle-lang --contentlang=content-lang --interfacelang=interface-lang --videolang=video-lang --out=outdir --logging=log_file --no-assessment-items --no-subtitles]
+  makecontentpacks ka-lite <lang> <version> [--subtitlelang=subtitle-lang --contentlang=content-lang --interfacelang=interface-lang --videolang=video-lang --out=outdir --logging=log_file --no-assessment-items --no-subtitles --no-assessment-resources]
   makecontentpacks -h | --help
   makecontentpacks --version
 
@@ -17,7 +17,7 @@ from contentpacks.utils import translate_nodes, \
 
 import logging
 
-def make_language_pack(lang, version, sublangargs, filename, no_assessment_items, no_subtitles):
+def make_language_pack(lang, version, sublangargs, filename, no_assessment_items, no_subtitles, no_assessment_resources):
     node_data, subtitle_data, interface_catalog, content_catalog, dubmap = retrieve_language_resources(version, sublangargs, no_subtitles)
 
     subtitles, subtitle_paths = subtitle_data.keys(), subtitle_data.values()
@@ -30,7 +30,10 @@ def make_language_pack(lang, version, sublangargs, filename, no_assessment_items
     html_exercise_path, translated_html_exercise_ids = retrieve_html_exercises(html_exercise_ids, lang)
 
     # now include only the assessment item resources that we need
-    all_assessment_data, all_assessment_files = retrieve_all_assessment_item_data() if not no_assessment_items else ([], set())
+    all_assessment_data, all_assessment_files = retrieve_all_assessment_item_data(
+        no_item_data=no_assessment_items,
+        no_item_resources=no_assessment_resources
+    )
 
     assessment_data = translate_assessment_item_text(all_assessment_data, content_catalog) if lang != "en" else all_assessment_data
 
@@ -74,6 +77,7 @@ def main():
     sublangs = normalize_sublang_args(args)
 
     no_assessment_items = args["--no-assessment-items"]
+    no_assessment_resources = args['--no-assessment-resources']
     no_subtitles = args['--no-subtitles']
 
     log_file = args["--logging"] or "debug.log"
@@ -81,7 +85,7 @@ def main():
     logging.basicConfig(level=logging.INFO)
 
     try:
-        make_language_pack(lang, version, sublangs, out, no_assessment_items, no_subtitles)
+        make_language_pack(lang, version, sublangs, out, no_assessment_items, no_subtitles, no_assessment_resources)
     except Exception:           # This is allowed, since we want to potentially debug all errors
         import os
         if not os.environ.get("DEBUG"):
