@@ -546,9 +546,10 @@ def recurse_availability_up_tree(nodes, db) -> [Item]:
     with Using(db, [Item]):
         # at this point, the only thing that can affect a topic's availability
         # are exercises. Videos and other content's availability can only be
-        # determined by what's in the client. So, loop over exercises and skip
-        # all other nodes (topics will be recursed upwards).
-        for node in (n for n in nodes if n.kind == NodeType.exercise):
+        # determined by what's in the client. However, we need to set total_files
+        # and remote_sizes. So, loop over exercises and other content,
+        # and skip topics as they will be recursed upwards.
+        for node in (n for n in nodes if n.kind != NodeType.topic):
             _recurse_availability_up_tree(node)
 
     return nodes
