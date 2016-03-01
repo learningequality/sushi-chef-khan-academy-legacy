@@ -59,13 +59,16 @@ def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: b
     node_data = retrieve_kalite_data()
 
     video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
-    subtitle_data = retrieve_subtitles(video_ids, sublangargs["video_lang"]) if not no_subtitles else {}
+    subtitle_data = retrieve_subtitles(video_ids, sublangargs["subtitle_lang"]) if not no_subtitles else {}
 
-    try:
-        dubbed_video_mapping = retrieve_dubbed_video_mapping(sublangargs["video_lang"])
-    except requests.exceptions.HTTPError as e:
-        logging.warning("Got an error from the KA API: {}".format(e))
-        logging.warning("I'll keep trying until they finally hand us a 200 OK.")
+    while 1:
+        try:
+            dubbed_video_mapping = retrieve_dubbed_video_mapping(sublangargs["video_lang"])
+        except requests.exceptions.HTTPError as e:
+            logging.warning("Got an error from the KA API: {}".format(e))
+            logging.warning("I'll keep trying until they finally hand us a 200 OK.")
+        else:
+            break
 
     # retrieve KA Lite po files from CrowdIn
     interface_lang = sublangargs["interface_lang"]
@@ -171,12 +174,16 @@ def retrieve_dubbed_video_mapping(lang: str) -> dict:
         url_template = "http://www.khanacademy.org/api/v2/topics/topictree?projection={projection}"
 
         url = url_template.format(projection=json.dumps(projection))
+        resp = requests.get(url)
+        resp.raise_for_status()
+        content = resp.content.decode()
 
         english_video_data = {video.get("id"): video.get("youtubeId") for video in
-                            json.loads(requests.get(url).content.decode()).get("videos", [])}
+                              json.loads(content).get("videos", [])}
 
         dubbed_video_mapping = {english_video_data[video.get("id")]: {"youtube_id": video.get("youtubeId"), "download_size": video.get("downloadSize")}
-                                for video in dubbed_video_data.get('videos', []) if english_video_data[video.get("id")] != video.get("youtubeId")}
+                                for video in dubbed_video_data.get('videos', []) if video.get("id") in english_video_data and
+                                english_video_data[video.get("id")] != video.get("youtubeId")}
 
     else:
         dubbed_video_mapping = {}
