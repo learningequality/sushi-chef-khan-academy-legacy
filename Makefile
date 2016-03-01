@@ -3,6 +3,7 @@ contentpack: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite en 0.15 --out=out/en.zip
 	./makecontentpacks minimize-content-pack.py out/en.zip out/en-minimal.zip
 	./makecontentpacks extract_khan_assessment.py out/en.zip
+	./makecontentpacks collectmetadata.py out/
 
 langpacks: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite es-ES 0.15 --out=out/es-ES.zip --no-assessment-resources --subtitlelang=es
