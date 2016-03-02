@@ -35,16 +35,12 @@ def make_language_pack(lang, version, sublangargs, filename, no_assessment_items
         no_item_resources=no_assessment_resources
     )
 
-    assessment_data = translate_assessment_item_text(all_assessment_data, content_catalog) if lang != "en" else all_assessment_data
+    assessment_data = list(translate_assessment_item_text(all_assessment_data, content_catalog)) if lang != "en" else all_assessment_data
 
     node_data = remove_untranslated_exercises(node_data, translated_html_exercise_ids, assessment_data) if lang != "en" else node_data
 
     pack_metadata = generate_kalite_language_pack_metadata(lang, version, interface_catalog, content_catalog, subtitles,
                                                            dubbed_video_count)
-
-    if no_assessment_items:
-        # Only bundle assessment item asset files for the English language pack
-        all_assessment_files = []
 
     bundle_language_pack(str(filename), node_data, interface_catalog, interface_catalog,
                          pack_metadata, assessment_data, all_assessment_files, subtitle_paths)

@@ -46,7 +46,7 @@ class Test_translate_nodes:
 
 class Test_translate_assessment_item_text:
 
-    def test_doesnt_return_untranslated_items(self):
+    def test_doesnt_returns_all_items(self):
         catalog = generate_catalog()
 
         sample_data = [
@@ -67,8 +67,8 @@ class Test_translate_assessment_item_text:
         translated = [node.get("id") for node in translate_assessment_item_text(sample_data, catalog)]
 
         assert "translated" in translated
-        assert "not_in_catalog" not in translated
-        assert "not_translated" not in translated
+        assert "not_in_catalog" in translated
+        assert "not_translated" in translated
 
 
 class Test_remove_unavailable_topics:

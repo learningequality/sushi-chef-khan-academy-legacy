@@ -156,13 +156,9 @@ def translate_assessment_item_text(items: list, catalog: Catalog):
     # TODO (aronasorman): implement tests
     def gettext(s):
         """
-        Specialized gettext function that raises NotTranslatable when no
-        translation for s has been found.
+        Convenience function for translating text through the given catalog.
         """
-        try:
-            trans = catalog[s]
-        except KeyError:
-            raise NotTranslatable("String has no translation: {}".format(s))
+        trans = catalog.get(s) or s
 
         return trans
 
@@ -175,11 +171,11 @@ def translate_assessment_item_text(items: list, catalog: Catalog):
         except NotTranslatable:
             continue
         else:
-            item["item_data"] = ujson.dumps(translated_item_data)
+            item["item_data"] = ujson.dumps(translated_item_data, gettext)
             yield item
 
 
-def smart_translate_item_data(item_data: dict, gettext=None):
+def smart_translate_item_data(item_data: dict, gettext):
     """Auto translate the content fields of a given assessment item data.
 
     An assessment item doesn't have the same fields; they change
@@ -189,13 +185,15 @@ def smart_translate_item_data(item_data: dict, gettext=None):
 
     Requires a gettext function.
     """
+    translate_item_fn = partial(smart_translate_item_data, gettext=gettext)
+
     # TODO (aronasorman): implement tests
     # just translate strings immediately
     if isinstance(item_data, str):
         return gettext(item_data)
 
     elif isinstance(item_data, list):
-        return map(smart_translate_item_data, item_data)
+        return list(map(translate_item_fn, item_data))
 
     elif isinstance(item_data, dict):
         if 'content' in item_data:
@@ -205,8 +203,7 @@ def smart_translate_item_data(item_data: dict, gettext=None):
             if isinstance(field_data, dict):
                 item_data[field] = smart_translate_item_data(field_data, gettext)
             elif isinstance(field_data, list):
-                translate_item_fn = partial(smart_translate_item_data, gettext=gettext)
-                item_data[field] = map(translate_item_fn, field_data)
+                item_data[field] = list(map(translate_item_fn, field_data))
 
         return item_data
 
