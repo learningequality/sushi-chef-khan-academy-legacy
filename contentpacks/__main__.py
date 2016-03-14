@@ -2,9 +2,19 @@
 makepack
 
 Usage:
-  makecontentpacks ka-lite <lang> <version> [--subtitlelang=subtitle-lang --contentlang=content-lang --interfacelang=interface-lang --videolang=video-lang --out=outdir --logging=log_file --no-assessment-items --no-subtitles --no-assessment-resources]
+  makecontentpacks ka-lite <lang> <version> [options]
   makecontentpacks -h | --help
   makecontentpacks --version
+
+--subtitlelang=subtitle-lang   The language to download subtitles in.
+--contentlang=content-lang     The language to for content, i.e. what language to pull from Khan Academy.
+--interfacelang=interface-lang The language to pull from CrowdIn for KALite's/Kolibri's interface.
+--videolang=video-lang         The language of dubbed videos, i.e. what dubbed video mapping language to use.
+--out=outdir                   The path to place the final content pack. 
+--logging=log_file             The file for logging output. Defaults to stderr if not specified.
+--no-subtitles                 If specified, will omit downloading and including any subtitles.
+--no-assessment-items          If specified, will omit downloading and including any assessment item data.
+--no-assessment-resources      If specified, will omit downloading and including any resources (images, json files) needed to render assessment item exercises.
 
 """
 from docopt import docopt
