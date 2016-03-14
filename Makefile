@@ -1,16 +1,16 @@
 contentpack: pex
 	mkdir -p out/
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite en 0.15 --out=out/en.zip
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite en 0.16 --out=out/en.zip
 	./makecontentpacks minimize-content-pack.py out/en.zip out/en-minimal.zip
 	./makecontentpacks extract_khan_assessment.py out/en.zip
 	./makecontentpacks collectmetadata.py out/
 
 langpacks: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite es-ES 0.15 --out=out/es-ES.zip --no-assessment-resources --subtitlelang=es
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite pt-BR 0.15 --out=out/pt-BR.zip --no-assessment-resources --videolang=pt
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite de 0.15 --out=out/de.zip --no-assessment-resources
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite fr 0.15 --out=out/fr.zip --no-assessment-resources
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite zh 0.15 --out=out/zh.zip --contentlang=zh-TW --interfacelang=zh-CN --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite es-ES 0.16 --out=out/es-ES.zip --no-assessment-resources --subtitlelang=es
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite pt-BR 0.16 --out=out/pt-BR.zip --no-assessment-resources --videolang=pt
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite de 0.16 --out=out/de.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite fr 0.16 --out=out/fr.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite zh 0.16 --out=out/zh.zip --contentlang=zh-TW --interfacelang=zh-CN --no-assessment-resources
 	unzip -p out/en.zip content.db > content.db
 	./makecontentpacks collectmetadata.py out/
 
