@@ -265,6 +265,10 @@ def remove_unavailable_topics(nodes):
 
 
 def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata, assessment_items, assessment_files, subtitles):
+
+    # make sure dest's parent directories exist
+    pathlib.Path(dest).parent.mkdir(parents=True, exist_ok=True)
+
     with zipfile.ZipFile(dest, "w") as zf, tempfile.NamedTemporaryFile() as dbf:
         db = SqliteDatabase(dbf.name)
         db.connect()
