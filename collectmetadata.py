@@ -41,7 +41,7 @@ def main():
     dir = pathlib.Path(args["<contentpackdir>"])
 
     if args["--out"]:
-        out = pathlib.Path(["--out"])
+        out = pathlib.Path(args["--out"])
     else:
         out = pathlib.Path.cwd() / ALL_METADATA_FILENAME
 
