@@ -13,7 +13,7 @@ langpacks: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite fr 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite zh 0.16 --out=out/langpacks/zh.zip --contentlang=zh-TW --interfacelang=zh-CN --no-assessment-resources
 	unzip -p out/en.zip content.db > content.db
-	./makecontentpacks collectmetadata.py out/ --out=out/all_metadata.json
+	./makecontentpacks collectmetadata.py out/langpacks/ --out=out/all_metadata.json
 
 all: supported
 
