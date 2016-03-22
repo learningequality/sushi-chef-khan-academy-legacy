@@ -24,7 +24,13 @@ def read_metadata(filename: pathlib.Path) -> dict:
         # str (it returns bytes)
         try:
             s = zf.read(CONTENTPACK_METADATA_FILENAME).decode('utf-8') 
-            return json.loads(s)
+
+            metadata = json.loads(s)
+
+            # add the file size here as well
+            metadata['zip_size'] = filename.stat().st_size
+
+            return metadata
         except KeyError:    # no metadata file, skip zipfile
             return None
 
@@ -50,6 +56,7 @@ def main():
 
     all_metadata = [read_metadata(f) for f in return_all_contentpack_files(dir)]
     all_metadata = [m for m in all_metadata if m]
+
     with open(str(out), "w") as f:
         json.dump(all_metadata, f)
 
