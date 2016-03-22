@@ -11,7 +11,18 @@ langpacks: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite bn 0.16 --out=out/langpacks/bn.zip --no-assessment-resources
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite de 0.16 --out=out/langpacks/de.zip --no-assessment-resources
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite fr 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite zh 0.16 --out=out/langpacks/zh.zip --contentlang=zh-TW --interfacelang=zh-CN --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite ar 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite da 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite bg 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite my 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite pl 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite lo 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite hi 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite sw 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite xh 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite kn 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite ta 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite zul 0.16 --out=out/langpacks/fr.zip --no-assessment-resources --contentlang=zu --interfacelang=zu
 	unzip -p out/en.zip content.db > content.db
 	./makecontentpacks collectmetadata.py out/langpacks/ --out=out/all_metadata.json
 
