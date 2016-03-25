@@ -264,7 +264,7 @@ def remove_unavailable_topics(nodes):
     return node_list
 
 
-def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata, assessment_items, assessment_files, subtitles):
+def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata, assessment_items, assessment_files, subtitles, html_exercise_path):
 
     # make sure dest's parent directories exist
     pathlib.Path(dest).parent.mkdir(parents=True, exist_ok=True)
@@ -295,6 +295,8 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
         save_catalog(backend_catalog, zf, "backend.mo")
         # save_subtitles(subtitle_path, zf)
 
+        save_html_exercises(html_exercise_path, zf)
+
         save_db(db, zf)
 
         save_metadata(zf, metadata)
@@ -306,6 +308,19 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
             save_subtitle(subtitle_path, zf)
 
     return dest
+
+
+def save_html_exercises(html_exercise_path, zf):
+    logging.info("Saving html exercises in {}".format(html_exercise_path))
+    zip_html_exercise_root = pathlib.Path("exercises/")
+
+    html_exercise_path = pathlib.Path(html_exercise_path)
+
+    for exercise_path in html_exercise_path.iterdir():
+        exercise_name = exercise_path.name
+        zip_exercise_path = zip_html_exercise_root / exercise_name
+
+        zf.writestr(str(zip_exercise_path), exercise_path.read_bytes())
 
 
 def save_subtitle(path: str, zf: zipfile.ZipFile):
