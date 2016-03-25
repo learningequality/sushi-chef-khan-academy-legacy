@@ -53,7 +53,7 @@ def make_language_pack(lang, version, sublangargs, filename, no_assessment_items
                                                            dubbed_video_count)
 
     bundle_language_pack(str(filename), node_data, interface_catalog, interface_catalog,
-                         pack_metadata, assessment_data, all_assessment_files, subtitle_paths)
+                         pack_metadata, assessment_data, all_assessment_files, subtitle_paths, html_exercise_path)
 
 
 def normalize_sublang_args(args):
