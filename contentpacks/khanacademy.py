@@ -56,7 +56,7 @@ POEntry_class.merge = new_merge
 
 
 def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: bool) -> LangpackResources:
-    node_data = retrieve_kalite_data()
+    node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True)
 
     video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
     subtitle_data = retrieve_subtitles(video_ids, sublangargs["subtitle_lang"]) if not no_subtitles else {}
