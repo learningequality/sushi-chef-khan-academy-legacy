@@ -425,7 +425,7 @@ def retrieve_exercise_dict(lang=None, force=False) -> str:
 
 
 @cache_file
-def download_and_clean_kalite_data(url, path) -> str:
+def download_and_clean_kalite_data(url, path, lang="en") -> str:
     data = requests.get(url)
     attempts = 1
     while data.status_code != 200 and attempts <= 5:
@@ -467,6 +467,10 @@ def download_and_clean_kalite_data(url, path) -> str:
     for node in node_data["exercises"]:
         seconds_per_fast_problem = ex_dict.get(node.get("id"), {}).get("seconds_per_fast_problem", 0)
         node["basepoints"] = ceil(7 * log(max(exp(5. / 7), seconds_per_fast_problem)))
+
+        # if not english, prepend language code to file_name attribute of the exercise node
+        if lang != "en" and not node["uses_assessment_items"]:
+            node["file_name"] = os.path.join(lang, node["file_name"])
 
     # Flatten node_data
 
