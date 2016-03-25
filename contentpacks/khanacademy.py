@@ -544,14 +544,11 @@ video_attributes = [
 ]
 
 
-def retrieve_kalite_data(lang=None, force=False) -> list:
+def retrieve_kalite_data(lang="en", force=False) -> list:
     """
     Retrieve the KA content data direct from KA.
     """
-    if lang:
-        url = "http://www.khanacademy.org/api/v2/topics/topictree?lang={lang}&projection={projection}".format(lang=lang)
-    else:
-        url = "http://www.khanacademy.org/api/v2/topics/topictree?projection={projection}"
+    url = "http://www.khanacademy.org/api/v2/topics/topictree?lang={lang}&projection={projection}"
 
     projection = OrderedDict([
         ("topics", [OrderedDict((key, 1) for key in topic_attributes)]),
@@ -559,9 +556,9 @@ def retrieve_kalite_data(lang=None, force=False) -> list:
         ("videos", [OrderedDict((key, 1) for key in video_attributes)])
     ])
 
-    url = url.format(projection=json.dumps(projection))
+    url = url.format(projection=json.dumps(projection), lang=lang)
 
-    node_data_path = download_and_clean_kalite_data(url, ignorecache=force, filename="nodes.json")
+    node_data_path = download_and_clean_kalite_data(url, lang=lang, ignorecache=force, filename="nodes.json")
 
     with open(node_data_path, 'r') as f:
         node_data = ujson.load(f)
