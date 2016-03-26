@@ -114,7 +114,8 @@ def download_and_cache_file(url: str, path: str, headers: dict={}) -> str:
     r.raise_for_status()
 
     with open(path, "wb") as f:
-        shutil.copyfileobj(r.raw, f)
+        for chunk in r.iter_content(1024):
+            f.write(chunk)
 
     return path
 
