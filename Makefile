@@ -11,7 +11,6 @@ langpacks: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite bn 0.16 --out=out/langpacks/bn.zip --no-assessment-resources
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite de 0.16 --out=out/langpacks/de.zip --no-assessment-resources
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite fr 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite ar 0.16 --out=out/langpacks/ar.zip --no-assessment-resources
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite da 0.16 --out=out/langpacks/da.zip --no-assessment-resources
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite bg 0.16 --out=out/langpacks/bg.zip --no-assessment-resources
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite my 0.16 --out=out/langpacks/my.zip --no-assessment-resources
