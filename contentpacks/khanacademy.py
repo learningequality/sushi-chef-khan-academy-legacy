@@ -799,7 +799,11 @@ def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None, no
 
     logging.info("Retrieving assessment item data for all assessment items.")
     data_and_files = pool.map(_download_item_data_and_files, assessment_items)
-    assessment_item_data, all_file_paths = zip(*data_and_files)
+    try:
+        assessment_item_data, all_file_paths = zip(*data_and_files)
+    except ValueError:
+        logging.warning("No assessment iitems fetched at all.")
+        return [], set()
 
     # remove empty assessment_item_data
     assessment_item_data = (data for data in assessment_item_data if data)
