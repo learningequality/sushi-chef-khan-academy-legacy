@@ -779,7 +779,8 @@ def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None, no
         try:
             item_data, file_paths = retrieve_assessment_item_data(item_id, lang=lang, force=force, no_item_data=no_item_data, no_item_resources=no_item_resources)
             return item_data, file_paths
-        except requests.RequestException:
+        except requests.RequestException as e:
+            logging.warning("got requests exception: {}".format(e))
             return {}, []
         except json.JSONDecodeError:
             logging.warning("got a JSONDecodeError for {}".format(item_id))
