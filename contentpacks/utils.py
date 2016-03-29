@@ -296,7 +296,10 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
         save_catalog(backend_catalog, zf, "backend.mo")
         # save_subtitles(subtitle_path, zf)
 
-        save_html_exercises(html_exercise_path, zf)
+        try:                    # sometimes we have no html exercises
+            save_html_exercises(html_exercise_path, zf)
+        except FileNotFoundError:
+            logging.warning("No html exercises found; skipping.")
 
         save_db(db, zf)
 
