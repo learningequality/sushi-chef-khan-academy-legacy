@@ -88,7 +88,7 @@ def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: b
         crowdin_secret_key = os.environ["KA_CROWDIN_SECRET_KEY"]
         includes = []
         ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key,
-                                           lang_code=sublangargs["content_lang"], force=True)
+                                           lang_code=sublangargs["interface_lang"], force=True)
 
     return LangpackResources(node_data, subtitle_data, kalite_catalog, ka_catalog,
                              dubbed_video_mapping)
