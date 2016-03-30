@@ -482,6 +482,10 @@ def generate_kalite_language_pack_metadata(lang: str, version: str, interface_ca
     """
     Create the language pack metadata based on the files passed in.
     """
+
+    # language packs are automatically beta if they have no dubbed videos and subtitles
+    is_beta = dubbed_video_count == 0 and len(subtitles) == 0
+
     metadata = {
         "code": lang,
         'software_version': version,
@@ -492,6 +496,7 @@ def generate_kalite_language_pack_metadata(lang: str, version: str, interface_ca
         "name": get_lang_name(lang),
         'native_name': get_lang_native_name(lang),
         "video_count": dubbed_video_count,
+        "beta": is_beta,
     }
 
     return metadata

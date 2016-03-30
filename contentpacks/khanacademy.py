@@ -88,7 +88,7 @@ def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: b
         crowdin_secret_key = os.environ["KA_CROWDIN_SECRET_KEY"]
         includes = []
         ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key,
-                                           lang_code=sublangargs["content_lang"], force=True)
+                                           lang_code=sublangargs["interface_lang"], force=True)
 
     return LangpackResources(node_data, subtitle_data, kalite_catalog, ka_catalog,
                              dubbed_video_mapping)
@@ -117,6 +117,7 @@ def retrieve_subtitle_meta_data(url, path):
 def retrieve_subtitles(videos: list, lang="en", force=False, threads=NUM_PROCESSES) -> dict:
     # videos => contains list of youtube ids
     """return list of youtubeids that were downloaded"""
+    lang = lang.lower()         # Amara likes lowercase codes
     def _download_subtitle_data(youtube_id):
 
         logging.info("trying to download subtitle for %s" % youtube_id)
