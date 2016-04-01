@@ -28,13 +28,13 @@ from contentpacks.utils import translate_nodes, \
 import logging
 
 def make_language_pack(lang, version, sublangargs, filename, no_assessment_items, no_subtitles, no_assessment_resources):
-    node_data, subtitle_data, interface_catalog, content_catalog, dubmap = retrieve_language_resources(version, sublangargs, no_subtitles)
+    node_data, subtitle_data, interface_catalog, content_catalog = retrieve_language_resources(version, sublangargs, no_subtitles)
 
     subtitles, subtitle_paths = subtitle_data.keys(), subtitle_data.values()
 
     node_data = translate_nodes(node_data, content_catalog)
     node_data = list(node_data)
-    node_data, dubbed_video_count = apply_dubbed_video_map(node_data, dubmap, subtitles, sublangargs["video_lang"])
+    node_data, dubbed_video_count = apply_dubbed_video_map(node_data, subtitles, sublangargs["video_lang"])
 
     html_exercise_ids, assessment_exercise_ids, node_data = separate_exercise_types(node_data)
     html_exercise_path, translated_html_exercise_ids = retrieve_html_exercises(html_exercise_ids, lang)

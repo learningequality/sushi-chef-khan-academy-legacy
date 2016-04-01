@@ -588,3 +588,30 @@ def recurse_availability_up_tree(nodes, db) -> [Item]:
             _recurse_availability_up_tree(node)
 
     return nodes
+
+
+def is_video_node_dubbed(video_node: dict, expected_lang: str) -> bool:
+    assert 'translated_youtube_lang' in video_node, "We need the " \
+        "translated_youtube_lang attribute to figure out if a video is dubbed!"
+
+    video_lang = video_node['translated_youtube_lang']
+    return get_primary_language(video_lang) == get_primary_language(expected_lang)
+
+
+def get_primary_language(lang):
+    """
+    A language code may come in two parts as per ISO 639-1. For the case of
+    pt-BR, the first part would be the primary language (pt) and the second
+    one, the country code. This function retruns the primary language part of
+    the language code.
+
+    """
+    if len(lang) <= 2:          # Already only the primary language
+        return lang
+    else:
+        # lang is something like pt-BR
+        # Split the lang code into two parts (pt, BR)
+        # And return the first part (pt)
+        return lang.\
+            split("-")\
+            [0]

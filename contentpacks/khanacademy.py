@@ -7,7 +7,6 @@ import logging
 import os
 import re
 import shutil
-import threading
 import urllib
 import tempfile
 import zipfile
@@ -22,7 +21,8 @@ import ujson
 
 from math import ceil, log, exp
 
-from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file
+from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file,\
+    is_video_node_dubbed
 from contentpacks.models import AssessmentItem
 
 NUM_PROCESSES = 5
@@ -33,7 +33,6 @@ LangpackResources = collections.namedtuple(
      "subtitles",
      "kalite_catalog",
      "ka_catalog",
-     "dubbed_video_mapping"
      ])
 
 
@@ -61,15 +60,6 @@ def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: b
     video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
     subtitle_data = retrieve_subtitles(video_ids, sublangargs["subtitle_lang"]) if not no_subtitles else {}
 
-    while 1:
-        try:
-            dubbed_video_mapping = retrieve_dubbed_video_mapping(sublangargs["video_lang"])
-        except requests.exceptions.HTTPError as e:
-            logging.warning("Got an error from the KA API: {}".format(e))
-            logging.warning("I'll keep trying until they finally hand us a 200 OK.")
-        else:
-            break
-
     # retrieve KA Lite po files from CrowdIn
     interface_lang = sublangargs["interface_lang"]
     if interface_lang == "en":
@@ -90,8 +80,7 @@ def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: b
         ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key,
                                            lang_code=sublangargs["interface_lang"], force=True)
 
-    return LangpackResources(node_data, subtitle_data, kalite_catalog, ka_catalog,
-                             dubbed_video_mapping)
+    return LangpackResources(node_data, subtitle_data, kalite_catalog, ka_catalog)
 
 
 @cache_file
@@ -146,50 +135,6 @@ def retrieve_subtitles(videos: list, lang="en", force=False, threads=NUM_PROCESS
     subtitle_data = dict(s for s in poolresult if s) # remove empty return values
 
     return subtitle_data
-
-
-def retrieve_dubbed_video_mapping(lang: str) -> dict:
-    """
-    Returns a dictionary mapping between the english id, and its id for
-    the dubbed video version given the language.
-    :param lang: language to fetch dubbed video map for
-    :return: dictionary of all valid mappings, empty if none.
-    """
-
-    if lang != "en":
-
-        projection = {"videos": [OrderedDict([("youtubeId", 1), ("id", 1), ("downloadSize", 1)])]}
-
-        url_template = "http://www.khanacademy.org/api/v2/topics/topictree?lang={lang}&projection={projection}"
-
-        url = url_template.format(lang=lang, projection=json.dumps(projection))
-
-        logging.info("Retrieving Dubbed Videos for language {lang}".format(lang=lang))
-
-        r = requests.get(url)
-        r.raise_for_status()
-        dubbed_video_data = r.json()
-
-        logging.info("Retrieving Videos for English to map dubbed video ids")
-
-        url_template = "http://www.khanacademy.org/api/v2/topics/topictree?projection={projection}"
-
-        url = url_template.format(projection=json.dumps(projection))
-        resp = requests.get(url)
-        resp.raise_for_status()
-        content = resp.content.decode()
-
-        english_video_data = {video.get("id"): video.get("youtubeId") for video in
-                              json.loads(content).get("videos", [])}
-
-        dubbed_video_mapping = {english_video_data[video.get("id")]: {"youtube_id": video.get("youtubeId"), "download_size": video.get("downloadSize")}
-                                for video in dubbed_video_data.get('videos', []) if video.get("id") in english_video_data and
-                                english_video_data[video.get("id")] != video.get("youtubeId")}
-
-    else:
-        dubbed_video_mapping = {}
-
-    return dubbed_video_mapping
 
 
 def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="en", force=False,
@@ -434,7 +379,8 @@ def download_and_clean_kalite_data(url, path, lang="en") -> str:
         attempts += 1
 
     if data.status_code != 200:
-        raise requests.RequestException
+        import pdb; pdb.set_trace()
+        raise requests.RequestException("Got error requesting KA data: {}".format(data.content))
 
     node_data = ujson.loads(data.content)
 
@@ -545,6 +491,7 @@ video_attributes = [
     'sha',
     'slug',
     'title',
+    'translatedYoutubeLang',
     'youtubeId'
 ]
 
@@ -862,7 +809,7 @@ def get_content_length(content):
     return size
 
 
-def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, lang: str, cachedir=None) -> (list, int):
+def apply_dubbed_video_map(content_data: list, subtitles: list, lang: str, cachedir=None) -> (list, int):
     if not cachedir:
         cachedir = os.path.join(os.getcwd(), "build")
 
@@ -879,11 +826,11 @@ def apply_dubbed_video_map(content_data: list, dubmap: dict, subtitles: list, la
         dubbed_count = 0
 
         for item in content_data:
-            if dubmap.get(item.get("youtube_id", "")): # has a dubbed video
-                item.update(dubmap.get(item["youtube_id"]))
-                dubbed_count += 1
-            elif item["kind"] == NodeType.video and item["youtube_id"] not in subtitles: # no subtitles
-                continue
+            if item["kind"] == NodeType.video:
+                if is_video_node_dubbed(item, lang):
+                    dubbed_count += 1
+                elif item["youtube_id"] not in subtitles:
+                    continue
             dubbed_content.append(item)
 
         content_data = dubbed_content
