@@ -4,8 +4,6 @@ import os
 import pkgutil
 import re
 import requests
-import shutil
-import urllib.parse
 from functools import partial
 from urllib.parse import urlparse
 from contentpacks.models import Item, AssessmentItem
@@ -36,6 +34,11 @@ NODE_FIELDS_TO_TRANSLATE = [
     "description",
     "display_name",
 ]
+
+
+ASSESSMENT_RESOURCES_ZIP_FOLDER = "khan/"
+
+ASSESSMENT_VERSION_FILENAME = "assessmentitems.version"
 
 
 LANGUAGELOOKUP_DATA = pkgutil.get_data('contentpacks', "resources/languagelookup.json")
@@ -307,11 +310,18 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
 
         for file_path in assessment_files:
             save_assessment_file(file_path, zf)
+        write_assessment_version(metadata, zf)
 
         for subtitle_path in subtitles:
             save_subtitle(subtitle_path, zf)
 
     return dest
+
+
+def write_assessment_version(metadata: dict, zf):
+    version = str(metadata.get("software_version", "xx.xx"))
+    assessment_version_zip_path = os.path.join(ASSESSMENT_RESOURCES_ZIP_FOLDER, ASSESSMENT_VERSION_FILENAME)
+    zf.writestr(assessment_version_zip_path, version)
 
 
 def save_html_exercises(html_exercise_path, zf):
@@ -459,7 +469,7 @@ def save_db(db, zf):
 
 
 def save_assessment_file(assessment_file, zf):
-        zf.write(assessment_file, os.path.join("khan", os.path.basename(os.path.dirname(
+        zf.write(assessment_file, os.path.join(ASSESSMENT_RESOURCES_ZIP_FOLDER, os.path.basename(os.path.dirname(
             assessment_file)), os.path.basename(assessment_file)))
 
 
