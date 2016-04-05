@@ -245,15 +245,47 @@ def modify_slugs(nodes) -> list:
 
 id_key = {
     "Topic": "slug",
-    "Video": "youtube_id",
     "Exercise": "name",
 }
 
 
-def modify_ids(nodes) -> list:
+def modify_ids(nodes, lang="en") -> list:
+    logging.debug("Modifying the ids of the nodes")
+    node_video_id_mappings = get_video_id_english_mappings(lang)
     for node in nodes:
-        node["id"] = node.get(id_key.get(node.get("kind")))
+        node_id = node["id"]
+        if node["kind"] == NodeType.video:
+            node["id"] = node_video_id_mappings.get(node_id) or node["youtube_id"]
+        else:
+            node["id"] = node.get(id_key.get(node.get("kind")))
+
     return nodes
+
+
+def get_video_id_english_mappings(lang):
+    if lang == "en":
+        mapping = {}
+    else:
+        logging.info("Creating mapping for nodes"
+                     " between en and {}".format(lang))
+
+        projection = {"videos": [
+            OrderedDict(
+                [("youtubeId", 1),
+                 ("id", 1)]
+            )]}
+
+        url_template = "http://www.khanacademy.org/api/v2/topics/topictree?projection={projection}"
+        url = url_template.format(lang=lang, projection=json.dumps(projection))
+
+        r = requests.get(url)
+        r.raise_for_status()
+        english_video_data = r.json()
+        english_video_data = english_video_data["videos"]
+
+        mapping = {n["id"]: n["youtubeId"] for n in english_video_data}
+
+    return mapping
 
 
 def apply_black_list(nodes) -> list:
@@ -379,7 +411,6 @@ def download_and_clean_kalite_data(url, path, lang="en") -> str:
         attempts += 1
 
     if data.status_code != 200:
-        import pdb; pdb.set_trace()
         raise requests.RequestException("Got error requesting KA data: {}".format(data.content))
 
     node_data = ujson.loads(data.content)
@@ -441,7 +472,7 @@ def download_and_clean_kalite_data(url, path, lang="en") -> str:
 
     # Modify id keys to match KA Lite id formats
 
-    node_data = modify_ids(node_data)
+    node_data = modify_ids(node_data, lang=lang)
 
     # Save node_data to disk
 
@@ -809,15 +840,7 @@ def get_content_length(content):
     return size
 
 
-def apply_dubbed_video_map(content_data: list, subtitles: list, lang: str, cachedir=None) -> (list, int):
-    if not cachedir:
-        cachedir = os.path.join(os.getcwd(), "build")
-
-    # try:
-    #     with open(os.path.join(cachedir, "file_sizes.json"), "r") as f:
-    #         remote_sizes = json.load(f)
-    # except FileNotFoundError:
-    #     remote_sizes = {}
+def apply_dubbed_video_map(content_data: list, subtitles: list, lang: str) -> (list, int):
 
     if lang != "en":
 
