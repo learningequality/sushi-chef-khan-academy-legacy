@@ -278,8 +278,15 @@ def get_video_id_english_mappings(lang):
         url_template = "http://www.khanacademy.org/api/v2/topics/topictree?projection={projection}"
         url = url_template.format(lang=lang, projection=json.dumps(projection))
 
-        r = requests.get(url)
-        r.raise_for_status()
+        while 1:
+            try:
+                r = requests.get(url)
+                r.raise_for_status()
+                break
+            except requests.exceptions.HTTPError as e:
+                logging.warning("Got an error from Khan Academy requesting from their topic tree url: {}".format(e))
+                logging.warning("Trying again.")
+
         english_video_data = r.json()
         english_video_data = english_video_data["videos"]
 
