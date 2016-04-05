@@ -840,15 +840,7 @@ def get_content_length(content):
     return size
 
 
-def apply_dubbed_video_map(content_data: list, subtitles: list, lang: str, cachedir=None) -> (list, int):
-    if not cachedir:
-        cachedir = os.path.join(os.getcwd(), "build")
-
-    # try:
-    #     with open(os.path.join(cachedir, "file_sizes.json"), "r") as f:
-    #         remote_sizes = json.load(f)
-    # except FileNotFoundError:
-    #     remote_sizes = {}
+def apply_dubbed_video_map(content_data: list, subtitles: list, lang: str) -> (list, int):
 
     if lang != "en":
 

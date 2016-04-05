@@ -6,7 +6,7 @@ from hypothesis.strategies import lists, sampled_from, text, \
     tuples
 
 from contentpacks.khanacademy import _get_video_ids, \
-    retrieve_dubbed_video_mapping, retrieve_html_exercises, \
+    retrieve_html_exercises, \
     retrieve_kalite_data, retrieve_translations, retrieve_subtitles, apply_dubbed_video_map, \
     retrieve_all_assessment_item_data, retrieve_assessment_item_data, \
     clean_assessment_item, localize_image_urls, localize_content_links, prune_assessment_items
@@ -21,14 +21,15 @@ class Test_apply_dubbed_video_map:
 
     def test_apply_dubbed(self):
         input_id = "y2-uaPiyoxc"
-        output_id = "lhS-nvcK8Co"
-        test_content = [{"youtube_id": input_id}]
+        test_content = [
+            {"youtube_id": input_id, "kind": "Video", "translated_youtube_lang": "de"},
+            {"youtube_id": input_id, "kind": "Video", "translated_youtube_lang": "es"}
+        ]
 
-        test_dubbed = {input_id: {"youtube_id": output_id, "download_size": 9001}}
-        test_list, test_count = apply_dubbed_video_map(test_content, test_dubbed, [], "de")
+        test_list, test_count = apply_dubbed_video_map(test_content, [], "de")
         assert test_list
         assert isinstance(test_list, list)
-        assert test_list[0]["youtube_id"] == output_id
+        assert test_list[0]["youtube_id"] == input_id
         assert test_count == 1
 
 
@@ -73,22 +74,6 @@ class Test_retrieve_subtitles:
         empty_dict = retrieve_subtitles(correct_list, "falselang", force=True)
         assert not empty_dict
         assert isinstance(empty_dict, dict)
-
-class Test_retrieve_dubbed_mappings:
-    
-    @vcr.use_cassette(serializer="yaml")
-    def test_only_dubbed(self):
-        test_call = retrieve_dubbed_video_mapping("de")
-        assert isinstance(test_call, dict)
-        assert test_call
-        for key, val in test_call.items():
-            assert key != val, "Key and value were identical"
-
-    @vcr.use_cassette(serializer="yaml")
-    def test_english_no_dubbed(self):
-        test_call = retrieve_dubbed_video_mapping("en")
-        assert isinstance(test_call, dict)
-        assert not test_call
 
 
 class Test_retrieve_translations:
@@ -251,15 +236,6 @@ def _get_all_video_ids():
 
     # just take the first 10 ids -- don't run too many
     return ids_tuple[:10]
-
-
-class Test_retrieve_dubbed_video_mapping:
-
-    def test_returns_dict(self):
-        with vcr.use_cassette("tests/fixtures/cassettes/khanacademy/video_api.yml", record_mode="new_episodes"):
-            dubbed_videos = retrieve_dubbed_video_mapping("de")
-
-        assert isinstance(dubbed_videos, dict)
 
 
 class Test_translating_kalite_data:
