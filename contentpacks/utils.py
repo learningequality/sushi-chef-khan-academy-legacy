@@ -319,9 +319,13 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
 
 
 def write_assessment_version(metadata: dict, zf):
-    version = str(metadata.get("software_version", "xx.xx"))
-    assessment_version_zip_path = os.path.join(ASSESSMENT_RESOURCES_ZIP_FOLDER, ASSESSMENT_VERSION_FILENAME)
-    zf.writestr(assessment_version_zip_path, version)
+    lang = metadata.get("code") or "en"
+    if lang != "en":            # Don't write the assessment version for non-en lang packs
+        return
+    else:
+        version = str(metadata.get("software_version", "xx.xx"))
+        assessment_version_zip_path = os.path.join(ASSESSMENT_RESOURCES_ZIP_FOLDER, ASSESSMENT_VERSION_FILENAME)
+        zf.writestr(assessment_version_zip_path, version)
 
 
 def save_html_exercises(html_exercise_path, zf):
