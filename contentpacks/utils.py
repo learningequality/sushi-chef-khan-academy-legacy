@@ -90,7 +90,7 @@ def cache_file(func):
                 cachedir = os.path.join(os.getcwd(), "build")
 
             if not filename:
-                filename = os.path.basename(urlparse(url).path)
+                filename = os.path.basename(urlparse(url).path) + urlparse(url).query
 
             path = os.path.join(cachedir, filename)
 
