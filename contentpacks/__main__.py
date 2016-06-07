@@ -42,7 +42,8 @@ def make_language_pack(lang, version, sublangargs, filename, no_assessment_items
     # now include only the assessment item resources that we need
     all_assessment_data, all_assessment_files = retrieve_all_assessment_item_data(
         no_item_data=no_assessment_items,
-        no_item_resources=no_assessment_resources
+        no_item_resources=no_assessment_resources,
+        lang=lang,
     )
 
     assessment_data = list(translate_assessment_item_text(all_assessment_data, content_catalog)) if lang != "en" else all_assessment_data

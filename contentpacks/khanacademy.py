@@ -713,8 +713,8 @@ def retrieve_assessment_item_data(assessment_item, lang=None, force=False, no_it
         return {}, []
 
     if lang:
-        url = "http://www.khanacademy.org/api/v1/assessment_items/{assessment_item}?lang={lang}".format(lang=lang)
-        filename = "assessment_items/{assessment_item}_{lang}.json".format(lang=lang)
+        url = "http://www.khanacademy.org/api/v1/assessment_items/{assessment_item}?lang={lang}".format(lang=lang, assessment_item=assessment_item)
+        filename = "assessment_items/{assessment_item}_{lang}.json".format(lang=lang, assessment_item=assessment_item)
     else:
         url = "http://www.khanacademy.org/api/v1/assessment_items/{assessment_item}"
         filename = "assessment_items/{assessment_item}.json"
