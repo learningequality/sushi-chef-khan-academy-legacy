@@ -142,11 +142,28 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="e
     request_url_template = ("https://api.crowdin.com/api/"
                             "project/{project_id}/download/"
                             "{lang_code}.zip?key={key}")
+    export_url_template = ("https://api.crowdin.com/api/"
+                            "project/{project_id}/export/"
+                            "{lang_code}.zip?key={key}")
     request_url = request_url_template.format(
         project_id=crowdin_project_name,
         lang_code=lang_code,
         key=crowdin_secret_key,
     )
+    export_url = request_url_template.format(
+        project_id=crowdin_project_name,
+        lang_code=lang_code,
+        key=crowdin_secret_key,
+    )
+
+    logging.info("requesting CrowdIn to rebuild latest translations.")
+    try:
+        requests.get(export_url)
+    except requests.exceptions.RequestException as e:
+        logging.warning(
+            "Got exception when building CrowdIn translations: {}".format(e)
+        )
+
     logging.debug("Retrieving translations from {}".format(request_url))
     zip_path = download_and_cache_file(request_url, ignorecache=force)
     zip_extraction_path = tempfile.mkdtemp()
