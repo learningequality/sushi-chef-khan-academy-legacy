@@ -125,7 +125,7 @@ def retrieve_subtitles(videos: list, lang="en", force=False, threads=NUM_PROCESS
             subtitle_path = download_and_cache_file(subtitle_download_uri, filename=filename, ignorecache=False)
             logging.info("subtitle path: {}".format(subtitle_path))
             return youtube_id, subtitle_path
-        except (requests.HTTPError, KeyError, urllib.error.HTTPError, urllib.error.URLError) as e:
+        except (requests.exceptions.RequestException, KeyError, urllib.error.HTTPError, urllib.error.URLError) as e:
             logging.info("got error while downloading subtitles: {}".format(e))
             pass
 
