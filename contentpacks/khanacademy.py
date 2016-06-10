@@ -890,6 +890,9 @@ def apply_dubbed_video_map(content_data: list, subtitles: list, lang: str) -> (l
         if item["remote_size"]:
             item["total_files"] = 1
 
+
+    print(">>>>>>>>>>>>content-data",  content_data)
+
     return content_data, dubbed_count
 
 def retrieve_html_exercises(exercises: [str], lang: str, force=False) -> (str, [str]):
