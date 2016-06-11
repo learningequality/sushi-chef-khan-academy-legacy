@@ -1,13 +1,66 @@
 import errno
 import os
 import logging
-from fle_utils.general import softload_json
+# from fle_utils.general import softload_json
+import json
+import json as simplejson
 
 CACHE_VARS = []
 TOPICS_DATA_PATH = os.path.realpath(os.path.dirname(os.path.realpath(__file__))) + "/"
 TOPICS_FILEPATH = os.path.join(TOPICS_DATA_PATH + "resources", "topics.json")
 
-print TOPICS_FILEPATH
+def convert_language_code_format(lang_code, for_django=True):
+    if not lang_code:  # protect against None
+        return lang_code
+
+    lang_code = lang_code.lower()
+    code_parts = re.split('-|_', lang_code)
+    if len(code_parts) >  1:
+        assert len(code_parts) == 2
+        code_parts[1] = code_parts[1].upper()
+        if for_django:
+            lang_code = "_".join(code_parts)
+        else:
+            lang_code = "-".join(code_parts)
+
+    return lang_code
+
+
+def lcode_to_ietf(lang_code):
+    return convert_language_code_format(lang_code, for_django=False)
+
+CACHE_VARS = []
+CODE2LANG_MAP = None
+CACHE_VARS.append("CODE2LANG_MAP")
+def get_code2lang_map(lang_code=None, force=False):
+    """Given a language code, returns metadata about that language."""
+    global CODE2LANG_MAP
+
+    if force or not CODE2LANG_MAP:
+        lmap = softload_json(settings.LANG_LOOKUP_FILEPATH, logger=logging.debug)
+
+        CODE2LANG_MAP = {}
+        for lc, entry in lmap.iteritems():
+            CODE2LANG_MAP[lcode_to_ietf(lc)] = entry  # key entries by ieft format
+
+    return CODE2LANG_MAP.get(lcode_to_ietf(lang_code)) if lang_code else CODE2LANG_MAP
+
+
+def softload_json(json_filepath, default={}, raises=False, logger=None, errmsg="Failed to read json file"):
+    if default == {}:
+        default = {}
+    print ">>>>>>>>>json_filepath", json_filepath
+    try:
+        with open(json_filepath, "r") as fp:
+            return simplejson.load(fp)
+    except Exception as e:
+        print ">>>>>>>>", e
+        if logger:
+            logger("%s %s: %s" % (errmsg, json_filepath, e))
+        if raises:
+            raise
+        return default
+
 
 # Globals that can be filled
 TOPICS          = None
@@ -28,6 +81,8 @@ def get_topic_tree(force=False, props=None):
                             if att not in props:
                                 del node[att]
     return TOPICS
+
+TOPICS = softload_json(TOPICS_FILEPATH, logger=logging.debug, raises=True)
 
 def validate_ancestor_ids(topictree=None):
     """
