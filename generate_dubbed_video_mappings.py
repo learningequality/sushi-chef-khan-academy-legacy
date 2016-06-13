@@ -4,25 +4,18 @@ import re
 import logging
 import requests
 import os
+from csv import DictReader
 import csv
-from StringIO import StringIO
-import sys, getopt
-import json
+import io
+import sys
 import urllib
 
 from contentpacks.dubbed_video_mappings_submodule import ensure_dir, get_node_cache
-from khan_api_python.api_models import Khan
 
 PROJECT_PATH = os.path.realpath(os.path.dirname(os.path.realpath(__file__))) + "/"
 
 CACHE_FILEPATH = os.path.join(PROJECT_PATH + "build/csv", 'khan_dubbed_videos.csv')
 DUBBED_LANGUAGES_FETCHED_IN_API = ["es", "fr"]
-
-
-def dubbed_video_data_from_api(lang_code):
-    k = Khan(lang="en")
-    videos = k.get_videos()
-    return {v["youtube_id"]: v["translated_youtube_id"] for v in videos if v["youtube_id"] != v["translated_youtube_id"]}
 
 
 def download_ka_dubbed_video_csv(download_url=None, cache_filepath=None):
@@ -63,7 +56,8 @@ def generate_dubbed_video_mappings_from_csv(csv_data=None):
 
     # This CSV file is in standard format: separated by ",", quoted by '"'
     logging.info("Parsing csv file.")
-    reader = csv.reader(StringIO(csv_data))
+    reader = csv.reader(io.StringIO(csv_data))
+    # reader = DictReader(open(csv_data, 'rb'))
 
     # Build a two-level video map.
     #   First key: language name
@@ -142,6 +136,8 @@ def main(argv):
     csv_data = download_ka_dubbed_video_csv(cache_filepath=CACHE_FILEPATH)
     max_cache_age = 0.0
     raw_map = generate_dubbed_video_mappings_from_csv(csv_data=csv_data)
+    # print(raw_map)
+
 
 
     # Remove any dummy (empty) entries, as this breaks everything on the client
