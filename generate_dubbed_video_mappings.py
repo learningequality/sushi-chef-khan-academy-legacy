@@ -8,7 +8,7 @@ import csv
 from StringIO import StringIO
 import sys, getopt
 import json
-
+import urllib
 
 from contentpacks.dubbed_video_mappings_submodule import ensure_dir, get_node_cache
 from khan_api_python.api_models import Khan
@@ -24,21 +24,25 @@ def dubbed_video_data_from_api(lang_code):
     videos = k.get_videos()
     return {v["youtube_id"]: v["translated_youtube_id"] for v in videos if v["youtube_id"] != v["translated_youtube_id"]}
 
-# TODO (arceduardvincent): Remove the CACHE_FILEPATH and replace it to None when done mapping the source code.
-def download_ka_dubbed_video_csv(download_url=None, cache_filepath=None):
-    download_url = "https://docs.google.com/spreadsheets/d/1k5xh2UXV3EchRHnYzeP6-YGKrmba22vsltGSuU9bL88/export?format=csv&id=1k5xh2UXV3EchRHnYzeP6-YGKrmba22vsltGSuU9bL88&gid=0"
 
-    # response = requests.get(download_url)
-    # if response.history:
-    #     print "Request was redirected"
-    #     for resp in response.history:
-    #         print resp.status_code, resp.url
-    #         download_url = resp.url
-    #     print "Final destination:"
-    #     print response.status_code, response.url
-    # else:
-    #     print "Request was not redirected"
-    #
+def download_ka_dubbed_video_csv(download_url=None, cache_filepath=None):
+    """
+    Function to do the heavy lifting in getting the dubbed videos map.
+    """
+    # Get the redirect url
+    if not download_url:
+        logging.info("Getting spreadsheet location from Khan Academy")
+        khan_url = "http://www.khanacademy.org/r/translationmapping"
+        try:
+            download_url = urllib.request.urlopen(khan_url).geturl()
+            if "docs.google.com" not in download_url:
+                logging.warn("Redirect location no longer in Google docs (%s)" % download_url)
+            else:
+                download_url = download_url.replace("/edit", "/export?format=csv")
+        except:
+            # TODO: have django email admins when we hit this exception
+            raise Exception("Expected redirect response from Khan Academy redirect url.")
+
     logging.info("Downloading dubbed video data from %s" % download_url)
     response = requests.get(download_url)
     if response.status_code != 200:
@@ -52,8 +56,8 @@ def download_ka_dubbed_video_csv(download_url=None, cache_filepath=None):
             fp.write(csv_data)
     except Exception as e:
         logging.error("Failed to make a local cache of the CSV data: %s; parsing local data" % e)
-
     return csv_data
+
 
 def generate_dubbed_video_mappings_from_csv(csv_data=None):
 
