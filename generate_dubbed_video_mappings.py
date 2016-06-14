@@ -1,26 +1,32 @@
 #!/usr/bin/python
 
-import re
+import getopt
 import logging
 import requests
 import os
-from csv import DictReader
 import csv
-import io
+from io import StringIO
 import sys
 import urllib
+import json
+
 
 from contentpacks.dubbed_video_mappings_submodule import ensure_dir, get_node_cache
 
 PROJECT_PATH = os.path.realpath(os.path.dirname(os.path.realpath(__file__))) + "/"
 
 CACHE_FILEPATH = os.path.join(PROJECT_PATH + "build/csv", 'khan_dubbed_videos.csv')
-DUBBED_LANGUAGES_FETCHED_IN_API = ["es", "fr"]
+DUBBED_VIDEOS_MAPPING_FILEPATH = os.path.join(PROJECT_PATH + "build/csv",  "dubbed_video_mappings.json")
+
+logging.getLogger().setLevel(logging.INFO)
 
 
 def download_ka_dubbed_video_csv(download_url=None, cache_filepath=None):
+
     """
     Function to do the heavy lifting in getting the dubbed videos map.
+
+    Could be moved into utils
     """
     # Get the redirect url
     if not download_url:
@@ -42,13 +48,16 @@ def download_ka_dubbed_video_csv(download_url=None, cache_filepath=None):
         logging.warning("Failed to download dubbed video CSV data: status=%s" % response.status)
     csv_data = response.content
 
+
     # Dump the data to a local cache file
+    csv_data = csv_data.decode("utf-8")
     try:
         ensure_dir(os.path.dirname(cache_filepath))
         with open(cache_filepath, "w") as fp:
             fp.write(csv_data)
     except Exception as e:
         logging.error("Failed to make a local cache of the CSV data: %s; parsing local data" % e)
+
     return csv_data
 
 
@@ -56,13 +65,7 @@ def generate_dubbed_video_mappings_from_csv(csv_data=None):
 
     # This CSV file is in standard format: separated by ",", quoted by '"'
     logging.info("Parsing csv file.")
-    reader = csv.reader(io.StringIO(csv_data))
-    # reader = DictReader(open(csv_data, 'rb'))
-
-    # Build a two-level video map.
-    #   First key: language name
-    #   Second key: english youtube ID
-    #   Value: corresponding youtube ID in the new language.
+    reader = csv.reader(StringIO(csv_data))
     video_map = {}
 
     # Loop through each row in the spreadsheet.
@@ -128,72 +131,42 @@ def generate_dubbed_video_mappings_from_csv(csv_data=None):
 
     return video_map
 
-DUBBED_VIDEOS_MAPPING_FILEPATH = os.path.join(PROJECT_PATH + "build/csv",  "dubbed_video_mappings.json")
-
-
 def main(argv):
+    input_csv_file = False
+    try:
+       opts, args = getopt.getopt(argv,"hc:o:",["csvfile=","ofile="])
+    except getopt.GetoptError:
+       logging.warn('generate_dubbed_video_mappings.py -c <csvfile> -o <outputfile>')
+       sys.exit(2)
+
+    for opt, arg in opts:
+       if opt == '-h':
+          logging.info('generate_dubbed_video_mappings.py -i <csvfile> -o <outputfile>')
+          sys.exit()
+       elif opt in ("-c", "--csvfile"):
+           csv_file = arg
+           csv_data = download_ka_dubbed_video_csv(cache_filepath=csv_file)
+           input_csv_file = True
+       # elif opt in ("-v", "--ofile"):
+       #    outputfile = arg
+
+       else:
+          assert False, logging.info("unhandled option")
+
+
+
     # old_map = os.path.exists(DUBBED_VIDEOS_MAPPING_FILEPATH) and copy.deepcopy(get_dubbed_video_map()) or {}  # for comparison purposes
-    csv_data = download_ka_dubbed_video_csv(cache_filepath=CACHE_FILEPATH)
-    max_cache_age = 0.0
+    if input_csv_file is False:
+        csv_data = download_ka_dubbed_video_csv(cache_filepath=CACHE_FILEPATH)
     raw_map = generate_dubbed_video_mappings_from_csv(csv_data=csv_data)
+    logging.info("raw_map:", raw_map, ">>>>>>>>>>>>>>>>>")
     # print(raw_map)
 
-
-
-    # Remove any dummy (empty) entries, as this breaks everything on the client
-    # if "" in raw_map:
-    #     del raw_map[""]
-    #
-    # for lang_code in DUBBED_LANGUAGES_FETCHED_IN_API:
-    #     logging.info("Updating {} from the API".format(lang_code))
-    #     map_from_api = dubbed_video_data_from_api(lang_code)
-    #     lang_metadata = get_code2lang_map(lang_code)
-    #     lang_ka_name = lang_metadata["ka_name"]
-    #     raw_map[lang_ka_name].update(map_from_api)
-
-    # # Now we've built the map.  Save it.
-    # ensure_dir(os.path.dirname(DUBBED_VIDEOS_MAPPING_FILEPATH))
-    # logging.info("Saving data to %s" % DUBBED_VIDEOS_MAPPING_FILEPATH)
-    # with open(DUBBED_VIDEOS_MAPPING_FILEPATH, "w") as fp:
-    #     json.dump(raw_map, fp)
-    #
-    # new_map = get_dubbed_video_map(reload=True)
-    #
-    # # Now tell the user about what changed.
-    # added_languages = set(new_map.keys()) - set(old_map.keys())
-    # removed_languages = set(old_map.keys()) - set(new_map.keys())
-    # if added_languages or removed_languages:
-    #     logging.info("*** Added support for %2d languages; removed support for %2d languages. ***" % (
-    #     len(added_languages), len(removed_languages)))
-    #
-    # for lang_code in sorted(list(set(new_map.keys()).union(set(old_map.keys())))):
-    #     added_videos = set(new_map.get(lang_code, {}).keys()) - set(old_map.get(lang_code, {}).keys())
-    #     removed_videos = set(old_map.get(lang_code, {}).keys()) - set(new_map.get(lang_code, {}).keys())
-    #     shared_keys = set(new_map.get(lang_code, {}).keys()).intersection(set(old_map.get(lang_code, {}).keys()))
-    #     changed_videos = [vid for vid in shared_keys if
-    #                       old_map.get(lang_code, {})[vid] != new_map.get(lang_code, {})[vid]]
-    #     logging.info("\t%5s: Added %d videos, removed %3d videos, changed %3d videos." % (
-    #     lang_code, len(added_videos), len(removed_videos), len(changed_videos)))
-
-    # logging.info("Done.")
-
-   # try:
-   #    opts, args = getopt.getopt(argv,"hi:o:",["ifile=","ofile="])
-   # except getopt.GetoptError:
-   #    print 'generate_dubbed_video_mappings.py -i <inputfile> -o <outputfile>'
-   #    sys.exit(2)
-   #
-   # for opt, arg in opts:
-   #    if opt == '-h':
-   #       print 'generate_dubbed_video_mappings.py -i <inputfile> -o <outputfile>'
-   #       sys.exit()
-   #    elif opt in ("-i", "--ifile"):
-   #       inputfile = arg
-   #    elif opt in ("-o", "--ofile"):
-   #       outputfile = arg
-   #
-   # print 'Input file is "', inputfile
-   # print 'Output file is "', outputfile
+    # Now we've built the map.  Save it.
+    ensure_dir(os.path.dirname(DUBBED_VIDEOS_MAPPING_FILEPATH))
+    logging.info("Saving data to %s" % DUBBED_VIDEOS_MAPPING_FILEPATH)
+    with open(DUBBED_VIDEOS_MAPPING_FILEPATH, "w") as fp:
+        json.dump(raw_map, fp)
 
 
 if __name__ == "__main__":
