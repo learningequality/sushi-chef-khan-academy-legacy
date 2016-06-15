@@ -619,3 +619,45 @@ def get_primary_language(lang):
         return lang.\
             split("-")\
             [0]
+
+
+def remove_assessment_data_with_empty_widgets(assessment_data):
+    outed = 0
+    for assessment in assessment_data:
+        try:
+            assessment_id = assessment.get("id")
+            item_data = ujson.loads(assessment["item_data"])
+            question_data = item_data["question"]
+
+            if question_data.get("widgets"):
+                yield assessment
+            else:
+                outed += 1
+                logging.warning("Filtering out assessment {}. Count: {}".format(assessment_id, outed))
+        except KeyError as e:
+            logging.warning("Got error when checking widgets for assessment data {id}: {e}".format(
+                id=assessment_id,
+                e=e)
+            )
+
+
+def remove_nonexistent_assessment_items_from_exercises(node_data: list, assessment_data: iter):
+    assessment_ids = set(assessment["id"] for assessment in assessment_data)
+
+    for node in node_data:
+        if node["kind"] != NodeType.exercise:
+            yield node
+        else:
+            # import pdb; pdb.set_trace()
+            try:
+                assessment_items = node["all_assessment_items"]
+                new_assessment_items = []
+                for item in assessment_items:
+                    ass_id = item["id"]
+                    if ass_id in assessment_ids:
+                        new_assessment_items.append(item)
+                node["all_assessment_items"] = new_assessment_items
+                yield node
+            except Exception as e:
+                import pdb; pdb.set_trace()
+                print(1)

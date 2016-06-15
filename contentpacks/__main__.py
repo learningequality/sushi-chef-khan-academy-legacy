@@ -23,9 +23,11 @@ from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_v
     retrieve_all_assessment_item_data
 from contentpacks.utils import translate_nodes, \
     remove_untranslated_exercises, bundle_language_pack, separate_exercise_types, \
-    generate_kalite_language_pack_metadata, translate_assessment_item_text
+    generate_kalite_language_pack_metadata, translate_assessment_item_text, \
+    remove_assessment_data_with_empty_widgets, remove_nonexistent_assessment_items_from_exercises
 
 import logging
+
 
 def make_language_pack(lang, version, sublangargs, filename, no_assessment_items, no_subtitles, no_assessment_resources):
     node_data, subtitle_data, interface_catalog, content_catalog = retrieve_language_resources(version, sublangargs, no_subtitles)
@@ -45,6 +47,8 @@ def make_language_pack(lang, version, sublangargs, filename, no_assessment_items
         no_item_resources=no_assessment_resources,
         lang=lang,
     )
+    all_assessment_data = list(remove_assessment_data_with_empty_widgets(all_assessment_data))
+    node_data = remove_nonexistent_assessment_items_from_exercises(node_data, all_assessment_data)
 
     assessment_data = list(translate_assessment_item_text(all_assessment_data, content_catalog)) if lang != "en" else all_assessment_data
 
