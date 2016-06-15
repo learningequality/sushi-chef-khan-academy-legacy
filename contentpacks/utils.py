@@ -619,3 +619,23 @@ def get_primary_language(lang):
         return lang.\
             split("-")\
             [0]
+
+
+def remove_assessment_data_with_empty_widgets(assessment_data):
+    outed = 0
+    for assessment in assessment_data:
+        try:
+            assessment_id = assessment.get("id")
+            item_data = ujson.loads(assessment["item_data"])
+            question_data = item_data["question"]
+
+            if question_data.get("widgets"):
+                yield assessment
+            else:
+                outed += 1
+                logging.warning("Filtering out assessment {}. Count: {}".format(assessment_id, outed))
+        except KeyError as e:
+            logging.warning("Got error when checking widgets for assessment data {id}: {e}".format(
+                id=assessment_id,
+                e=e)
+            )
