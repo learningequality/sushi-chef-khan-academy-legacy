@@ -639,3 +639,25 @@ def remove_assessment_data_with_empty_widgets(assessment_data):
                 id=assessment_id,
                 e=e)
             )
+
+
+def remove_nonexistent_assessment_items_from_exercises(node_data: list, assessment_data: iter):
+    assessment_ids = set(assessment["id"] for assessment in assessment_data)
+
+    for node in node_data:
+        if node["kind"] != NodeType.exercise:
+            yield node
+        else:
+            # import pdb; pdb.set_trace()
+            try:
+                assessment_items = node["all_assessment_items"]
+                new_assessment_items = []
+                for item in assessment_items:
+                    ass_id = item["id"]
+                    if ass_id in assessment_ids:
+                        new_assessment_items.append(item)
+                node["all_assessment_items"] = new_assessment_items
+                yield node
+            except Exception as e:
+                import pdb; pdb.set_trace()
+                print(1)
