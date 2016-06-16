@@ -18,11 +18,12 @@ import polib
 import requests
 import json
 import ujson
+import pkgutil
 
 from math import ceil, log, exp
 
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file,\
-    is_video_node_dubbed
+    is_video_node_dubbed, get_lang_name
 from contentpacks.models import AssessmentItem
 
 NUM_PROCESSES = 5
@@ -564,11 +565,43 @@ def retrieve_kalite_data(lang="en", force=False) -> list:
     ])
 
     url = url.format(projection=json.dumps(projection), lang=lang)
-
+    
     node_data_path = download_and_clean_kalite_data(url, lang=lang, ignorecache=force, filename="nodes.json")
 
     with open(node_data_path, 'r') as f:
         node_data = ujson.load(f)
+
+    # node_data = addin_dubbed_video_mappings(node_data, lang) 
+
+    return node_data
+
+
+def addin_dubbed_video_mappings(node_data, lang="en"):
+    # Get the dubbed videos from the spreadsheet and substitute them 
+    # for the video attributes of the returned data struct.
+    lang_name = get_lang_name(lang).lower()
+
+    dubbed_videos_path = pkgutil.get_data('contentpacks', "resources/dubbed_video_mappings.json")
+    dubbed_videos_load = ujson.loads(dubbed_videos_path)
+    dubbed_videos_list = dubbed_videos_load[lang_name]
+
+    node_data_list = []
+    for obj in node_data:
+        if (obj["kind"] == "Video"):
+            node_data_list.append(obj["youtube_id"])
+
+    en_nodes_list = []
+    en_nodes = pkgutil.get_data('contentpacks', "resources/en-nodes.json")
+    en_node_load = ujson.loads(en_nodes)
+    for node in en_node_load:
+        if (node["kind"] == "Video"):
+            if not node["youtube_id"] in node_data_list:
+                if node["youtube_id"] in dubbed_videos_list:
+                    node["youtube_id"] = dubbed_videos_list[node["youtube_id"]]
+                    node["translated_youtube_lang"] = lang
+                    en_nodes_list.append(node)
+
+    node_data += en_nodes_list
 
     return node_data
 
