@@ -14,6 +14,7 @@ from collections import OrderedDict
 from functools import reduce
 from multiprocessing.pool import ThreadPool
 import itertools
+import time
 import polib
 import requests
 import json
@@ -430,7 +431,8 @@ def retrieve_exercise_dict(lang=None, force=False) -> str:
 def download_and_clean_kalite_data(url, path, lang="en") -> str:
     data = requests.get(url)
     attempts = 1
-    while data.status_code != 200 and attempts <= 5:
+    while data.status_code != 200 and attempts <= 100:
+        time.sleep(30)
         data = requests.get(url)
         attempts += 1
 
