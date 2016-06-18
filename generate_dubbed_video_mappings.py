@@ -16,7 +16,7 @@ from contentpacks.dubbed_video_mappings_submodule import ensure_dir, get_node_ca
 PROJECT_PATH = os.path.realpath(os.path.dirname(os.path.realpath(__file__))) + "/"
 
 CACHE_FILEPATH = os.path.join(PROJECT_PATH + "build/csv", 'khan_dubbed_videos.csv')
-DUBBED_VIDEOS_MAPPING_FILEPATH = os.path.join(PROJECT_PATH + "build/csv",  "dubbed_video_mappings.json")
+DUBBED_VIDEOS_MAPPING_FILEPATH = os.path.join(PROJECT_PATH + "contentpacks/resources",  "dubbed_video_mappings.json")
 
 logging.getLogger().setLevel(logging.INFO)
 
@@ -153,13 +153,10 @@ def main(argv):
        else:
           assert False, logging.info("unhandled option")
 
-
-
     # old_map = os.path.exists(DUBBED_VIDEOS_MAPPING_FILEPATH) and copy.deepcopy(get_dubbed_video_map()) or {}  # for comparison purposes
     if input_csv_file is False:
         csv_data = download_ka_dubbed_video_csv(cache_filepath=CACHE_FILEPATH)
     raw_map = generate_dubbed_video_mappings_from_csv(csv_data=csv_data)
-    logging.info("raw_map:", raw_map, ">>>>>>>>>>>>>>>>>")
     # print(raw_map)
 
     # Now we've built the map.  Save it.

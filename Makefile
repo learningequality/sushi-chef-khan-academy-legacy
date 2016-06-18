@@ -27,8 +27,8 @@ langpacks: pex
 
 all: supported
 
-#generate_dubbed_video: pex
-#    PEX_MODULE=python  generate_dubbed_video_mappings.py
+dubbed_videos: 
+	python generate_dubbed_video_mappings.py
 
 sdist:
 	python setup.py sdist
