@@ -27,11 +27,16 @@ langpacks: pex
 
 all: supported
 
-dubbed_videos: 
-	python generate_dubbed_video_mappings.py
-
 sdist:
 	python setup.py sdist
 
 pex: sdist
 	pex --python=python3 -r requirements.txt -o makecontentpacks --disable-cache --no-wheel dist/content-pack-maker-`python setup.py --version`.tar.gz
+
+dubbed_videos: 
+	python generate_dubbed_video_mappings.py
+
+publish:
+	scp -P 4242 out/*.zip $(sshuser)@pantry.learningequality.org:/var/www/downloads/$(project)/$(version)/content/contentpacks/
+	scp -P 4242 out/khan_assessment.zip $(sshuser)@pantry.learningequality.org:/var/www/downloads/$(project)/$(version)/content/
+	scp -P 4242 all_metadata.json $(sshuser)@pantry.learningequality.org:/var/www/downloads/$(project)/$(version)/content/contentpacks/
