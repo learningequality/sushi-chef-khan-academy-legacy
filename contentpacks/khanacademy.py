@@ -554,7 +554,7 @@ video_attributes = [
 ]
 
 
-def retrieve_kalite_data(lang="en", force=False) -> list:
+def retrieve_kalite_data(lang="en", force=False, filename="nodes.json") -> list:
     """
     Retrieve the KA content data direct from KA.
     """
@@ -567,13 +567,14 @@ def retrieve_kalite_data(lang="en", force=False) -> list:
     ])
 
     url = url.format(projection=json.dumps(projection), lang=lang)
-    
-    node_data_path = download_and_clean_kalite_data(url, lang=lang, ignorecache=force, filename="nodes.json")
+
+    node_data_path = download_and_clean_kalite_data(url, lang=lang, ignorecache=force, filename=filename)
 
     with open(node_data_path, 'r') as f:
         node_data = ujson.load(f)
 
-    # node_data = addin_dubbed_video_mappings(node_data, lang) 
+    # if lang != "en":
+    #     node_data = addin_dubbed_video_mappings(node_data, lang) 
 
     return node_data
 
@@ -582,7 +583,6 @@ def addin_dubbed_video_mappings(node_data, lang="en"):
     # Get the dubbed videos from the spreadsheet and substitute them 
     # for the video attributes of the returned data struct.
     lang_name = get_lang_name(lang).lower()
-
     dubbed_videos_path = pkgutil.get_data('contentpacks', "resources/dubbed_video_mappings.json")
     dubbed_videos_load = ujson.loads(dubbed_videos_path)
     dubbed_videos_list = dubbed_videos_load[lang_name]
@@ -593,13 +593,16 @@ def addin_dubbed_video_mappings(node_data, lang="en"):
             node_data_list.append(obj["youtube_id"])
 
     en_nodes_list = []
-    en_nodes = pkgutil.get_data('contentpacks', "resources/en-nodes.json")
-    en_node_load = ujson.loads(en_nodes)
+    PROJECT_PATH = os.path.realpath(os.path.dirname(os.path.realpath()))
+    en_nodes_path = os.path.join(PROJECT_PATH, "build", 'en_nodes.json')
+    with open(en_nodes_path, 'r') as f:
+        en_node_load = ujson.load(f)
     for node in en_node_load:
         if (node["kind"] == "Video"):
-            if not node["youtube_id"] in node_data_list:
-                if node["youtube_id"] in dubbed_videos_list:
-                    node["youtube_id"] = dubbed_videos_list[node["youtube_id"]]
+            youtube_id = node["youtube_id"]
+            if not youtube_id in node_data_list:
+                if youtube_id in dubbed_videos_list:
+                    node["youtube_id"] = dubbed_videos_list[youtube_id]
                     node["translated_youtube_lang"] = lang
                     en_nodes_list.append(node)
 

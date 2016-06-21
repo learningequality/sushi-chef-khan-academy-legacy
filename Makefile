@@ -1,37 +1,43 @@
-contentpack: pex
+contentpack: deps
 	mkdir -p out/
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite en 0.16 --out=out/en.zip --no-subtitles --no-assessment-resources
 	./makecontentpacks minimize-content-pack.py out/en.zip out/en-minimal.zip
 	./makecontentpacks extract_khan_assessment.py out/en.zip
 	./makecontentpacks collectmetadata.py out/ --out=out/all_metadata.json
 
-es: pex
+es: deps
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite es 0.16 --out=out/langpacks/es.zip --no-assessment-resources --subtitlelang=es --interfacelang=es-ES --contentlang=es-ES
 
-pt-BR: pex
+
+pt-BR: deps
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite pt-BR 0.16 --out=out/langpacks/pt-BR.zip --no-assessment-resources --videolang=pt
 
-bn: pex
+
+bn: deps
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite bn 0.16 --out=out/langpacks/bn.zip --no-assessment-resources
 
-de: pex
+
+de: deps
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite de 0.16 --out=out/langpacks/de.zip --no-assessment-resources
 
-fr: pex
+
+fr: deps
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite fr 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
 
-da: pex
+
+da: deps
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite da 0.16 --out=out/langpacks/da.zip --no-assessment-resources
 
-bg: pex
+
+bg: deps
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite bg 0.16 --out=out/langpacks/bg.zip --no-assessment-resources
 
 
-id: pex
+id: deps
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite id 0.16 --out=out/langpacks/id.zip --no-assessment-resource
 
 
-hi: pex
+hi: deps
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite hi 0.16 --out=out/langpacks/hi.zip --no-assessment-resource
 
 
@@ -39,26 +45,35 @@ xh: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite xh 0.16 --out=out/langpacks/xh.zip --no-assessment-resource
 
 
-ta: pex
+ta: deps
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite ta 0.16 --out=out/langpacks/ta.zip --no-assessment-resource
 
 
 all: supported
 
-langpacks: es pt-BR bn de fr da bg id hi xh ta
+
+langpacks: xh
 	unzip -p out/en.zip content.db > content.db
 	./makecontentpacks collectmetadata.py out/langpacks/ --out=out/all_metadata.json
+
 
 sdist:
 	python setup.py sdist
 
+
 pex: sdist
 	pex --python=python3 -r requirements.txt -o makecontentpacks --disable-cache --no-wheel dist/content-pack-maker-`python setup.py --version`.tar.gz
 
-dubbed_videos: 
-	python generate_dubbed_video_mappings.py
 
 publish:
 	scp -P 4242 out/*.zip $(sshuser)@pantry.learningequality.org:/var/www/downloads/$(project)/$(version)/content/contentpacks/
 	scp -P 4242 out/khan_assessment.zip $(sshuser)@pantry.learningequality.org:/var/www/downloads/$(project)/$(version)/content/
 	scp -P 4242 all_metadata.json $(sshuser)@pantry.learningequality.org:/var/www/downloads/$(project)/$(version)/content/contentpacks/
+
+
+dubbed_videos: 
+	python generate_dubbed_video_mappings.py
+	python generate_en_nodes.py
+
+
+deps: dubbed_videos pex
