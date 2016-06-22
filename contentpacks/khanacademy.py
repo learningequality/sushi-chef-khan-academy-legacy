@@ -592,11 +592,14 @@ def addin_dubbed_video_mappings(node_data, lang="en"):
         if (obj["kind"] == "Video"):
             node_data_list.append(obj["youtube_id"])
 
+    topic_path_list = []
+    for obj in node_data:
+        if (obj["kind"] == "Topic"):
+            topic_list.append(obj["path"])
+
     en_nodes_list = []
-    PROJECT_PATH = os.path.realpath(os.path.dirname(os.path.realpath()))
-    en_nodes_path = os.path.join(PROJECT_PATH, "build", 'en_nodes.json')
-    with open(en_nodes_path, 'r') as f:
-        en_node_load = ujson.load(f)
+    en_nodes_path = pkgutil.get_data('contentpacks', "resources/en_nodes.json")
+    en_node_load = ujson.loads(en_nodes_path)
     for node in en_node_load:
         if (node["kind"] == "Video"):
             youtube_id = node["youtube_id"]
@@ -605,6 +608,10 @@ def addin_dubbed_video_mappings(node_data, lang="en"):
                     node["youtube_id"] = dubbed_videos_list[youtube_id]
                     node["translated_youtube_lang"] = lang
                     en_nodes_list.append(node)
+
+        if (obj["kind"] == "Topic"):
+            if not node["path"] in topic_path_list:
+                en_nodes_list.append(node)
 
     node_data += en_nodes_list
 
