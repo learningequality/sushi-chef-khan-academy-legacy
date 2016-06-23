@@ -5,8 +5,8 @@ import json
 # from fle_utils.general import softload_json
 
 CACHE_VARS = []
-TOPICS_DATA_PATH = os.path.realpath(os.path.dirname(os.path.realpath(__file__))) + "/"
-TOPICS_FILEPATH = os.path.join(TOPICS_DATA_PATH + "resources", "topics.json")
+TOPICS_DATA_PATH = os.path.realpath(os.path.dirname(os.path.realpath(__file__)))
+TOPICS_FILEPATH = os.path.join(TOPICS_DATA_PATH, "resources", "topics.json")
 
 
 def softload_json(json_filepath, default={}, raises=False, logger=None, errmsg="Failed to read json file"):

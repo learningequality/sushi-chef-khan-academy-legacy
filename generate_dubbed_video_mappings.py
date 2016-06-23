@@ -1,5 +1,12 @@
-#!/usr/bin/python
+"""
+generate_dubbed_video_mappings
 
+Create a dubbed_video_mappings.json, at contentpacks resources.
+
+Usage:
+  generate_dubbed_video_mappings.py
+
+"""
 import getopt
 import logging
 import requests
@@ -10,13 +17,11 @@ import sys
 import urllib
 import json
 
-
 from contentpacks.dubbed_video_mappings_submodule import ensure_dir, get_node_cache
 
-PROJECT_PATH = os.path.realpath(os.path.dirname(os.path.realpath(__file__))) + "/"
-
-CACHE_FILEPATH = os.path.join(PROJECT_PATH + "build/csv", 'khan_dubbed_videos.csv')
-DUBBED_VIDEOS_MAPPING_FILEPATH = os.path.join(PROJECT_PATH + "contentpacks/resources",  "dubbed_video_mappings.json")
+PROJECT_PATH = os.path.realpath(os.path.dirname(os.path.realpath(__file__)))
+CACHE_FILEPATH = os.path.join(PROJECT_PATH, "build", "csv", 'khan_dubbed_videos.csv')
+DUBBED_VIDEOS_MAPPING_FILEPATH = os.path.join(PROJECT_PATH, "contentpacks", "resources",  "dubbed_video_mappings.json")
 
 logging.getLogger().setLevel(logging.INFO)
 
@@ -47,7 +52,6 @@ def download_ka_dubbed_video_csv(download_url=None, cache_filepath=None):
     if response.status_code != 200:
         logging.warning("Failed to download dubbed video CSV data: status=%s" % response.status)
     csv_data = response.content
-
 
     # Dump the data to a local cache file
     csv_data = csv_data.decode("utf-8")
@@ -106,14 +110,6 @@ def generate_dubbed_video_mappings_from_csv(csv_data=None):
                 dubbed_youtube_id = row[idx]
                 if english_video_id == dubbed_youtube_id and lang != "english":
                     logging.error("Removing entry for (%s, %s): dubbed and english youtube ID are the same." % (lang, english_video_id))
-                #elif dubbed_youtube_id in video_map[lang].values():
-                    # Talked to Bilal, and this is actually supposed to be OK.  Would throw us for a loop!
-                    #    For now, just keep one.
-                    #for key in video_map[lang].keys():
-                    #    if video_map[lang][key] == dubbed_youtube_id:
-                    #        del video_map[lang][key]
-                    #        break
-                    #logging.error("Removing entry for (%s, %s): the same dubbed video ID is used in two places, and we can only keep one in our current system." % (lang, english_video_id))
                 else:
                     video_map[lang][english_video_id] = row[idx]  # add the corresponding video id for the video, in this language.
 
@@ -147,8 +143,6 @@ def main(argv):
            csv_file = arg
            csv_data = download_ka_dubbed_video_csv(cache_filepath=csv_file)
            input_csv_file = True
-       # elif opt in ("-v", "--ofile"):
-       #    outputfile = arg
 
        else:
           assert False, logging.info("unhandled option")
@@ -157,7 +151,6 @@ def main(argv):
     if input_csv_file is False:
         csv_data = download_ka_dubbed_video_csv(cache_filepath=CACHE_FILEPATH)
     raw_map = generate_dubbed_video_mappings_from_csv(csv_data=csv_data)
-    # print(raw_map)
 
     # Now we've built the map.  Save it.
     ensure_dir(os.path.dirname(DUBBED_VIDEOS_MAPPING_FILEPATH))
@@ -167,4 +160,7 @@ def main(argv):
 
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
+    if os.path.exists(DUBBED_VIDEOS_MAPPING_FILEPATH):
+        logging.info('Dubbed videos json %s already exist' % (DUBBED_VIDEOS_MAPPING_FILEPATH))
+    else:
+        main(sys.argv[1:])

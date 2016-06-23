@@ -56,11 +56,11 @@ POEntry_class.old_merge = POEntry_class.merge
 POEntry_class.merge = new_merge
 
 
-def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: bool) -> LangpackResources:
-    node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True)
+def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: bool, no_dubbed_videos) -> LangpackResources:
+    node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True, filename="nodes.json") if not no_dubbed_videos else {}
 
     video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
-    subtitle_data = retrieve_subtitles(video_ids, sublangargs["subtitle_lang"]) if not no_subtitles else {}
+    subtitle_data = retrieve_subtitles(video_ids, sublangargs["subtitle_lang"]) 
 
     # retrieve KA Lite po files from CrowdIn
     interface_lang = sublangargs["interface_lang"]
@@ -554,7 +554,7 @@ video_attributes = [
 ]
 
 
-def retrieve_kalite_data(lang="en", force=False, filename="nodes.json") -> list:
+def retrieve_kalite_data(lang="en", force=False, filename="nodes.json", no_dubbed_videos=False) -> list:
     """
     Retrieve the KA content data direct from KA.
     """
@@ -566,55 +566,55 @@ def retrieve_kalite_data(lang="en", force=False, filename="nodes.json") -> list:
         ("videos", [OrderedDict((key, 1) for key in video_attributes)])
     ])
 
-    url = url.format(projection=json.dumps(projection), lang=lang)
+    # url = url.format(projection=json.dumps(projection), lang=lang)
 
-    node_data_path = download_and_clean_kalite_data(url, lang=lang, ignorecache=force, filename=filename)
+    # node_data_path = download_and_clean_kalite_data(url, lang=lang, ignorecache=force, filename=filename)
 
-    with open(node_data_path, 'r') as f:
-        node_data = ujson.load(f)
-
-    # if lang != "en":
-    #     node_data = addin_dubbed_video_mappings(node_data, lang) 
+    # with open(node_data_path, 'r') as f:
+    #     node_data = ujson.load(f)
+    node_data = []
+    if not lang == "en" and not no_dubbed_videos == True:
+        node_data = addin_dubbed_video_mappings(node_data, lang) 
 
     return node_data
 
 
 def addin_dubbed_video_mappings(node_data, lang="en"):
     # Get the dubbed videos from the spreadsheet and substitute them 
-    # for the video attributes of the returned data struct.
+    # for the video, and topic attributes of the returned data struct.
+
+    # Get the list of video ids from dubbed video mappings
     lang_name = get_lang_name(lang).lower()
-    dubbed_videos_path = pkgutil.get_data('contentpacks', "resources/dubbed_video_mappings.json")
-    dubbed_videos_load = ujson.loads(dubbed_videos_path)
+    dubbed_videos_data = pkgutil.get_data('contentpacks', "resources/dubbed_video_mappings.json")
+    dubbed_videos_load = ujson.loads(dubbed_videos_data)
     dubbed_videos_list = dubbed_videos_load[lang_name]
 
-    node_data_list = []
-    for obj in node_data:
-        if (obj["kind"] == "Video"):
-            node_data_list.append(obj["youtube_id"])
+    # Get the current youtube_ids, and topic_paths form the khan api node data.
+    youtube_ids = [node.get("youtube_id") for node in node_data if node.get("kind") == "Video"]
+    topic_paths = [node.get("path") for node in node_data if node.get("kind") == "Topic"]
 
-    topic_path_list = []
-    for obj in node_data:
-        if (obj["kind"] == "Topic"):
-            topic_list.append(obj["path"])
+    en_node_list = []
+    en_nodes_data = pkgutil.get_data('contentpacks', "resources/en_nodes.json")
+    en_node_load = ujson.loads(en_nodes_data)
 
-    en_nodes_list = []
-    en_nodes_path = pkgutil.get_data('contentpacks', "resources/en_nodes.json")
-    en_node_load = ujson.loads(en_nodes_path)
+    # The en_nodes.json must be the same data structure to node_data variable from khan api.
     for node in en_node_load:
         if (node["kind"] == "Video"):
             youtube_id = node["youtube_id"]
-            if not youtube_id in node_data_list:
+            if not youtube_id in youtube_ids:
                 if youtube_id in dubbed_videos_list:
                     node["youtube_id"] = dubbed_videos_list[youtube_id]
                     node["translated_youtube_lang"] = lang
-                    en_nodes_list.append(node)
+                    en_node_list.append(node)
+                    youtube_ids.append(youtube_id)
 
-        if (obj["kind"] == "Topic"):
-            if not node["path"] in topic_path_list:
-                en_nodes_list.append(node)
+        # Append all topics that's not in topic_paths list.
+        if (node["kind"] == "Topic"):
+            if not node["path"] in topic_paths:
+                en_node_list.append(node)
+                topic_paths.append(node["path"])
 
-    node_data += en_nodes_list
-
+    node_data += en_node_list
     return node_data
 
 

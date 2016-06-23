@@ -41,7 +41,7 @@ hi: deps
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite hi 0.16 --out=out/langpacks/hi.zip --no-assessment-resource
 
 
-xh: pex
+xh: deps
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite xh 0.16 --out=out/langpacks/xh.zip --no-assessment-resource
 
 
@@ -52,7 +52,7 @@ ta: deps
 all: supported
 
 
-langpacks: xh
+langpacks: es pt-BR bn de fr da bg id hi xh ta
 	unzip -p out/en.zip content.db > content.db
 	./makecontentpacks collectmetadata.py out/langpacks/ --out=out/all_metadata.json
 
