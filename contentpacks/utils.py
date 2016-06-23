@@ -503,7 +503,7 @@ def generate_kalite_language_pack_metadata(lang: str, version: str, interface_ca
     metadata = {
         "code": lang,
         'software_version': version,
-        'language_pack_version': 1,
+        'language_pack_version': int(os.environ.get("CONTENT_PACK_VERSION") or "1"),
         'percent_translated': interface_catalog.percent_translated,
         'topic_tree_translated': content_catalog.percent_translated,
         'subtitle_count': len(subtitles),

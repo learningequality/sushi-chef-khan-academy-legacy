@@ -1,6 +1,6 @@
 contentpack: pex
 	mkdir -p out/
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite en 0.16 --out=out/en.zip --no-subtitles --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite en 0.16 --out=out/en.zip --no-subtitles
 	./makecontentpacks minimize-content-pack.py out/en.zip out/en-minimal.zip
 	./makecontentpacks extract_khan_assessment.py out/en.zip
 	./makecontentpacks collectmetadata.py out/ --out=out/all_metadata.json
