@@ -566,13 +566,13 @@ def retrieve_kalite_data(lang="en", force=False, filename="nodes.json", no_dubbe
         ("videos", [OrderedDict((key, 1) for key in video_attributes)])
     ])
 
-    # url = url.format(projection=json.dumps(projection), lang=lang)
+    url = url.format(projection=json.dumps(projection), lang=lang)
 
-    # node_data_path = download_and_clean_kalite_data(url, lang=lang, ignorecache=force, filename=filename)
+    node_data_path = download_and_clean_kalite_data(url, lang=lang, ignorecache=force, filename=filename)
 
-    # with open(node_data_path, 'r') as f:
-    #     node_data = ujson.load(f)
-    node_data = []
+    with open(node_data_path, 'r') as f:
+        node_data = ujson.load(f)
+    
     if not lang == "en" and not no_dubbed_videos == True:
         node_data = addin_dubbed_video_mappings(node_data, lang) 
 
