@@ -1,12 +1,3 @@
-"""
-generate_dubbed_video_mappings
-
-Create a dubbed_video_mappings.json, at contentpacks resources.
-
-Usage:
-  generate_dubbed_video_mappings.py
-
-"""
 
 import csv
 import errno
@@ -21,7 +12,7 @@ import urllib
 from io import StringIO
 
 
-PROJECT_PATH = os.path.realpath(os.path.dirname(os.path.realpath(__file__)))
+PROJECT_PATH = os.path.join(os.getcwd())
 CACHE_FILEPATH = os.path.join(PROJECT_PATH, "build", "csv", 'khan_dubbed_videos.csv')
 DUBBED_VIDEOS_MAPPING_FILEPATH = os.path.join(PROJECT_PATH, "build",  "dubbed_video_mappings.json")
 
@@ -132,10 +123,10 @@ def generate_dubbed_video_mappings_from_csv(csv_data=None):
     return video_map
 
 
-def main(argv):
+def main():
     input_csv_file = False
     try:
-       opts, args = getopt.getopt(argv,"hc:o:",["csvfile=","ofile="])
+       opts, args = getopt.getopt([],"hc:o:",["csvfile=","ofile="])
     except getopt.GetoptError:
        logging.warn('generate_dubbed_video_mappings.py -c <csvfile> -o <outputfile>')
        sys.exit(2)
@@ -162,10 +153,3 @@ def main(argv):
     logging.info("Saving data to %s" % DUBBED_VIDEOS_MAPPING_FILEPATH)
     with open(DUBBED_VIDEOS_MAPPING_FILEPATH, "w") as fp:
         json.dump(raw_map, fp)
-
-
-if __name__ == "__main__":
-    if os.path.exists(DUBBED_VIDEOS_MAPPING_FILEPATH):
-        logging.info('Dubbed videos json already exist at %s' % (DUBBED_VIDEOS_MAPPING_FILEPATH))
-    else:
-        main(sys.argv[1:])

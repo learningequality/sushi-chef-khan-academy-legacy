@@ -20,12 +20,14 @@ import requests
 import json
 import ujson
 import pkgutil
+import sys
 
 from math import ceil, log, exp
 
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file,\
     is_video_node_dubbed, get_lang_name, NodeType
 from contentpacks.models import AssessmentItem
+from contentpacks.generate_dubbed_video_mappings import main, DUBBED_VIDEOS_MAPPING_FILEPATH
 
 NUM_PROCESSES = 5
 
@@ -57,7 +59,7 @@ POEntry_class.merge = new_merge
 
 
 def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: bool, no_dubbed_videos) -> LangpackResources:
-    node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True, filename="nodes.json") if not no_dubbed_videos else {}
+    node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True ) if not no_dubbed_videos else {}
 
     video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
     subtitle_data = retrieve_subtitles(video_ids, sublangargs["subtitle_lang"]) 
@@ -554,7 +556,7 @@ video_attributes = [
 ]
 
 
-def retrieve_kalite_data(lang="en", force=False, filename="nodes.json", no_dubbed_videos=False) -> list:
+def retrieve_kalite_data(lang="en", force=False, no_dubbed_videos=False) -> list:
     """
     Retrieve the KA content data direct from KA.
     """
@@ -568,12 +570,17 @@ def retrieve_kalite_data(lang="en", force=False, filename="nodes.json", no_dubbe
 
     url = url.format(projection=json.dumps(projection), lang=lang)
 
-    node_data_path = download_and_clean_kalite_data(url, lang=lang, ignorecache=force, filename=filename)
+    node_data_path = download_and_clean_kalite_data(url, lang=lang, ignorecache=force, filename="nodes.json")
 
     with open(node_data_path, 'r') as f:
         node_data = ujson.load(f)
+
     if not lang == "en" and not no_dubbed_videos == True:
-        node_data = addin_dubbed_video_mappings(node_data, lang) 
+        # Generate en_nodes.json json this will be used in dubbed video mappings.
+        # This will cache en_nodes.json
+        download_and_clean_kalite_data(url, lang="en", ignorecache=force, filename="en_nodes.json")
+
+        node_data = addin_dubbed_video_mappings(node_data, lang)
 
     return node_data
 
@@ -582,12 +589,13 @@ def addin_dubbed_video_mappings(node_data, lang="en"):
     # Get the dubbed videos from the spreadsheet and substitute them 
     # for the video, and topic attributes of the returned data struct.
 
-    # Generate en_nodes.json json this will be used in dubbed video mappings.
-    # This will cache en_nodes.json
-    name = "en_nodes.json"
-    retrieve_kalite_data("en", force=False, filename=name)
-
     build_path = os.path.join(os.getcwd(), "build")
+
+    # Create a dubbed_video_mappings.json, at build folder.
+    if os.path.exists(os.path.join(build_path, "dubbed_video_mappings.json")):
+        logging.info('Dubbed videos json already exist at %s' % (DUBBED_VIDEOS_MAPPING_FILEPATH))
+    else:
+        main()
 
     # Get the list of video ids from dubbed video mappings
     lang_name = get_lang_name(lang).lower()
