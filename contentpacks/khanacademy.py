@@ -432,15 +432,22 @@ def retrieve_exercise_dict(lang=None, force=False) -> str:
 
 @cache_file
 def download_and_clean_kalite_data(url, path, lang="en") -> str:
-    data = requests.get(url)
     attempts = 1
-    while data.status_code != 200 and attempts <= 100:
-        time.sleep(30)
+    while attempts < 100:
         data = requests.get(url)
-        attempts += 1
+        try:
+            data.raise_for_status()
+            break
+        except requests.RequestException as e:
+            logging.warning("Attempt {attempt}: Got error while requesting KA data: {e!s:<80}".format(
+                attempt=attempts,
+                e=e)
+            )
+            attempts += 1
+            time.sleep(10)
+            continue
 
-    if data.status_code != 200:
-        raise requests.RequestException("Got error requesting KA data: {}".format(data.content))
+    data.raise_for_status()     # make sure that when we get here, there are no more errors from KA.
 
     node_data = ujson.loads(data.content)
 
