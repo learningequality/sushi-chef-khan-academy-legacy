@@ -7,30 +7,47 @@ Usage:
   generate_dubbed_video_mappings.py
 
 """
-import getopt
-import logging
-import requests
-import os
+
 import csv
-from io import StringIO
+import errno
+import getopt
+import json
+import logging
+import os
+import requests
 import sys
 import urllib
-import json
 
-from contentpacks.dubbed_video_mappings_submodule import ensure_dir, get_node_cache
+from io import StringIO
+
 
 PROJECT_PATH = os.path.realpath(os.path.dirname(os.path.realpath(__file__)))
 CACHE_FILEPATH = os.path.join(PROJECT_PATH, "build", "csv", 'khan_dubbed_videos.csv')
-DUBBED_VIDEOS_MAPPING_FILEPATH = os.path.join(PROJECT_PATH, "contentpacks", "resources",  "dubbed_video_mappings.json")
+DUBBED_VIDEOS_MAPPING_FILEPATH = os.path.join(PROJECT_PATH, "build",  "dubbed_video_mappings.json")
 
 logging.getLogger().setLevel(logging.INFO)
+
+
+# http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
+def ensure_dir(path):
+    """Create the entire directory path, if it doesn't exist already."""
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            # file already exists
+            if not os.path.isdir(path):
+                # file exists but is not a directory
+                raise OSError(errno.ENOTDIR, "Not a directory: '%s'" % path)
+            pass  # directory already exists
+        else:
+            raise
 
 
 def download_ka_dubbed_video_csv(download_url=None, cache_filepath=None):
 
     """
     Function to do the heavy lifting in getting the dubbed videos map.
-
     Could be moved into utils
     """
     # Get the redirect url
@@ -112,20 +129,8 @@ def generate_dubbed_video_mappings_from_csv(csv_data=None):
                     logging.error("Removing entry for (%s, %s): dubbed and english youtube ID are the same." % (lang, english_video_id))
                 else:
                     video_map[lang][english_video_id] = row[idx]  # add the corresponding video id for the video, in this language.
-
-    # Now, validate the mappings with our topic data
-    known_videos = get_node_cache("Video").keys()
-    missing_videos = set(known_videos) - set(video_map["english"].keys())
-    extra_videos = set(video_map["english"].keys()) - set(known_videos)
-    if missing_videos:
-        logging.warn("There are %d known videos not in the list of dubbed videos" % len(missing_videos))
-        logging.warn("Adding missing English videos to English dubbed video map")
-        for video in missing_videos:
-            video_map["english"][video] = video
-    if extra_videos:
-        logging.warn("There are %d videos in the list of dubbed videos that we have never heard of." % len(extra_videos))
-
     return video_map
+
 
 def main(argv):
     input_csv_file = False
@@ -161,6 +166,6 @@ def main(argv):
 
 if __name__ == "__main__":
     if os.path.exists(DUBBED_VIDEOS_MAPPING_FILEPATH):
-        logging.info('Dubbed videos json %s already exist' % (DUBBED_VIDEOS_MAPPING_FILEPATH))
+        logging.info('Dubbed videos json already exist at %s' % (DUBBED_VIDEOS_MAPPING_FILEPATH))
     else:
         main(sys.argv[1:])

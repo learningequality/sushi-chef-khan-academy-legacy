@@ -24,7 +24,7 @@ import pkgutil
 from math import ceil, log, exp
 
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file,\
-    is_video_node_dubbed, get_lang_name
+    is_video_node_dubbed, get_lang_name, NodeType
 from contentpacks.models import AssessmentItem
 
 NUM_PROCESSES = 5
@@ -572,7 +572,6 @@ def retrieve_kalite_data(lang="en", force=False, filename="nodes.json", no_dubbe
 
     with open(node_data_path, 'r') as f:
         node_data = ujson.load(f)
-    
     if not lang == "en" and not no_dubbed_videos == True:
         node_data = addin_dubbed_video_mappings(node_data, lang) 
 
@@ -583,23 +582,42 @@ def addin_dubbed_video_mappings(node_data, lang="en"):
     # Get the dubbed videos from the spreadsheet and substitute them 
     # for the video, and topic attributes of the returned data struct.
 
+    # Generate en_nodes.json json this will be used in dubbed video mappings.
+    # This will cache en_nodes.json
+    name = "en_nodes.json"
+    retrieve_kalite_data("en", force=False, filename=name)
+
+    build_path = os.path.join(os.getcwd(), "build")
+
     # Get the list of video ids from dubbed video mappings
     lang_name = get_lang_name(lang).lower()
-    dubbed_videos_data = pkgutil.get_data('contentpacks', "resources/dubbed_video_mappings.json")
-    dubbed_videos_load = ujson.loads(dubbed_videos_data)
-    dubbed_videos_list = dubbed_videos_load[lang_name]
+    dubbed_videos_path = os.path.join(build_path, "dubbed_video_mappings.json")
+    with open(dubbed_videos_path, 'r') as f:
+        dubbed_videos_load = ujson.load(f)
 
-    # Get the current youtube_ids, and topic_paths form the khan api node data.
-    youtube_ids = [node.get("youtube_id") for node in node_data if node.get("kind") == "Video"]
-    topic_paths = [node.get("path") for node in node_data if node.get("kind") == "Topic"]
+    dubbed_videos_list = dubbed_videos_load.get(lang_name)
+
+    # Get the current youtube_ids, and topic_paths from the khan api node data.
+    youtube_ids = []
+    topic_paths = []
+    for node in node_data:
+        node_kind = node.get("kind")
+        if node_kind == NodeType.video:
+            youtube_ids.append(node.get("youtube_id"))
+        if node_kind == NodeType.topic:
+            topic_paths.append(node.get("path"))
+
+    en_nodes_path = os.path.join(build_path, "en_nodes.json")
+    with open(en_nodes_path, 'r') as f:
+        en_node_load = ujson.load(f)
 
     en_node_list = []
-    en_nodes_data = pkgutil.get_data('contentpacks', "resources/en_nodes.json")
-    en_node_load = ujson.loads(en_nodes_data)
 
     # The en_nodes.json must be the same data structure to node_data variable from khan api.
     for node in en_node_load:
-        if (node["kind"] == "Video"):
+        node_kind = node.get("kind")
+
+        if (node_kind == NodeType.video):
             youtube_id = node["youtube_id"]
             if not youtube_id in youtube_ids:
                 if youtube_id in dubbed_videos_list:
@@ -609,7 +627,7 @@ def addin_dubbed_video_mappings(node_data, lang="en"):
                     youtube_ids.append(youtube_id)
 
         # Append all topics that's not in topic_paths list.
-        if (node["kind"] == "Topic"):
+        if (node_kind == NodeType.topic):
             if not node["path"] in topic_paths:
                 en_node_list.append(node)
                 topic_paths.append(node["path"])

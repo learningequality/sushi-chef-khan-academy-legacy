@@ -73,7 +73,6 @@ publish:
 
 dubbed_videos: 
 	python generate_dubbed_video_mappings.py
-	python generate_en_nodes.py
 
 
 deps: dubbed_videos pex
