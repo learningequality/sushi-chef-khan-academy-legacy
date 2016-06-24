@@ -56,10 +56,17 @@ def download_ka_dubbed_video_csv(download_url=None, cache_filepath=None):
             raise Exception("Expected redirect response from Khan Academy redirect url.")
 
     logging.info("Downloading dubbed video data from %s" % download_url)
-    response = requests.get(download_url)
-    if response.status_code != 200:
-        logging.warning("Failed to download dubbed video CSV data: status=%s" % response.status)
-    csv_data = response.content
+
+    data = requests.get(download_url)
+    attempts = 1
+    while data.status_code != 200 and attempts <= 100:
+        time.sleep(30)
+        data = requests.get(url)
+        attempts += 1
+
+    if data.status_code != 200:
+        raise requests.RequestException("Failed to download dubbed video CSV data: %s" % data.content)
+    csv_data = data.content
 
     # Dump the data to a local cache file
     csv_data = csv_data.decode("utf-8")
