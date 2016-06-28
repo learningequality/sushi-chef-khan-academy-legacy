@@ -59,10 +59,10 @@ POEntry_class.merge = new_merge
 
 
 def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: bool, no_dubbed_videos) -> LangpackResources:
-    node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True ) if not no_dubbed_videos else {}
+    node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True, no_dubbed_videos=no_dubbed_videos)
 
     video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
-    subtitle_data = retrieve_subtitles(video_ids, sublangargs["subtitle_lang"]) 
+    subtitle_data = retrieve_subtitles(video_ids, sublangargs["subtitle_lang"]) if not no_subtitles else {}
 
     # retrieve KA Lite po files from CrowdIn
     interface_lang = sublangargs["interface_lang"]
@@ -582,7 +582,7 @@ def retrieve_kalite_data(lang="en", force=False, no_dubbed_videos=False) -> list
     with open(node_data_path, 'r') as f:
         node_data = ujson.load(f)
 
-    if not lang == "en" and not no_dubbed_videos == True:
+    if not lang == "en" and not no_dubbed_videos:
         # Generate en_nodes.json json this will be used in dubbed video mappings.
         # This will cache en_nodes.json
         download_and_clean_kalite_data(url, lang="en", ignorecache=force, filename="en_nodes.json")
