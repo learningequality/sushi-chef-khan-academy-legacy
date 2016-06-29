@@ -19,12 +19,15 @@ import polib
 import requests
 import json
 import ujson
+import pkgutil
+import sys
 
 from math import ceil, log, exp
 
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file,\
-    is_video_node_dubbed
+    is_video_node_dubbed, get_lang_name, NodeType
 from contentpacks.models import AssessmentItem
+from contentpacks.generate_dubbed_video_mappings import main, DUBBED_VIDEOS_MAPPING_FILEPATH
 
 NUM_PROCESSES = 5
 
@@ -55,8 +58,8 @@ POEntry_class.old_merge = POEntry_class.merge
 POEntry_class.merge = new_merge
 
 
-def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: bool) -> LangpackResources:
-    node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True)
+def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: bool, no_dubbed_videos) -> LangpackResources:
+    node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True, no_dubbed_videos=no_dubbed_videos)
 
     video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
     subtitle_data = retrieve_subtitles(video_ids, sublangargs["subtitle_lang"]) if not no_subtitles else {}
@@ -560,7 +563,7 @@ video_attributes = [
 ]
 
 
-def retrieve_kalite_data(lang="en", force=False) -> list:
+def retrieve_kalite_data(lang="en", force=False, no_dubbed_videos=False) -> list:
     """
     Retrieve the KA content data direct from KA.
     """
@@ -579,6 +582,72 @@ def retrieve_kalite_data(lang="en", force=False) -> list:
     with open(node_data_path, 'r') as f:
         node_data = ujson.load(f)
 
+    if not lang == "en" and not no_dubbed_videos:
+        # Generate en_nodes.json json this will be used in dubbed video mappings.
+        # This will cache en_nodes.json
+        download_and_clean_kalite_data(url, lang="en", ignorecache=force, filename="en_nodes.json")
+
+        node_data = addin_dubbed_video_mappings(node_data, lang)
+
+    return node_data
+
+
+def addin_dubbed_video_mappings(node_data, lang="en"):
+    # Get the dubbed videos from the spreadsheet and substitute them 
+    # for the video, and topic attributes of the returned data struct.
+
+    build_path = os.path.join(os.getcwd(), "build")
+
+    # Create a dubbed_video_mappings.json, at build folder.
+    if os.path.exists(os.path.join(build_path, "dubbed_video_mappings.json")):
+        logging.info('Dubbed videos json already exist at %s' % (DUBBED_VIDEOS_MAPPING_FILEPATH))
+    else:
+        main()
+
+    # Get the list of video ids from dubbed video mappings
+    lang_name = get_lang_name(lang).lower()
+    dubbed_videos_path = os.path.join(build_path, "dubbed_video_mappings.json")
+    with open(dubbed_videos_path, 'r') as f:
+        dubbed_videos_load = ujson.load(f)
+
+    dubbed_videos_list = dubbed_videos_load.get(lang_name)
+
+    # Get the current youtube_ids, and topic_paths from the khan api node data.
+    youtube_ids = []
+    topic_paths = []
+    for node in node_data:
+        node_kind = node.get("kind")
+        if node_kind == NodeType.video:
+            youtube_ids.append(node.get("youtube_id"))
+        if node_kind == NodeType.topic:
+            topic_paths.append(node.get("path"))
+
+    en_nodes_path = os.path.join(build_path, "en_nodes.json")
+    with open(en_nodes_path, 'r') as f:
+        en_node_load = ujson.load(f)
+
+    en_node_list = []
+
+    # The en_nodes.json must be the same data structure to node_data variable from khan api.
+    for node in en_node_load:
+        node_kind = node.get("kind")
+
+        if (node_kind == NodeType.video):
+            youtube_id = node["youtube_id"]
+            if not youtube_id in youtube_ids:
+                if youtube_id in dubbed_videos_list:
+                    node["youtube_id"] = dubbed_videos_list[youtube_id]
+                    node["translated_youtube_lang"] = lang
+                    en_node_list.append(node)
+                    youtube_ids.append(youtube_id)
+
+        # Append all topics that's not in topic_paths list.
+        if (node_kind == NodeType.topic):
+            if not node["path"] in topic_paths:
+                en_node_list.append(node)
+                topic_paths.append(node["path"])
+
+    node_data += en_node_list
     return node_data
 
 
@@ -900,6 +969,7 @@ def apply_dubbed_video_map(content_data: list, subtitles: list, lang: str) -> (l
             item["total_files"] = 1
 
     return content_data, dubbed_count
+
 
 def retrieve_html_exercises(exercises: [str], lang: str, force=False) -> (str, [str]):
     """

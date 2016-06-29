@@ -86,20 +86,20 @@ def cache_file(func):
     All decorated functions must only accept 2 args, 'url' and 'path'.
     """
     def func_wrapper(url, cachedir=None, ignorecache=False, filename=None, **kwargs):
-            if not cachedir:
-                cachedir = os.path.join(os.getcwd(), "build")
+        if not cachedir:
+            cachedir = os.path.join(os.getcwd(), "build")
 
-            if not filename:
-                filename = os.path.basename(urlparse(url).path) + urlparse(url).query
+        if not filename:
+            filename = os.path.basename(urlparse(url).path) + urlparse(url).query
 
-            path = os.path.join(cachedir, filename)
+        path = os.path.join(cachedir, filename)
 
-            os.makedirs(os.path.dirname(path), exist_ok=True)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
 
-            if ignorecache or not os.path.exists(path):
-                func(url, path, **kwargs)
+        if ignorecache or not os.path.exists(path):
+            func(url, path, **kwargs)
 
-            return path
+        return path
 
     return func_wrapper
 
