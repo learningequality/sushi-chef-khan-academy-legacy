@@ -562,12 +562,13 @@ video_attributes = [
     'youtubeId'
 ]
 
+en_lang_code = "en"
 
-def retrieve_kalite_data(lang, force=False, no_dubbed_videos=False) -> list:
+
+def retrieve_kalite_data(lang=en_lang_code, force=False, no_dubbed_videos=False) -> list:
     """
     Retrieve the KA content data direct from KA.
     """
-    en_lang_code = "en"
     lang_url = "http://www.khanacademy.org/api/v2/topics/topictree?lang={lang}&projection={projection}"
 
     projection = OrderedDict([
@@ -587,15 +588,15 @@ def retrieve_kalite_data(lang, force=False, no_dubbed_videos=False) -> list:
         # Generate en_nodes.json json this will be used in dubbed video mappings.
         # This will cache en_nodes.json
         url = lang_url.format(projection=json.dumps(projection), lang=en_lang_code)
-        download_and_clean_kalite_data(url, lang=en_lang_code, ignorecache=force, filename="en_nodes.json")
+        download_and_clean_kalite_data(url, lang=en_lang_code, ignorecache=False, filename="en_nodes.json")
 
         node_data = addin_dubbed_video_mappings(node_data, lang)
 
     return node_data
 
 
-def addin_dubbed_video_mappings(node_data, lang):
-    # Get the dubbed videos from the spreadsheet and substitute them 
+def addin_dubbed_video_mappings(node_data, lang=en_lang_code):
+    # Get the dubbed videos from the spreadsheet and substitute them
     # for the video, and topic attributes of the returned data struct.
 
     build_path = os.path.join(os.getcwd(), "build")
@@ -607,12 +608,15 @@ def addin_dubbed_video_mappings(node_data, lang):
         main()
 
     # Get the list of video ids from dubbed video mappings
-    lang_name = get_lang_name(lang).lower()
+    lang_code = get_lang_name(lang).lower()
     dubbed_videos_path = os.path.join(build_path, "dubbed_video_mappings.json")
     with open(dubbed_videos_path, 'r') as f:
         dubbed_videos_load = ujson.load(f)
 
-    dubbed_videos_list = dubbed_videos_load.get(lang_name)
+    dubbed_videos_list = dubbed_videos_load.get(lang_code)
+    # If dubbed_videos_list is None It means that the language code is not available in dubbed video mappings.
+    if not dubbed_videos_list:
+        return node_data
 
     # Get the current youtube_ids, and topic_paths from the khan api node data.
     youtube_ids = []
@@ -629,7 +633,6 @@ def addin_dubbed_video_mappings(node_data, lang):
         en_node_load = ujson.load(f)
 
     en_node_list = []
-
     # The en_nodes.json must be the same data structure to node_data variable from khan api.
     for node in en_node_load:
         node_kind = node.get("kind")
