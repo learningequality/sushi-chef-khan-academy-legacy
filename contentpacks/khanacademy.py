@@ -563,10 +563,11 @@ video_attributes = [
 ]
 
 
-def retrieve_kalite_data(lang="en", force=False, no_dubbed_videos=False) -> list:
+def retrieve_kalite_data(lang, force=False, no_dubbed_videos=False) -> list:
     """
     Retrieve the KA content data direct from KA.
     """
+    en_lang_code = "en"
     lang_url = "http://www.khanacademy.org/api/v2/topics/topictree?lang={lang}&projection={projection}"
 
     projection = OrderedDict([
@@ -582,19 +583,18 @@ def retrieve_kalite_data(lang="en", force=False, no_dubbed_videos=False) -> list
     with open(node_data_path, 'r') as f:
         node_data = ujson.load(f)
 
-    if not lang == "en" and not no_dubbed_videos:
+    if not lang == en_lang_code and not no_dubbed_videos:
         # Generate en_nodes.json json this will be used in dubbed video mappings.
         # This will cache en_nodes.json
-        lang = "en"
-        url = lang_url.format(projection=json.dumps(projection), lang=lang)
-        download_and_clean_kalite_data(url, lang="en", ignorecache=force, filename="en_nodes.json")
+        url = lang_url.format(projection=json.dumps(projection), lang=en_lang_code)
+        download_and_clean_kalite_data(url, lang=en_lang_code, ignorecache=force, filename="en_nodes.json")
 
         node_data = addin_dubbed_video_mappings(node_data, lang)
 
     return node_data
 
 
-def addin_dubbed_video_mappings(node_data, lang="en"):
+def addin_dubbed_video_mappings(node_data, lang):
     # Get the dubbed videos from the spreadsheet and substitute them 
     # for the video, and topic attributes of the returned data struct.
 
