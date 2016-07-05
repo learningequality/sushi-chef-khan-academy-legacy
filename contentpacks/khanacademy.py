@@ -58,8 +58,8 @@ POEntry_class.old_merge = POEntry_class.merge
 POEntry_class.merge = new_merge
 
 
-def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: bool, no_dubbed_videos) -> LangpackResources:
-    node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True, no_dubbed_videos=no_dubbed_videos)
+def retrieve_language_resources(version: str, sublangargs: dict, ka_domain: str, no_subtitles: bool, no_dubbed_videos: bool) -> LangpackResources:
+    node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True, ka_domain=ka_domain, no_dubbed_videos=no_dubbed_videos)
 
     video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
     subtitle_data = retrieve_subtitles(video_ids, sublangargs["subtitle_lang"]) if not no_subtitles else {}
@@ -565,11 +565,15 @@ video_attributes = [
 en_lang_code = "en"
 
 
-def retrieve_kalite_data(lang=en_lang_code, force=False, no_dubbed_videos=False) -> list:
+def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubbed_videos=False) -> list:
     """
     Retrieve the KA content data direct from KA.
     """
-    lang_url = "http://www.khanacademy.org/api/v2/topics/topictree?lang={lang}&projection={projection}"
+
+    if not ka_domain:
+        ka_domain = "www.khanacademy.org"
+
+    lang_url = "http://{ka_domain}/api/v2/topics/topictree?lang={lang}&projection={projection}"
 
     projection = OrderedDict([
         ("topics", [OrderedDict((key, 1) for key in topic_attributes)]),
@@ -577,7 +581,7 @@ def retrieve_kalite_data(lang=en_lang_code, force=False, no_dubbed_videos=False)
         ("videos", [OrderedDict((key, 1) for key in video_attributes)])
     ])
 
-    url = lang_url.format(projection=json.dumps(projection), lang=lang)
+    url = lang_url.format(projection=json.dumps(projection), lang=lang, ka_domain=ka_domain)
 
     node_data_path = download_and_clean_kalite_data(url, lang=lang, ignorecache=force, filename="nodes.json")
 

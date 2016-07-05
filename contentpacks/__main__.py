@@ -29,8 +29,9 @@ from contentpacks.utils import translate_nodes, \
 
 import logging
 
-def make_language_pack(lang, version, sublangargs, filename, no_assessment_items, no_subtitles, no_assessment_resources, no_dubbed_videos):
-    node_data, subtitle_data, interface_catalog, content_catalog = retrieve_language_resources(version, sublangargs, no_subtitles, no_dubbed_videos)
+
+def make_language_pack(lang, version, sublangargs, filename, ka_domain, no_assessment_items, no_subtitles, no_assessment_resources, no_dubbed_videos):
+    node_data, subtitle_data, interface_catalog, content_catalog = retrieve_language_resources(version, sublangargs, ka_domain, no_subtitles, no_dubbed_videos)
 
     subtitles, subtitle_paths = subtitle_data.keys(), subtitle_data.values()
 
@@ -75,6 +76,7 @@ def normalize_sublang_args(args):
 
 
 def main():
+    import os
     args = docopt(__doc__)
 
     assert args["ka-lite"], ("Sorry, content packs for non-KA Lite "
@@ -84,6 +86,8 @@ def main():
     lang = args["<lang>"]
     version = args["<version>"]
     out = Path(args["--out"]) if args['--out'] else Path.cwd() / "{lang}.zip".format(lang=lang)
+
+    ka_domain = os.environ.get("KA_DOMAIN") or "www.khanacademy.org"
 
     sublangs = normalize_sublang_args(args)
 
@@ -97,7 +101,7 @@ def main():
     logging.basicConfig(level=logging.INFO)
 
     try:
-        make_language_pack(lang, version, sublangs, out, no_assessment_items, no_subtitles, no_assessment_resources, no_dubbed_videos)
+        make_language_pack(lang, version, sublangs, out, ka_domain, no_assessment_items, no_subtitles, no_assessment_resources, no_dubbed_videos)
     except Exception:           # This is allowed, since we want to potentially debug all errors
         import os
         if not os.environ.get("DEBUG"):
