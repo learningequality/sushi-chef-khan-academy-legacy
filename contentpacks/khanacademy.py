@@ -591,7 +591,7 @@ def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubb
     if not lang == en_lang_code and not no_dubbed_videos:
         # Generate en_nodes.json json this will be used in dubbed video mappings.
         # This will cache en_nodes.json
-        url = lang_url.format(projection=json.dumps(projection), lang=en_lang_code)
+        url = lang_url.format(projection=json.dumps(projection), lang=en_lang_code, ka_domain=ka_domain)
         download_and_clean_kalite_data(url, lang=en_lang_code, ignorecache=False, filename="en_nodes.json")
 
         node_data = addin_dubbed_video_mappings(node_data, lang)
