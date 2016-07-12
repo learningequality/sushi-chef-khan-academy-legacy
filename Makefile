@@ -33,6 +33,10 @@ bg: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite bg 0.16 --out=out/langpacks/bg.zip --no-assessment-resources
 
 
+ka: pex
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite ka 0.16 --out=out/langpacks/ka.zip --no-assessment-resources
+
+
 id: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite id 0.16 --out=out/langpacks/id.zip --no-assessment-resource
 
@@ -52,7 +56,7 @@ ta: pex
 all: supported
 
 
-langpacks: es pt-BR bn de fr da bg id hi xh ta
+langpacks: es pt-BR bn de fr da bg id hi xh ta ka
 	unzip -p out/en.zip content.db > content.db
 	./makecontentpacks collectmetadata.py out/langpacks/ --out=out/all_metadata.json
 
