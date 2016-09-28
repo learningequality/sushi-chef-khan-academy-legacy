@@ -25,7 +25,7 @@ import sys
 from math import ceil, log, exp
 
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file,\
-    is_video_node_dubbed, get_lang_name, NodeType
+    is_video_node_dubbed, get_lang_name, NodeType, get_lang_native_name
 from contentpacks.models import AssessmentItem
 from contentpacks.generate_dubbed_video_mappings import main, DUBBED_VIDEOS_MAPPING_FILEPATH
 
@@ -619,6 +619,12 @@ def addin_dubbed_video_mappings(node_data, lang=en_lang_code):
 
     dubbed_videos_list = dubbed_videos_load.get(lang_code)
     # If dubbed_videos_list is None It means that the language code is not available in dubbed video mappings.
+
+    if not dubbed_videos_list:
+        # Look up for the native lang code name if the get_lang_name is null.
+        lang_code = get_lang_native_name(lang).lower()
+        dubbed_videos_list = dubbed_videos_load.get(lang_code)
+
     if not dubbed_videos_list:
         return node_data
 
