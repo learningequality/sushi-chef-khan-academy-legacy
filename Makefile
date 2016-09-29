@@ -12,8 +12,8 @@ es: pex
 pt-BR: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite pt-BR 0.16 --out=out/langpacks/pt-BR.zip --no-assessment-resources --videolang=pt
 
-sw: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite sw 0.16 --out=out/langpacks/sw.zip --no-assessment-resources --videolang=sw
+swa: pex
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite swa 0.16 --out=out/langpacks/swa.zip --no-assessment-resources --videolang=swa --contentlang=swa
 
 pt-PT: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite pt-PT 0.16 --out=out/langpacks/pt-PT.zip --no-assessment-resources --videolang=pt --contentlang=pt
