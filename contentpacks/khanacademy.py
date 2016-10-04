@@ -25,7 +25,7 @@ import sys
 from math import ceil, log, exp
 
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file,\
-    is_video_node_dubbed, get_lang_name, NodeType, get_lang_native_name
+    is_video_node_dubbed, get_lang_name, NodeType, get_lang_native_name, get_lang_code_list
 from contentpacks.models import AssessmentItem
 from contentpacks.generate_dubbed_video_mappings import main, DUBBED_VIDEOS_MAPPING_FILEPATH
 
@@ -565,7 +565,7 @@ video_attributes = [
 en_lang_code = "en"
 
 
-def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubbed_videos=False) -> list:
+def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubbed_videos=False, mutilple_lang_name=True) -> list:
     """
     Retrieve the KA content data direct from KA.
     """
@@ -587,6 +587,50 @@ def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubb
 
     with open(node_data_path, 'r') as f:
         node_data = ujson.load(f)
+
+    youtube_ids = []
+    topic_paths = []
+    exercise_ids = []
+    for node in node_data:
+        node_kind = node.get("kind")
+        if node_kind == NodeType.video:
+            if not node["translated_youtube_lang"] == 'en':
+                youtube_ids.append(node.get("youtube_id"))
+        if node_kind == NodeType.topic:
+            topic_paths.append(node.get("path"))
+        if node_kind == NodeType.exercise:
+            exercise_ids.append(node.get("id"))
+
+    mutilple_lang_name = True
+    if mutilple_lang_name:
+        lang_list = get_lang_code_list(lang)
+        if lang_list:
+            lang_node_list = []
+            for lang_code in lang_list:
+                if not lang_code == lang:
+                    logging.info('=====> lang%s' % (lang))
+                    url = lang_url.format(projection=json.dumps(projection), lang=lang_code, ka_domain=ka_domain)
+                    node_data_path = download_and_clean_kalite_data(url, lang=lang_code, ignorecache=force, filename="nodes.json")
+                    with open(node_data_path, 'r') as f:
+                        node_data_temp = ujson.load(f)
+                    if node_data_temp:
+                        for node_temp in node_data_temp:
+                            node_kind = node_temp.get("kind")
+                            if (node_kind == NodeType.topic):
+                                if not node_temp["path"] in topic_paths:
+                                    lang_node_list.append(node_temp)
+                                    topic_paths.append(node_temp["path"])
+                            if (node_kind == NodeType.exercise):
+                                if not node_temp["id"] in exercise_ids:
+                                    lang_node_list.append(node_temp)    
+                                    exercise_ids.append(node_temp["id"])
+                            if (node_kind == NodeType.video):
+                                if not node_temp["youtube_id"] in youtube_ids:
+                                    lang_node_list.append(node_temp)
+                                    youtube_ids.append(node_temp["youtube_id"])
+                    logging.info('lang_node_list ===>%s' % (lang_node_list))
+            if lang_node_list:
+                node_data += lang_node_list
 
     if not lang == en_lang_code and not no_dubbed_videos:
         # Generate en_nodes.json json this will be used in dubbed video mappings.

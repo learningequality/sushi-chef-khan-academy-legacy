@@ -536,6 +536,22 @@ def get_lang_native_name(lang):
         return "DEBUG"
 
 
+def get_lang_code_list(lang):
+    langlookup = ujson.loads(LANGUAGELOOKUP_DATA)
+    lang_name = langlookup[lang]["name"]
+
+    try:
+        lang_code_list = []
+        for obj in langlookup.items():
+            name = obj[1]["name"]
+            if name == lang_name:
+                lang_code_list.append(obj[0])
+        return lang_code_list
+    except KeyError:
+        logging.warning("No languge code found for {}. Defaulting to DEBUG.".format(lang_name))
+        return "DEBUG"
+
+
 def save_metadata(zf, metadata):
     dump = ujson.dumps(metadata)
     metadata_name = "metadata.json"
