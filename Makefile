@@ -12,8 +12,8 @@ es: pex
 pt-BR: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite pt-BR 0.16 --out=out/langpacks/pt-BR.zip --no-assessment-resources --videolang=pt
 
-swa: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite swa 0.16 --out=out/langpacks/swa.zip --no-assessment-resources --videolang=swa --contentlang=swa
+sw: pex
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite sw 0.16 --out=out/langpacks/sw.zip --no-assessment-resources --videolang=sw --subtitlelang=sw
 
 pt-PT: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite pt-PT 0.16 --out=out/langpacks/pt-PT.zip --no-assessment-resources --videolang=pt --contentlang=pt
@@ -61,7 +61,7 @@ ta: pex
 all: supported
 
 
-langpacks: pt-PT es pt-BR bn de fr da bg id hi xh ta ka sw
+langpacks: sw
 	unzip -p out/en.zip content.db > content.db
 	./makecontentpacks collectmetadata.py out/langpacks/ --out=out/all_metadata.json
 
