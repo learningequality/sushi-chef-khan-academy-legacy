@@ -680,7 +680,7 @@ def addin_dubbed_video_mappings(node_data, lang=en_lang_code):
         if node_kind == NodeType.video:
             youtube_ids.append(node.get("youtube_id"))
         if node_kind == NodeType.topic:
-            topic_title_list.append(node.get("title"))
+            topic_title_list.append(node.get("path"))
 
     en_nodes_path = os.path.join(build_path, "en_nodes.json")
     with open(en_nodes_path, 'r') as f:
@@ -693,9 +693,9 @@ def addin_dubbed_video_mappings(node_data, lang=en_lang_code):
         # Append all topics that's not in topic_title_list list.
 
         if (node_kind == NodeType.topic):
-            if not node["title"] in topic_title_list:
+            if not node["path"] in topic_title_list:
                 en_node_list.append(node)
-                topic_title_list.append(node["title"])
+                topic_title_list.append(node["path"])
 
         if (node_kind == NodeType.video):
             youtube_id = node["youtube_id"]
