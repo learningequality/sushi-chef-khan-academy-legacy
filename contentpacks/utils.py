@@ -548,7 +548,7 @@ def get_lang_code_list(lang):
                 lang_code_list.append(obj[0])
         return lang_code_list
     except KeyError:
-        logging.warning("No languge code found for {}. Defaulting to DEBUG.".format(lang_name))
+        logging.warning("No language code found for {}. Defaulting to DEBUG.".format(lang_name))
         return "DEBUG"
 
 

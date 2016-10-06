@@ -565,7 +565,7 @@ video_attributes = [
 en_lang_code = "en"
 
 
-def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubbed_videos=False, mutilple_lang_name=True) -> list:
+def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubbed_videos=False) -> list:
     """
     Retrieve the KA content data direct from KA.
     Note: use the same language code in the video, topic and exercises node data to prevent issues.
@@ -603,13 +603,18 @@ def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubb
             exercise_ids.append(node.get("id"))
 
     """
-    We must check if the languge code we specify has the same languge name
-        but defferent language code using get_lang_code_list function.
+    We must check if the language code we specify has the same
+        language name But different language code using get_lang_code_list function.
     """
-    lang_list = get_lang_code_list(lang)
-    if lang_list:
-        lang_node_list = []
-        for lang_code in lang_list:
+    lang_code_list = get_lang_code_list(lang)
+    if lang_code_list:
+        lang_node_list = []`
+
+        """
+        Loop the lang_code_list variable to get each language code, and used 
+            it to get another node data form khan api.
+        """
+        for lang_code in lang_code_list:
             if not lang_code == lang:
                 url = lang_url.format(projection=json.dumps(projection), lang=lang_code, ka_domain=ka_domain)
                 node_data_path = download_and_clean_kalite_data(url, lang=lang_code, ignorecache=force, filename="nodes.json")
