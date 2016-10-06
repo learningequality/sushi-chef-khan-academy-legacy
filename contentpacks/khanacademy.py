@@ -608,7 +608,7 @@ def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubb
     """
     lang_code_list = get_lang_code_list(lang)
     if lang_code_list:
-        lang_node_list = []`
+        lang_node_list = []
 
         """
         Loop the lang_code_list variable to get each language code, and used 
