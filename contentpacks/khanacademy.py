@@ -568,6 +568,7 @@ en_lang_code = "en"
 def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubbed_videos=False, mutilple_lang_name=True) -> list:
     """
     Retrieve the KA content data direct from KA.
+    Note: use the same language code in the video, topic and exercises node data to prevent issues.
     """
 
     if not ka_domain:
@@ -580,14 +581,14 @@ def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubb
         ("exercises", [OrderedDict((key, 1) for key in exercise_attributes)]),
         ("videos", [OrderedDict((key, 1) for key in video_attributes)])
     ])
-    # node_data = []
-    url = lang_url.format(projection=json.dumps(projection), lang=lang, ka_domain=ka_domain)
 
+    url = lang_url.format(projection=json.dumps(projection), lang=lang, ka_domain=ka_domain)
     node_data_path = download_and_clean_kalite_data(url, lang=lang, ignorecache=force, filename="nodes.json")
 
     with open(node_data_path, 'r') as f:
         node_data = ujson.load(f)
 
+    # Create a list of projections to determine what is the current node data return from khan api.
     youtube_ids = []
     topic_title_list = []
     exercise_ids = []
@@ -601,36 +602,40 @@ def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubb
         if node_kind == NodeType.exercise:
             exercise_ids.append(node.get("id"))
 
-    mutilple_lang_name = True
-    if mutilple_lang_name:
-        lang_list = get_lang_code_list(lang)
-        if lang_list:
-            lang_node_list = []
-            for lang_code in lang_list:
-                if not lang_code == lang:
-                    
-                    url = lang_url.format(projection=json.dumps(projection), lang=lang_code, ka_domain=ka_domain)
-                    node_data_path = download_and_clean_kalite_data(url, lang=lang_code, ignorecache=force, filename="nodes.json")
-                    with open(node_data_path, 'r') as f:
-                        node_data_temp = ujson.load(f)
-                    if node_data_temp:
-                        for node_temp in node_data_temp:
-                            node_kind = node_temp.get("kind")
-                            if (node_kind == NodeType.topic):
-                                if not node_temp["title"] in topic_title_list:
+    """
+    We must check if the languge code we specify has the same languge name
+        but defferent language code using get_lang_code_list function.
+    """
+    lang_list = get_lang_code_list(lang)
+    if lang_list:
+        lang_node_list = []
+        for lang_code in lang_list:
+            if not lang_code == lang:
+                url = lang_url.format(projection=json.dumps(projection), lang=lang_code, ka_domain=ka_domain)
+                node_data_path = download_and_clean_kalite_data(url, lang=lang_code, ignorecache=force, filename="nodes.json")
+                with open(node_data_path, 'r') as f:
+                    node_data_temp = ujson.load(f)
+
+                if node_data_temp:
+                    for node_temp in node_data_temp:
+                        node_kind = node_temp.get("kind")
+                        if (node_kind == NodeType.topic):
+                            if not node_temp["title"] in topic_title_list:
+                                lang_node_list.append(node_temp)
+                                topic_title_list.append(node_temp["title"])
+                        if (node_kind == NodeType.exercise):
+                            if not node_temp["id"] in exercise_ids:
+                                lang_node_list.append(node_temp)    
+                                exercise_ids.append(node_temp["id"])
+                        if (node_kind == NodeType.video):
+                            # Override the translated_youtube_lang language code to use the same language code.
+                            if not node_temp["youtube_id"] in youtube_ids:
+                                if node_temp["translated_youtube_lang"] == lang:
                                     lang_node_list.append(node_temp)
-                                    topic_title_list.append(node_temp["title"])
-                            if (node_kind == NodeType.exercise):
-                                if not node_temp["id"] in exercise_ids:
-                                    lang_node_list.append(node_temp)    
-                                    exercise_ids.append(node_temp["id"])
-                            if (node_kind == NodeType.video):
-                                if not node_temp["youtube_id"] in youtube_ids:
-                                    if node_temp["translated_youtube_lang"] == lang:
-                                        lang_node_list.append(node_temp)
-                                        youtube_ids.append(node_temp["youtube_id"])
-            if lang_node_list:
-                node_data += lang_node_list
+                                    youtube_ids.append(node_temp["youtube_id"])
+        if lang_node_list:
+            # Append the lang_node_list to merge it in current node data.
+            node_data += lang_node_list
 
     if not lang == en_lang_code and not no_dubbed_videos:
         # Generate en_nodes.json json this will be used in dubbed video mappings.
@@ -639,7 +644,6 @@ def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubb
         download_and_clean_kalite_data(url, lang=en_lang_code, ignorecache=False, filename="en_nodes.json")
 
         node_data = addin_dubbed_video_mappings(node_data, lang)
-
     return node_data
 
 
@@ -672,15 +676,15 @@ def addin_dubbed_video_mappings(node_data, lang=en_lang_code):
     if not dubbed_videos_list:
         return node_data
 
-    # Get the current youtube_ids, and topic_title_list from the khan api node data.
+    # Get the current youtube_ids, and topic_path_list from the khan api node data.
     youtube_ids = []
-    topic_title_list = []
+    topic_path_list = []
     for node in node_data:
         node_kind = node.get("kind")
         if node_kind == NodeType.video:
             youtube_ids.append(node.get("youtube_id"))
         if node_kind == NodeType.topic:
-            topic_title_list.append(node.get("path"))
+            topic_path_list.append(node.get("path"))
 
     en_nodes_path = os.path.join(build_path, "en_nodes.json")
     with open(en_nodes_path, 'r') as f:
@@ -690,12 +694,12 @@ def addin_dubbed_video_mappings(node_data, lang=en_lang_code):
     # The en_nodes.json must be the same data structure to node_data variable from khan api.
     for node in en_node_load:
         node_kind = node.get("kind")
-        # Append all topics that's not in topic_title_list list.
+        # Append all topics that's not in topic path list.
 
         if (node_kind == NodeType.topic):
-            if not node["path"] in topic_title_list:
+            if not node["path"] in topic_path_list:
                 en_node_list.append(node)
-                topic_title_list.append(node["path"])
+                topic_path_list.append(node["path"])
 
         if (node_kind == NodeType.video):
             youtube_id = node["youtube_id"]
