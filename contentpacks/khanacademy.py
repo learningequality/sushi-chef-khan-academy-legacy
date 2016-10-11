@@ -652,7 +652,7 @@ def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubb
     return node_data
 
 
-def adding_dubbed_video_mappings(node_data, lang=en_lang_code):
+def add_dubbed_video_mappings(node_data, lang=en_lang_code):
     # Get the dubbed videos from the spreadsheet and substitute them
     # for the video, and topic attributes of the returned data struct.
 
