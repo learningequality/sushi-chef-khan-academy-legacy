@@ -648,7 +648,7 @@ def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubb
         url = lang_url.format(projection=json.dumps(projection), lang=en_lang_code, ka_domain=ka_domain)
         download_and_clean_kalite_data(url, lang=en_lang_code, ignorecache=False, filename="en_nodes.json")
 
-        node_data = adding_dubbed_video_mappings(node_data, lang)
+        node_data = add_dubbed_video_mappings(node_data, lang)
     return node_data
 
 
