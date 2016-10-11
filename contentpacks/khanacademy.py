@@ -648,11 +648,11 @@ def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubb
         url = lang_url.format(projection=json.dumps(projection), lang=en_lang_code, ka_domain=ka_domain)
         download_and_clean_kalite_data(url, lang=en_lang_code, ignorecache=False, filename="en_nodes.json")
 
-        node_data = addin_dubbed_video_mappings(node_data, lang)
+        node_data = adding_dubbed_video_mappings(node_data, lang)
     return node_data
 
 
-def addin_dubbed_video_mappings(node_data, lang=en_lang_code):
+def adding_dubbed_video_mappings(node_data, lang=en_lang_code):
     # Get the dubbed videos from the spreadsheet and substitute them
     # for the video, and topic attributes of the returned data struct.
 
@@ -665,18 +665,17 @@ def addin_dubbed_video_mappings(node_data, lang=en_lang_code):
         main()
 
     # Get the list of video ids from dubbed video mappings
-    lang_code = get_lang_name(lang).lower()
+    lang_name = get_lang_name(lang).lower()
     dubbed_videos_path = os.path.join(build_path, "dubbed_video_mappings.json")
     with open(dubbed_videos_path, 'r') as f:
         dubbed_videos_load = ujson.load(f)
 
-    dubbed_videos_list = dubbed_videos_load.get(lang_code)
+    dubbed_videos_list = dubbed_videos_load.get(lang_name)
     # If dubbed_videos_list is None It means that the language code is not available in dubbed video mappings.
-
     if not dubbed_videos_list:
-        # Look up for the native lang code name if the get_lang_name is null.
-        lang_code = get_lang_native_name(lang).lower()
-        dubbed_videos_list = dubbed_videos_load.get(lang_code)
+        # Look up for the native name if the get_lang_name is null.
+        lang_native_name = get_lang_native_name(lang).lower()
+        dubbed_videos_list = dubbed_videos_load.get(lang_native_name)
 
     if not dubbed_videos_list:
         return node_data
@@ -687,7 +686,8 @@ def addin_dubbed_video_mappings(node_data, lang=en_lang_code):
     for node in node_data:
         node_kind = node.get("kind")
         if node_kind == NodeType.video:
-            youtube_ids.append(node.get("youtube_id"))
+            if node["translated_youtube_lang"] == lang:
+                youtube_ids.append(node.get("youtube_id"))
         if node_kind == NodeType.topic:
             topic_path_list.append(node.get("path"))
 
@@ -695,7 +695,7 @@ def addin_dubbed_video_mappings(node_data, lang=en_lang_code):
     with open(en_nodes_path, 'r') as f:
         en_node_load = ujson.load(f)
 
-    en_node_list = []
+    translated_node_list = []
     # The en_nodes.json must be the same data structure to node_data variable from khan api.
     for node in en_node_load:
         node_kind = node.get("kind")
@@ -703,7 +703,7 @@ def addin_dubbed_video_mappings(node_data, lang=en_lang_code):
 
         if (node_kind == NodeType.topic):
             if not node["path"] in topic_path_list:
-                en_node_list.append(node)
+                translated_node_list.append(node)
                 topic_path_list.append(node["path"])
 
         if (node_kind == NodeType.video):
@@ -712,10 +712,10 @@ def addin_dubbed_video_mappings(node_data, lang=en_lang_code):
                 if youtube_id in dubbed_videos_list:
                     node["youtube_id"] = dubbed_videos_list[youtube_id]
                     node["translated_youtube_lang"] = lang
-                    en_node_list.append(node)
+                    translated_node_list.append(node)
                     youtube_ids.append(youtube_id)
 
-    node_data += en_node_list
+    node_data += translated_node_list
     return node_data
 
 
