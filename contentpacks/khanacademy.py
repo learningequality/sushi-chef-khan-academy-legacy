@@ -66,7 +66,7 @@ def retrieve_language_resources(version: str, sublangargs: dict, ka_domain: str,
 
     # retrieve KA Lite po files from CrowdIn
     interface_lang = sublangargs["interface_lang"]
-    if interface_lang == "en":
+    if interface_lang == EN_LANG_CODE:
         kalite_catalog = Catalog()
         ka_catalog = Catalog()
     else:
@@ -107,7 +107,7 @@ def retrieve_subtitle_meta_data(url, path):
         f.write(amara_id)
 
 
-def retrieve_subtitles(videos: list, lang="en", force=False, threads=NUM_PROCESSES) -> dict:
+def retrieve_subtitles(videos: list, lang=EN_LANG_CODE, force=False, threads=NUM_PROCESSES) -> dict:
     # videos => contains list of youtube ids
     """return list of youtubeids that were downloaded"""
     lang = lang.lower()         # Amara likes lowercase codes
@@ -141,7 +141,7 @@ def retrieve_subtitles(videos: list, lang="en", force=False, threads=NUM_PROCESS
     return subtitle_data
 
 
-def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="en", force=False,
+def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code=EN_LANG_CODE, force=False,
                           includes="*.po") -> Catalog:
     request_url_template = ("https://api.crowdin.com/api/"
                             "project/{project_id}/download/"
@@ -270,7 +270,7 @@ id_key = {
 }
 
 
-def modify_ids(nodes, lang="en") -> list:
+def modify_ids(nodes, lang=EN_LANG_CODE) -> list:
     logging.debug("Modifying the ids of the nodes")
     node_video_id_mappings = get_video_id_english_mappings(lang)
     for node in nodes:
@@ -284,7 +284,7 @@ def modify_ids(nodes, lang="en") -> list:
 
 
 def get_video_id_english_mappings(lang):
-    if lang == "en":
+    if lang == EN_LANG_CODE:
         mapping = {}
     else:
         logging.info("Creating mapping for nodes"
@@ -431,7 +431,7 @@ def retrieve_exercise_dict(lang=None, force=False) -> str:
 
 
 @cache_file
-def download_and_clean_kalite_data(url, path, lang="en") -> str:
+def download_and_clean_kalite_data(url, path, lang=EN_LANG_CODE) -> str:
     attempts = 1
     while attempts < 100:
         data = requests.get(url)
@@ -483,7 +483,7 @@ def download_and_clean_kalite_data(url, path, lang="en") -> str:
         node["basepoints"] = ceil(7 * log(max(exp(5. / 7), seconds_per_fast_problem)))
 
         # if not english, prepend language code to file_name attribute of the exercise node
-        if lang != "en" and not node["uses_assessment_items"]:
+        if lang != EN_LANG_CODE and not node["uses_assessment_items"]:
             node["file_name"] = os.path.join(lang, node["file_name"])
 
     # Flatten node_data
@@ -516,7 +516,9 @@ def download_and_clean_kalite_data(url, path, lang="en") -> str:
         ujson.dump(node_data, f)
 
 
-topic_attributes = [
+EN_LANG_CODE = "en"
+
+TOPIC_ATTRIBUTES = [
     'childData',
     'deleted',
     'description',
@@ -528,7 +530,7 @@ topic_attributes = [
     'title'
 ]
 
-exercise_attributes = [
+EXERCISE_ATTRIBUTES = [
     'allAssessmentItems',
     'curatedRelatedVideos',
     'description',
@@ -543,7 +545,7 @@ exercise_attributes = [
     'usesAssessmentItems'
 ]
 
-video_attributes = [
+VIDEO_ATTRIBUTES = [
     'description',
     'downloadSize',
     'duration',
@@ -562,103 +564,78 @@ video_attributes = [
     'youtubeId'
 ]
 
-en_lang_code = "en"
+PROJECTION_KEYS = OrderedDict([
+    ("topics", [OrderedDict((key, 1) for key in TOPIC_ATTRIBUTES)]),
+    ("exercises", [OrderedDict((key, 1) for key in EXERCISE_ATTRIBUTES)]),
+    ("videos", [OrderedDict((key, 1) for key in VIDEO_ATTRIBUTES)])
+])
+
+API_URL = "http://{ka_domain}/api/v2/topics/topictree?lang={lang}&projection={PROJECTION_KEYS}"
+KA_DOMAIN = "www.khanacademy.org"
 
 
-def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubbed_videos=False) -> list:
+def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no_dubbed_videos=False) -> list:
     """
     Retrieve the KA content data direct from KA.
     Note: use the same language code in the video, topic and exercises node data to prevent issues.
     """
 
-    if not ka_domain:
-        ka_domain = "www.khanacademy.org"
-
-    lang_url = "http://{ka_domain}/api/v2/topics/topictree?lang={lang}&projection={projection}"
-
-    projection = OrderedDict([
-        ("topics", [OrderedDict((key, 1) for key in topic_attributes)]),
-        ("exercises", [OrderedDict((key, 1) for key in exercise_attributes)]),
-        ("videos", [OrderedDict((key, 1) for key in video_attributes)])
-    ])
-
-    url = lang_url.format(projection=json.dumps(projection), lang=lang, ka_domain=ka_domain)
-    node_data_path = download_and_clean_kalite_data(url, lang=lang, ignorecache=force, filename="nodes.json")
-
-    with open(node_data_path, 'r') as f:
-        node_data = ujson.load(f)
-
-    # Create a list of projections to determine what is the current node data return from khan api.
-    youtube_ids = []
+    node_data = []
     topic_title_list = []
     exercise_ids = []
-    for node in node_data:
-        node_kind = node.get("kind")
-        if node_kind == NodeType.video:
-            if node["translated_youtube_lang"] == lang:
-                youtube_ids.append(node.get("youtube_id"))
-        if node_kind == NodeType.topic:
-            topic_title_list.append(node.get("title"))
-        if node_kind == NodeType.exercise:
-            exercise_ids.append(node.get("id"))
+    youtube_ids = []
 
     """
-    We must check if the language code we specify has the same
-        language name But different language code using get_lang_code_list function.
+    Get all possible language codes for the language because one language may have multiple language codes or names.  
+
+    Example 1: Swahili language { 
+                "sw":{ "name":"Swahili", "native_name":"Kiswahili" },
+                "swa":{ "name":"Swahili", "native_name":"Kiswahili" },
+            }
+
+    Example 2: Somali language {
+                "som":{ "name":"Somali", "native_name":"Soomaaliga" },
+                "so":{ "name":"Somali", "native_name":"Soomaaliga, af Soomaali" },
+            }
     """
-    lang_code_list = get_lang_code_list(lang)
-    if lang_code_list:
-        lang_node_list = []
 
-        """
-        Loop the lang_code_list variable to get each language code, and used 
-            it to get another node data form khan api.
-        """
-        for lang_code in lang_code_list:
-            if not lang_code == lang:
-                url = lang_url.format(projection=json.dumps(projection), lang=lang_code, ka_domain=ka_domain)
-                node_data_path = download_and_clean_kalite_data(url, lang=lang_code, ignorecache=force, filename="nodes.json")
-                with open(node_data_path, 'r') as f:
-                    node_data_temp = ujson.load(f)
+    # MUST: Get all possible language codes for the language.
+    lang_codes = get_lang_code_list(lang)
 
-                if node_data_temp:
-                    for node_temp in node_data_temp:
-                        node_kind = node_temp.get("kind")
-                        if (node_kind == NodeType.topic):
-                            if not node_temp["title"] in topic_title_list:
-                                lang_node_list.append(node_temp)
-                                topic_title_list.append(node_temp["title"])
-                        if (node_kind == NodeType.exercise):
-                            if not node_temp["id"] in exercise_ids:
-                                lang_node_list.append(node_temp)    
-                                exercise_ids.append(node_temp["id"])
-                        if (node_kind == NodeType.video):
-                            # Override the translated_youtube_lang language code to use the same language code.
-                            if not node_temp["youtube_id"] in youtube_ids:
-                                if node_temp["translated_youtube_lang"] == lang:
-                                    lang_node_list.append(node_temp)
-                                    youtube_ids.append(node_temp["youtube_id"])
-        if lang_node_list:
-            # Append the lang_node_list to merge it in current node data.
-            node_data += lang_node_list
+    # Loop-thru all lang codes and populate the topic, exercise, video lists while checking for duplicates.
+    for lang_code in lang_codes:
+        url = API_URL.format(projection=json.dumps(PROJECTION_KEYS), lang=lang_code, ka_domain=ka_domain)
+        node_data_path = download_and_clean_kalite_data(url, lang=lang_code, ignorecache=force, filename="nodes.json")
+        with open(node_data_path, 'r') as f:
+            node_data_temp = ujson.load(f)
 
-    if not lang == en_lang_code and not no_dubbed_videos:
-        # Generate en_nodes.json json this will be used in dubbed video mappings.
-        # This will cache en_nodes.json
-        url = lang_url.format(projection=json.dumps(projection), lang=en_lang_code, ka_domain=ka_domain)
-        download_and_clean_kalite_data(url, lang=en_lang_code, ignorecache=False, filename="en_nodes.json")
+        for node_temp in node_data_temp:
+            node_kind = node_temp.get("kind")
+            if (node_kind == NodeType.topic):
+                if not node_temp["title"] in topic_title_list:
+                    topic_title_list.append(node_temp["title"])
+                    node_data.append(node_temp)
+            if (node_kind == NodeType.exercise):
+                if not node_temp["id"] in exercise_ids:
+                    exercise_ids.append(node_temp["id"])
+                    node_data.append(node_temp)    
+            if (node_kind == NodeType.video):
+                if not node_temp["youtube_id"] in youtube_ids:
+                    if node_temp["translated_youtube_lang"] == lang:
+                        youtube_ids.append(node_temp["youtube_id"])
+                        node_data.append(node_temp)
 
+    if not lang == EN_LANG_CODE and not no_dubbed_videos:
         node_data = add_dubbed_video_mappings(node_data, lang)
     return node_data
 
 
-def add_dubbed_video_mappings(node_data, lang=en_lang_code):
+def add_dubbed_video_mappings(node_data, lang=EN_LANG_CODE):
     # Get the dubbed videos from the spreadsheet and substitute them
     # for the video, and topic attributes of the returned data struct.
 
-    build_path = os.path.join(os.getcwd(), "build")
-
     # Create a dubbed_video_mappings.json, at build folder.
+    build_path = os.path.join(os.getcwd(), "build")
     if os.path.exists(os.path.join(build_path, "dubbed_video_mappings.json")):
         logging.info('Dubbed videos json already exist at %s' % (DUBBED_VIDEOS_MAPPING_FILEPATH))
     else:
@@ -691,6 +668,9 @@ def add_dubbed_video_mappings(node_data, lang=en_lang_code):
         if node_kind == NodeType.topic:
             topic_path_list.append(node.get("path"))
 
+    # Generate and cache `en_nodes.json` for dubbed video mappings.
+    url = API_URL.format(projection=json.dumps(PROJECTION_KEYS), lang=EN_LANG_CODE, ka_domain=KA_DOMAIN)
+    download_and_clean_kalite_data(url, lang=EN_LANG_CODE, ignorecache=False, filename="en_nodes.json")
     en_nodes_path = os.path.join(build_path, "en_nodes.json")
     with open(en_nodes_path, 'r') as f:
         en_node_load = ujson.load(f)
@@ -1012,7 +992,7 @@ def get_content_length(content):
 
 def apply_dubbed_video_map(content_data: list, subtitles: list, lang: str) -> (list, int):
 
-    if lang != "en":
+    if lang != EN_LANG_CODE:
 
         dubbed_content = []
 
@@ -1045,7 +1025,7 @@ def retrieve_html_exercises(exercises: [str], lang: str, force=False) -> (str, [
     and the second element a list of exercise ids that have html exercises.
     """
     BUILD_DIR = os.path.join(os.getcwd(), "build", lang)
-    EN_BUILD_DIR = os.path.join(os.getcwd(), "build", "en")
+    EN_BUILD_DIR = os.path.join(os.getcwd(), "build", EN_LANG_CODE)
     EXERCISE_DOWNLOAD_URL_TEMPLATE = ("https://es.khanacademy.org/"
                                       "khan-exercises/exercises/{id}.html?lang={lang}")
 
@@ -1055,7 +1035,7 @@ def retrieve_html_exercises(exercises: [str], lang: str, force=False) -> (str, [
         downloaded url from the selected language is different from the english version.
         """
         lang_url = EXERCISE_DOWNLOAD_URL_TEMPLATE.format(id=exercise_id, lang=lang)
-        en_url = EXERCISE_DOWNLOAD_URL_TEMPLATE.format(id=exercise_id, lang="en")
+        en_url = EXERCISE_DOWNLOAD_URL_TEMPLATE.format(id=exercise_id, lang=EN_LANG_CODE)
         try:
             lang_file = download_and_cache_file(lang_url, cachedir=BUILD_DIR, ignorecache=force)
             en_file = download_and_cache_file(en_url, cachedir=EN_BUILD_DIR, ignorecache=force)
