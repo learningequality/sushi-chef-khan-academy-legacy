@@ -34,6 +34,61 @@ EN_LANG_CODE = "en"
 
 NUM_PROCESSES = 5
 
+TOPIC_ATTRIBUTES = [
+    'childData',
+    'deleted',
+    'description',
+    'doNotPublish',
+    'hide',
+    'id',
+    'kind',
+    'slug',
+    'title'
+]
+
+EXERCISE_ATTRIBUTES = [
+    'allAssessmentItems',
+    'curatedRelatedVideos',
+    'description',
+    'displayName',
+    'fileName',
+    'id',
+    'kind',
+    'name',
+    'prerequisites',
+    'slug',
+    'title',
+    'usesAssessmentItems'
+]
+
+VIDEO_ATTRIBUTES = [
+    'description',
+    'downloadSize',
+    'duration',
+    'id',
+    'imageUrl',
+    'keywords',
+    'kind',
+    'licenseName',
+    'readableId',
+    'relatedExerciseUrl',
+    'relativeUrl',
+    'sha',
+    'slug',
+    'title',
+    'translatedYoutubeLang',
+    'youtubeId'
+]
+
+PROJECTION_KEYS = OrderedDict([
+    ("topics", [OrderedDict((key, 1) for key in TOPIC_ATTRIBUTES)]),
+    ("exercises", [OrderedDict((key, 1) for key in EXERCISE_ATTRIBUTES)]),
+    ("videos", [OrderedDict((key, 1) for key in VIDEO_ATTRIBUTES)])
+])
+
+API_URL = "http://{ka_domain}/api/v2/topics/topictree?lang={lang}&projection={projection}"
+KA_DOMAIN = "www.khanacademy.org"
+
 LangpackResources = collections.namedtuple(
     "LangpackResources",
     ["node_data",
@@ -519,62 +574,6 @@ def download_and_clean_kalite_data(url, path, lang=EN_LANG_CODE) -> str:
         ujson.dump(node_data, f)
 
 
-TOPIC_ATTRIBUTES = [
-    'childData',
-    'deleted',
-    'description',
-    'doNotPublish',
-    'hide',
-    'id',
-    'kind',
-    'slug',
-    'title'
-]
-
-EXERCISE_ATTRIBUTES = [
-    'allAssessmentItems',
-    'curatedRelatedVideos',
-    'description',
-    'displayName',
-    'fileName',
-    'id',
-    'kind',
-    'name',
-    'prerequisites',
-    'slug',
-    'title',
-    'usesAssessmentItems'
-]
-
-VIDEO_ATTRIBUTES = [
-    'description',
-    'downloadSize',
-    'duration',
-    'id',
-    'imageUrl',
-    'keywords',
-    'kind',
-    'licenseName',
-    'readableId',
-    'relatedExerciseUrl',
-    'relativeUrl',
-    'sha',
-    'slug',
-    'title',
-    'translatedYoutubeLang',
-    'youtubeId'
-]
-
-PROJECTION_KEYS = OrderedDict([
-    ("topics", [OrderedDict((key, 1) for key in TOPIC_ATTRIBUTES)]),
-    ("exercises", [OrderedDict((key, 1) for key in EXERCISE_ATTRIBUTES)]),
-    ("videos", [OrderedDict((key, 1) for key in VIDEO_ATTRIBUTES)])
-])
-
-API_URL = "http://{ka_domain}/api/v2/topics/topictree?lang={lang}&projection={PROJECTION_KEYS}"
-KA_DOMAIN = "www.khanacademy.org"
-
-
 def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no_dubbed_videos=False) -> list:
     """
     Retrieve the KA content data direct from KA.
@@ -605,7 +604,8 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
 
     # Loop-thru all lang codes and populate the topic, exercise, video lists while checking for duplicates.
     for lang_code in lang_codes:
-        url = API_URL.format(projection=json.dumps(PROJECTION_KEYS), lang=lang_code, ka_domain=ka_domain)
+        projection = json.dumps(PROJECTION_KEYS)
+        url = API_URL.format(projection=projection, lang=lang_code, ka_domain=ka_domain)
         node_data_path = download_and_clean_kalite_data(url, lang=lang_code, ignorecache=force, filename="nodes.json")
         with open(node_data_path, 'r') as f:
             node_data_temp = ujson.load(f)
