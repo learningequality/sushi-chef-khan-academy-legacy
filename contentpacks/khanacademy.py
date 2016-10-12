@@ -29,6 +29,9 @@ from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache
 from contentpacks.models import AssessmentItem
 from contentpacks.generate_dubbed_video_mappings import main, DUBBED_VIDEOS_MAPPING_FILEPATH
 
+
+EN_LANG_CODE = "en"
+
 NUM_PROCESSES = 5
 
 LangpackResources = collections.namedtuple(
@@ -515,8 +518,6 @@ def download_and_clean_kalite_data(url, path, lang=EN_LANG_CODE) -> str:
     with open(path, "w") as f:
         ujson.dump(node_data, f)
 
-
-EN_LANG_CODE = "en"
 
 TOPIC_ATTRIBUTES = [
     'childData',
