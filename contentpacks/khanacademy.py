@@ -603,7 +603,9 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
     lang_codes = get_lang_code_list(lang)
 
     # Loop-thru all lang codes and populate the topic, exercise, video lists while checking for duplicates.
+    logging.info("Found %s language codes for the language %s." % (lang_codes, lang,))
     for lang_code in lang_codes:
+        logging.info("  Processing language code %s..." % lang_code)
         projection = json.dumps(PROJECTION_KEYS)
         url = API_URL.format(projection=projection, lang=lang_code, ka_domain=ka_domain)
         node_data_path = download_and_clean_kalite_data(url, lang=lang_code, ignorecache=force, filename="nodes.json")
