@@ -615,8 +615,8 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
         for node_temp in node_data_temp:
             node_kind = node_temp.get("kind")
             if (node_kind == NodeType.topic):
-                if not node_temp["title"] in topic_title_list:
-                    topic_title_list.append(node_temp["title"])
+                if not node_temp["path"] in topic_title_list:
+                    topic_title_list.append(node_temp["path"])
                     node_data.append(node_temp)
             if (node_kind == NodeType.exercise):
                 if not node_temp["id"] in exercise_ids:
