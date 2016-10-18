@@ -25,7 +25,8 @@ import sys
 from math import ceil, log, exp
 
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file,\
-    is_video_node_dubbed, get_lang_name, NodeType, get_lang_native_name, get_lang_code_list
+    is_video_node_dubbed, get_lang_name, NodeType, get_lang_native_name,\
+    get_lang_ka_name, get_lang_code_list
 from contentpacks.models import AssessmentItem
 from contentpacks.generate_dubbed_video_mappings import main, DUBBED_VIDEOS_MAPPING_FILEPATH
 
@@ -581,7 +582,7 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
     """
 
     node_data = []
-    topic_title_list = []
+    topic_path_list = []
     exercise_ids = []
     youtube_ids = []
 
@@ -611,12 +612,17 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
         node_data_path = download_and_clean_kalite_data(url, lang=lang_code, ignorecache=force, filename="nodes.json")
         with open(node_data_path, 'r') as f:
             node_data_temp = ujson.load(f)
-
+        """
+        Some translated_youtube_lang value return from KHAN API did not match
+            to the specify language code. We need to override it to use the same
+            language code.
+        Example: using pt-BR language code in the khan api will return pt translated_youtube_lang.
+        """
         for node_temp in node_data_temp:
             node_kind = node_temp.get("kind")
             if (node_kind == NodeType.topic):
-                if not node_temp["path"] in topic_title_list:
-                    topic_title_list.append(node_temp["path"])
+                if not node_temp["path"] in topic_path_list:
+                    topic_path_list.append(node_temp["path"])
                     node_data.append(node_temp)
             if (node_kind == NodeType.exercise):
                 if not node_temp["id"] in exercise_ids:
@@ -624,10 +630,13 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
                     node_data.append(node_temp)    
             if (node_kind == NodeType.video):
                 if not node_temp["youtube_id"] in youtube_ids:
-                    if node_temp["translated_youtube_lang"] == lang:
+                    youtube_lang = node_temp["translated_youtube_lang"]
+                    if youtube_lang == lang:
                         youtube_ids.append(node_temp["youtube_id"])
                         node_data.append(node_temp)
-
+                    elif not youtube_lang != EN_LANG_CODE:
+                        node_temp["translated_youtube_lang"] == lang
+                        node_data.append(node_temp)
     if not lang == EN_LANG_CODE and not no_dubbed_videos:
         node_data = add_dubbed_video_mappings(node_data, lang)
     return node_data
@@ -645,12 +654,21 @@ def add_dubbed_video_mappings(node_data, lang=EN_LANG_CODE):
         main()
 
     # Get the list of video ids from dubbed video mappings
-    lang_name = get_lang_name(lang).lower()
     dubbed_videos_path = os.path.join(build_path, "dubbed_video_mappings.json")
     with open(dubbed_videos_path, 'r') as f:
         dubbed_videos_load = ujson.load(f)
 
+    """
+    Dubbed video mappings may use the ka_name, lang_name or native_name as
+        reference to get a dictionary of language videos.
+    """
+    lang_name = get_lang_ka_name(lang).lower()
     dubbed_videos_list = dubbed_videos_load.get(lang_name)
+
+    if not dubbed_videos_list:
+        lang_name = get_lang_name(lang).lower()
+        dubbed_videos_list = dubbed_videos_load.get(lang_name)
+
     # If dubbed_videos_list is None It means that the language code is not available in dubbed video mappings.
     if not dubbed_videos_list:
         # Look up for the native name if the get_lang_name is null.
@@ -660,7 +678,6 @@ def add_dubbed_video_mappings(node_data, lang=EN_LANG_CODE):
     if not dubbed_videos_list:
         return node_data
 
-    # Get the current youtube_ids, and topic_path_list from the khan api node data.
     youtube_ids = []
     topic_path_list = []
     for node in node_data:

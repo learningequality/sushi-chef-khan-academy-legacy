@@ -536,6 +536,15 @@ def get_lang_native_name(lang):
         return "DEBUG"
 
 
+def get_lang_ka_name(lang):
+    try:
+        langlookup = ujson.loads(LANGUAGELOOKUP_DATA)
+        return langlookup[lang]["native_name"]
+    except KeyError:
+        logging.warning("No ka name found for {}. Defaulting to DEBUG.".format(lang))
+        return "DEBUG"
+
+
 def get_lang_code_list(lang):
     """
     Returns a list of language codes that has a similar language name to the specified language code.
