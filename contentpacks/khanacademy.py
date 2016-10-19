@@ -612,12 +612,6 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
         node_data_path = download_and_clean_kalite_data(url, lang=lang_code, ignorecache=force, filename="nodes.json")
         with open(node_data_path, 'r') as f:
             node_data_temp = ujson.load(f)
-        """
-        Some translated_youtube_lang value return from KHAN API did not match
-            to the specify language code. We need to override it to use the same
-            language code.
-        Example: using pt-BR language code in the khan api will return pt translated_youtube_lang.
-        """
         for node_temp in node_data_temp:
             node_kind = node_temp.get("kind")
             if (node_kind == NodeType.topic):
@@ -635,6 +629,12 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
                         youtube_ids.append(node_temp["youtube_id"])
                         node_data.append(node_temp)
                     elif not youtube_lang == EN_LANG_CODE:
+                        """
+                        Some translated_youtube_lang value return from KHAN API did not match
+                            to the specify language code. We need to override it to use the same
+                            language code.
+                        Example: using pt-BR language code in the khan api will return pt translated_youtube_lang.
+                        """
                         node_temp["translated_youtube_lang"] = lang
                         node_data.append(node_temp)
     if not lang == EN_LANG_CODE and not no_dubbed_videos:
