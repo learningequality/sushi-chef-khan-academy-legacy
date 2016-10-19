@@ -517,32 +517,29 @@ def generate_kalite_language_pack_metadata(lang: str, version: str, interface_ca
 
 
 def get_lang_name(lang):
-    langlookup = ujson.loads(LANGUAGELOOKUP_DATA)
-
     try:
+        langlookup = ujson.loads(LANGUAGELOOKUP_DATA)
         return langlookup[lang]["name"]
     except KeyError:
         logging.warning("No name found for {}. Defaulting to DEBUG.".format(lang))
-        return "DEBUG"
+        return ""
 
 
 def get_lang_native_name(lang):
-    langlookup = ujson.loads(LANGUAGELOOKUP_DATA)
-
-    try:
-        return langlookup[lang]["native_name"]
-    except KeyError:
-        logging.warning("No native name found for {}. Defaulting to DEBUG.".format(lang))
-        return "DEBUG"
-
-
-def get_lang_ka_name(lang):
     try:
         langlookup = ujson.loads(LANGUAGELOOKUP_DATA)
         return langlookup[lang]["native_name"]
     except KeyError:
+        logging.warning("No native name found for {}. Defaulting to DEBUG.".format(lang))
+        return ""
+
+def get_lang_ka_name(lang):
+    try:
+        langlookup = ujson.loads(LANGUAGELOOKUP_DATA)
+        return langlookup[lang]["ka_name"]
+    except KeyError:
         logging.warning("No ka name found for {}. Defaulting to DEBUG.".format(lang))
-        return "DEBUG"
+        return ""
 
 
 def get_lang_code_list(lang):
