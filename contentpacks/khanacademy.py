@@ -630,8 +630,8 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
                         node_data.append(node_temp)
                     elif not youtube_lang == EN_LANG_CODE:
                         """
-                        Some translated_youtube_lang value return from KHAN API did not match
-                            to the specify language code. We need to override it to use the same
+                        Some translated_youtube_lang values return from KHAN API did not match
+                            to the specified language code. We need to override it to use the same
                             language code.
                         Example: using pt-BR language code in the khan api will return pt translated_youtube_lang.
                         """
