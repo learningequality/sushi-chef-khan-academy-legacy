@@ -635,6 +635,7 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
                             language code.
                         Example: using pt-BR language code in the khan api will return pt translated_youtube_lang.
                         """
+                        youtube_ids.append(node_temp["youtube_id"])
                         node_temp["translated_youtube_lang"] = lang
                         node_data.append(node_temp)
     if not lang == EN_LANG_CODE and not no_dubbed_videos:
