@@ -634,8 +634,8 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
                     if youtube_lang == lang:
                         youtube_ids.append(node_temp["youtube_id"])
                         node_data.append(node_temp)
-                    elif not youtube_lang != EN_LANG_CODE:
-                        node_temp["translated_youtube_lang"] == lang
+                    elif not youtube_lang == EN_LANG_CODE:
+                        node_temp["translated_youtube_lang"] = lang
                         node_data.append(node_temp)
     if not lang == EN_LANG_CODE and not no_dubbed_videos:
         node_data = add_dubbed_video_mappings(node_data, lang)
