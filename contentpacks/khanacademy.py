@@ -72,7 +72,6 @@ VIDEO_ATTRIBUTES = [
     'kind',
     'licenseName',
     'readableId',
-    'relatedExerciseUrl',
     'relativeUrl',
     'sha',
     'slug',
