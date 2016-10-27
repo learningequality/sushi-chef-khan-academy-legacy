@@ -1054,17 +1054,20 @@ def retrieve_html_exercises(exercises: [str], lang: str, force=False) -> (str, [
         Download an exercise and return its exercise id *if* the
         downloaded url from the selected language is different from the english version.
         """
-        for lang in lang_codes:
-            lang_url = EXERCISE_DOWNLOAD_URL_TEMPLATE.format(id=exercise_id, lang=lang)
-            en_url = EXERCISE_DOWNLOAD_URL_TEMPLATE.format(id=exercise_id, lang=EN_LANG_CODE)
-            try:
-                lang_file = download_and_cache_file(lang_url, cachedir=BUILD_DIR, ignorecache=force)
-                en_file = download_and_cache_file(en_url, cachedir=EN_BUILD_DIR, ignorecache=force)
-                if not filecmp.cmp(lang_file, en_file, shallow=False):
-                    return exercise_id
-            except requests.exceptions.HTTPError as e:
-                logging.warning("Failed to fetch html for exercise {}, exception: {}".format(exercise_id, e))
-                return None
+        try:
+            for lang in lang_codes:
+                lang_url = EXERCISE_DOWNLOAD_URL_TEMPLATE.format(id=exercise_id, lang=lang)
+                en_url = EXERCISE_DOWNLOAD_URL_TEMPLATE.format(id=exercise_id, lang=EN_LANG_CODE)
+                try:
+                    lang_file = download_and_cache_file(lang_url, cachedir=BUILD_DIR, ignorecache=force)
+                    en_file = download_and_cache_file(en_url, cachedir=EN_BUILD_DIR, ignorecache=force)
+                    if not filecmp.cmp(lang_file, en_file, shallow=False):
+                        return exercise_id
+                except requests.exceptions.HTTPError as e:
+                    logging.warning("Failed to fetch html for lang: {}, exercise {}, exception: {}".format(lang, exercise_id, e))
+        except requests.exceptions.HTTPError as e:
+            logging.warning("Failed to fetch exercise for lang_codes: {}, exception: {}".format(lang_codes, e))
+            return None
 
     pool = ThreadPool(processes=NUM_PROCESSES)
     translated_exercises = pool.map(_download_html_exercise, exercises)
