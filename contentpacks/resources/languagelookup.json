@@ -771,9 +771,13 @@
     "name":"Swedish",
     "native_name":"Svenska"
   },
-  "ur-PK":{
+  "sv-FI":{
     "name":"Swedish",
     "native_name":"Svenska"
+  },
+  "ur-PK":{
+    "name":"Urdu",
+    "native_name":"Urdu"
   },
   "zh-CN":{
     "name":"Chinese, Simplified",
