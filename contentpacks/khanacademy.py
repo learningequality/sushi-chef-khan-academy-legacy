@@ -484,7 +484,7 @@ def retrieve_exercise_dict(lang=None, force=False) -> str:
         url = "https://www.khanacademy.org/api/internal/exercises" + ("?lang={lang}".format(lang=lang) if lang else "")
         exercise_data_path = download_exercise_data(url, ignorecache=force, filename="exercises.json")
         with open(exercise_data_path, 'r') as f:
-            exercise_data = ujson.load(f)
+            exercise_data += ujson.load(f)
 
     return {ex.get("id"): ex for ex in exercise_data}
 
