@@ -574,7 +574,7 @@ def get_lang_code_list(lang):
                 lang_code_list.append(obj[0])
         return lang_code_list
     except KeyError:
-        logging.warning("No language code found for {}. Defaulting to an empty list.".format(lang_name))
+        logging.warning("No language code found for {}. Defaulting to an empty list.".format(lang))
         return []
 
 
