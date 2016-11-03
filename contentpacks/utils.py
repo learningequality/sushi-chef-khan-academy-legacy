@@ -521,7 +521,7 @@ def get_lang_name(lang):
         langlookup = ujson.loads(LANGUAGELOOKUP_DATA)
         return langlookup[lang]["name"]
     except KeyError:
-        logging.warning("No name found for {}. Defaulting to DEBUG.".format(lang))
+        logging.warning("No name found for {}. Defaulting to an empty string.".format(lang))
         return ""
 
 
@@ -530,7 +530,7 @@ def get_lang_native_name(lang):
         langlookup = ujson.loads(LANGUAGELOOKUP_DATA)
         return langlookup[lang]["native_name"]
     except KeyError:
-        logging.warning("No native name found for {}. Defaulting to DEBUG.".format(lang))
+        logging.warning("No native name found for {}. Defaulting to an empty string.".format(lang))
         return ""
 
 def get_lang_ka_name(lang):
@@ -538,7 +538,7 @@ def get_lang_ka_name(lang):
         langlookup = ujson.loads(LANGUAGELOOKUP_DATA)
         return langlookup[lang]["ka_name"]
     except KeyError:
-        logging.warning("No ka name found for {}. Defaulting to DEBUG.".format(lang))
+        logging.warning("No ka name found for {}. Defaulting to an empty string.".format(lang))
         return ""
 
 
@@ -572,7 +572,8 @@ def get_lang_code_list(lang):
             name = obj[1]["name"]
             if name == lang_name:
                 lang_code_list.append(obj[0])
-        return lang_code_list
+        # MUST: Return a sorted list to make debugging easier.
+        return sorted(lang_code_list)
     except KeyError:
         logging.warning("No language code found for {}. Defaulting to an empty list.".format(lang))
         return []
