@@ -46,6 +46,7 @@ def make_language_pack(lang, version, sublangargs, filename, ka_domain, no_asses
     all_assessment_data, all_assessment_files = retrieve_all_assessment_item_data(
         no_item_data=no_assessment_items,
         no_item_resources=no_assessment_resources,
+        node_data=node_data,
         lang=lang,
     )
     all_assessment_data = list(remove_assessment_data_with_empty_widgets(all_assessment_data))
