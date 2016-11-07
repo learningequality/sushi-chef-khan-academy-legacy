@@ -707,10 +707,16 @@ def remove_nonexistent_assessment_items_from_exercises(node_data: list, assessme
 
 def remove_exercises_without_assessment_items(node_data):
     # TODO: This function must be refactor to use the yield generators.
+    yotube_ids = []
     new_node_data = []
     for node in node_data:
         if node["kind"] != NodeType.exercise:
-            new_node_data.append(node)
+            if node["kind"] != NodeType.video:
+                new_node_data.append(node)
+            else:
+                if not node["youtube_id"] in yotube_ids:
+                    yotube_ids.append(node["youtube_id"])
+                    new_node_data.append(node)
         else:
             assessment_items = node["all_assessment_items"]
             if assessment_items:
