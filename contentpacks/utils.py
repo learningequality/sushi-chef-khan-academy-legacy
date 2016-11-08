@@ -533,6 +533,7 @@ def get_lang_native_name(lang):
         logging.warning("No native name found for {}. Defaulting to an empty string.".format(lang))
         return ""
 
+
 def get_lang_ka_name(lang):
     try:
         langlookup = ujson.loads(LANGUAGELOOKUP_DATA)
@@ -705,22 +706,26 @@ def remove_nonexistent_assessment_items_from_exercises(node_data: list, assessme
                 import pdb; pdb.set_trace()
                 print(1)
 
-def remove_exercises_without_assessment_items(node_data):
-    # TODO: This function must be refactor to use the yield generators.
-    # TODO: Create another function to remove duplicate youtubeIds in node data.
-    yotube_ids = []
+
+def clean_node_data_items(node_data):
+    # TODO: This function must be refactored to use the yield generators.
+    """
+    This function does the following:
+        - Remove exercises without assessment items in node_data.
+        - Remove videos with duplicate youtubeIds in node_data.
+    """
+    youtube_ids = []
     new_node_data = []
     for node in node_data:
-        if node["kind"] == NodeType.exercise:
-            assessment_items = node["all_assessment_items"]
-            if assessment_items:
+        kind = node.get("kind")
+        if kind == NodeType.exercise:
+            if node.get("all_assessment_items"):
                 new_node_data.append(node)
-        else: 
-            # Remove duplicate yotubeIds in node data.
-            if node["kind"] == NodeType.video:
-                if not node["youtube_id"] in yotube_ids:
-                    yotube_ids.append(node["youtube_id"])
-                    new_node_data.append(node)
-            else:
+        elif kind == NodeType.video:
+            youtube_id = node.get("youtube_id")
+            if youtube_id not in youtube_ids:
+                youtube_ids.append(youtube_id)
                 new_node_data.append(node)
+        else:
+            new_node_data.append(node)
     return new_node_data
