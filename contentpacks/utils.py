@@ -708,8 +708,9 @@ def remove_nonexistent_assessment_items_from_exercises(node_data: list, assessme
 
 
 def clean_node_data_items(node_data):
-    # TODO: This function must be refactored to use the yield generators.
     """
+    TODO(mrpau-richard): This function must be refactored to use the yield generators.
+
     This function does the following:
         - Remove exercises without assessment items in node_data.
         - Remove videos with duplicate youtubeIds in node_data.
