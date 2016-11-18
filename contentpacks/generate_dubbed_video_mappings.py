@@ -1,4 +1,3 @@
-
 import csv
 import errno
 import getopt
@@ -7,13 +6,14 @@ import logging
 import os
 import requests
 import sys
+import time
 import urllib
 
 from io import StringIO
 
 
 PROJECT_PATH = os.path.join(os.getcwd())
-CACHE_FILEPATH = os.path.join(PROJECT_PATH, "build", "csv", 'khan_dubbed_videos.csv')
+CACHE_FILEPATH = os.path.join(PROJECT_PATH, "build", "csv", 'dubbed_videos.csv')
 DUBBED_VIDEOS_MAPPING_FILEPATH = os.path.join(PROJECT_PATH, "build",  "dubbed_video_mappings.json")
 
 logging.getLogger().setLevel(logging.INFO)
@@ -35,7 +35,7 @@ def ensure_dir(path):
             raise
 
 
-def download_ka_dubbed_video_csv(download_url=None, cache_filepath=None):
+def download_ka_dubbed_video_csv(download_url=None, is_khan_csv=False, cache_filepath=None):
 
     """
     Function to do the heavy lifting in getting the dubbed videos map.
@@ -43,17 +43,19 @@ def download_ka_dubbed_video_csv(download_url=None, cache_filepath=None):
     """
     # Get the redirect url
     if not download_url:
-        logging.info("Getting spreadsheet location from Khan Academy")
-        khan_url = "http://www.khanacademy.org/r/translationmapping"
+        csv_url = "http://learningequality.org/r/translationmapping"
+        if is_khan_csv:
+            csv_url = "http://www.khanacademy.org/r/translationmapping"
+        logging.info("Getting spreadsheet location from (%s)" % csv_url)
         try:
-            download_url = urllib.request.urlopen(khan_url).geturl()
+            download_url = urllib.request.urlopen(csv_url).geturl()
             if "docs.google.com" not in download_url:
                 logging.warn("Redirect location no longer in Google docs (%s)" % download_url)
             else:
                 download_url = download_url.replace("/edit", "/export?format=csv")
         except:
             # TODO: have django email admins when we hit this exception
-            raise Exception("Expected redirect response from Khan Academy redirect url.")
+            raise Exception("Expected redirect response from (%s)" % csv_url)
 
     logging.info("Downloading dubbed video data from %s" % download_url)
 
@@ -61,7 +63,7 @@ def download_ka_dubbed_video_csv(download_url=None, cache_filepath=None):
     attempts = 1
     while data.status_code != 200 and attempts <= 100:
         time.sleep(30)
-        data = requests.get(url)
+        data = requests.get(download_url)
         attempts += 1
 
     if data.status_code != 200:
@@ -86,6 +88,7 @@ def generate_dubbed_video_mappings_from_csv(csv_data=None):
     logging.info("Parsing csv file.")
     reader = csv.reader(StringIO(csv_data))
     video_map = {}
+    header_row = []
 
     # Loop through each row in the spreadsheet.
     for row in reader:
