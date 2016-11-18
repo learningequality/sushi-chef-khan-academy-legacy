@@ -4,10 +4,10 @@ import getopt
 import json
 import logging
 import os
-import urllib
 import requests
 import sys
 import time
+import urllib
 
 from io import StringIO
 
@@ -63,7 +63,7 @@ def download_ka_dubbed_video_csv(download_url=None, is_khan_csv=False, cache_fil
     attempts = 1
     while data.status_code != 200 and attempts <= 100:
         time.sleep(30)
-        data = requests.get(csv_url)
+        data = requests.get(download_url)
         attempts += 1
 
     if data.status_code != 200:
