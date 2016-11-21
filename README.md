@@ -1,5 +1,5 @@
-Learning Equality Content pack maker
-=================================
+Learning Equality Sushi Chef
+============================
 
 Requirements:
 -------
@@ -8,20 +8,18 @@ Requirements:
 To start development:
 -------
 
-#### Create a virtual environment “content-pack” that you will work in:
+#### Create a virtual environment “sushi-chef” that you will work in:
 
 - > `sudo pip install virtualenvwrapper`
-- > `mkvirtualenv content-pack`
-- > `workon content-pack`
+- > `mkvirtualenv sushi-chef`
+- > `workon sushi-chef`
 
 #### Install additional development tools:
 
 - > pip install -r requirements.txt
 - > pip install -r requirements_dev.txt
+- > pip install ricecooker
 
-#### To create language packs:
+#### To run sushi chef:
 
-- Run `make langpacks` from the project root directory.
-- Language packs located at `/out/langpacks/*.zip`
-
-To run all tests, do a `py.test` from the project's root directory.
+- > python -m ricecooker uploadchannel ka_sushi_chef.py --token={t} lang={lang_code}
