@@ -65,3 +65,5 @@ venv
 makecontentpacks
 out/
 /all_metadata.json
+
+restore/

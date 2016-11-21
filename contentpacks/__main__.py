@@ -29,6 +29,7 @@ from contentpacks.utils import translate_nodes, \
     clean_node_data_items
 
 import logging
+import pickle
 
 
 def make_language_pack(lang, version, sublangargs, filename, ka_domain, no_assessment_items, no_subtitles, no_assessment_resources, no_dubbed_videos):
@@ -57,12 +58,14 @@ def make_language_pack(lang, version, sublangargs, filename, ka_domain, no_asses
     assessment_data = list(translate_assessment_item_text(all_assessment_data, content_catalog)) if lang != "en" else all_assessment_data
 
     node_data = remove_untranslated_exercises(node_data, translated_html_exercise_ids, assessment_data) if lang != "en" else node_data
+    node_data = list(node_data)
+    node_data.reverse()
 
-    pack_metadata = generate_kalite_language_pack_metadata(lang, version, interface_catalog, content_catalog, subtitles,
-                                                           dubbed_video_count)
+    with open('node_data_{0}.pickle'.format(lang), 'wb') as handle:
+        pickle.dump(node_data, handle)
 
-    bundle_language_pack(str(filename), node_data, interface_catalog, interface_catalog,
-                         pack_metadata, assessment_data, all_assessment_files, subtitle_paths, html_exercise_path)
+    with open('assessment_data_{0}.pickle'.format(lang), 'wb') as handle:
+        pickle.dump(assessment_data, handle)
 
 
 def normalize_sublang_args(args):
