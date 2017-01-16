@@ -910,7 +910,7 @@ def retrieve_assessment_item_data(assessment_item, lang=None, force=False, no_it
     item_data = localize_graphie_urls(item_data)
 
     # Validate assessment item content.
-    for k, v in yaml.load(item_data["item_data"]).items():
+    for k, v in ujson.loads(item_data["item_data"]).items():
         if k == "question":
             if not v.get("content"):
                 logging.info("Found empty assessment content from KA's API {assessment_item}".format(assessment_item=assessment_item))
