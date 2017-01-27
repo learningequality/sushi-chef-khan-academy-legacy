@@ -1,5 +1,6 @@
-from ricecooker.classes.nodes import (Channel, Exercise, Video, Topic)
+from ricecooker.classes.nodes import (ChannelNode, ExerciseNode, VideoNode, TopicNode)
 from ricecooker.classes.questions import PerseusQuestion
+from ricecooker.classes.files import VideoFile
 import subprocess
 import re
 import os
@@ -26,14 +27,7 @@ def _getNode(paths, tree):
             return None
 
 
-Channel._getNode = _getNode
-
-
-# temporary fix to get nodes in the correct order
-def reverse_children(tree):
-    tree.children = tree.children[::-1]
-    for child in tree.children:
-        reverse_children(child)
+ChannelNode._getNode = _getNode
 
 
 def construct_channel(**kwargs):
@@ -53,17 +47,17 @@ def construct_channel(**kwargs):
         assessment_dict[item['id']] = item
 
     tree = _build_tree(node_data, assessment_dict, lang)
-    reverse_children(tree)
 
     return tree
 
 
 def _build_tree(node_data, assessment_dict, lang_code):
 
-    channel = Channel(
-        domain="khanacademy.org",
-        channel_id="abc123",
+    channel = ChannelNode(
+        source_id="KA ({0})".format(lang_code),
+        source_domain="khanacademy.org",
         title="Khan Academy ({0})".format(lang_code),
+        description='Khan Academy content for the {0} language.'.format(lang_code),
         thumbnail="https://cdn.kastatic.org/images/khan-logo-vertical-transparent.png",
     )
     channel.path = 'khan'
@@ -84,11 +78,11 @@ def create_node(node, assessment_dict):
 
     kind = node.get('kind')
     # Exercise node creation
-    if kind == 'Exercise':
-        child_node = Exercise(
-            id=node['id'],
+    if kind == 'Exercise':  # All rights reserved
+        child_node = ExerciseNode(
+            source_id=node['id'],
             title=node['title'],
-            description=node.get('description')[:400]
+            description='' if node.get("description") is None else node.get("description", '')[:400]
         )
         # attach Perseus questions to Exercises
         for item in node['all_assessment_items']:
@@ -104,21 +98,21 @@ def create_node(node, assessment_dict):
 
     # Topic node creation
     elif kind == 'Topic':
-        child_node = Topic(
-            id=node["id"],
+        child_node = TopicNode(
+            source_id=node["id"],
             title=node["title"],
-            description=node.get("description")[:400]
+            description='' if node.get("description") is None else node.get("description", '')[:400]
         )
 
     # Video node creation
     elif kind == 'Video':
         # standard download url for KA videos
         download_url = "https://cdn.kastatic.org/KA-youtube-converted/{0}.mp4/{1}.mp4".format(node['youtube_id'], node['youtube_id'])
-        child_node = Video(
-            id=node["id"],
+        child_node = VideoNode(
+            source_id=node["id"],
             title=node["title"],
-            description=node.get("description")[:400],
-            files=download_url,
+            description='' if node.get("description") is None else node.get("description", '')[:400],
+            files=[VideoFile(download_url)],
             thumbnail=node.get('image_url')
         )
 

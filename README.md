@@ -16,10 +16,10 @@ To start development:
 
 #### Install additional development tools:
 
-- > pip install -r requirements.txt
-- > pip install -r requirements_dev.txt
-- > pip install ricecooker
+- > `pip install -r requirements.txt`
+- > `pip install -r requirements_dev.txt`
+- > `pip install ricecooker`
 
 #### To run sushi chef:
 
-- > python -m ricecooker uploadchannel ka_sushi_chef.py --token={t} lang={lang_code}
+- > `python -m ricecooker uploadchannel ka_sushi_chef.py -v --compress --token={t} lang={lang_code}`

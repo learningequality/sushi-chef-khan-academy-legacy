@@ -59,7 +59,7 @@ def make_language_pack(lang, version, sublangargs, filename, ka_domain, no_asses
 
     node_data = remove_untranslated_exercises(node_data, translated_html_exercise_ids, assessment_data) if lang != "en" else node_data
     node_data = list(node_data)
-    node_data.reverse()
+    node_data = sorted(node_data, key=lambda x: x.get('sort_order'))
 
     with open('node_data_{0}.pickle'.format(lang), 'wb') as handle:
         pickle.dump(node_data, handle)
