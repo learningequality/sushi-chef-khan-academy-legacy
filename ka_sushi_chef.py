@@ -1,3 +1,4 @@
+from le_utils.constants import licenses
 from ricecooker.classes.nodes import (ChannelNode, ExerciseNode, VideoNode, TopicNode)
 from ricecooker.classes.questions import PerseusQuestion
 from ricecooker.classes.files import VideoFile
@@ -82,8 +83,12 @@ def create_node(node, assessment_dict):
         child_node = ExerciseNode(
             source_id=node['id'],
             title=node['title'],
-            description='' if node.get("description") is None else node.get("description", '')[:400]
+            description='' if node.get("description") is None else node.get("description", '')[:400],
+            license=licenses.CC_BY_NC_SA
         )
+        path = 'https://www.khanacademy.org' + node.get('path').strip('khan')
+        slug = path.split('/')[-2]
+        path = path.replace(slug, 'e') + slug
         # attach Perseus questions to Exercises
         for item in node['all_assessment_items']:
             for match in re.finditer(FILE_URL_REGEX, assessment_dict[item['id']]["item_data"]):
@@ -92,7 +97,8 @@ def create_node(node, assessment_dict):
                 assessment_dict[item['id']]["item_data"] = re.sub(FILE_URL_REGEX, file_path, assessment_dict[item['id']]["item_data"], 1)
             question = PerseusQuestion(
                 id=item['id'],
-                raw_data=assessment_dict[item['id']]['item_data']
+                raw_data=assessment_dict[item['id']]['item_data'],
+                source_url=path
             )
             child_node.add_question(question)
 
@@ -113,7 +119,8 @@ def create_node(node, assessment_dict):
             title=node["title"],
             description='' if node.get("description") is None else node.get("description", '')[:400],
             files=[VideoFile(download_url)],
-            thumbnail=node.get('image_url')
+            thumbnail=node.get('image_url'),
+            license=licenses.CC_BY_NC_SA
         )
 
     else:  # unknown content file format
