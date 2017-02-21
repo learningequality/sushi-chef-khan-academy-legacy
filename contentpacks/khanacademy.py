@@ -60,7 +60,9 @@ EXERCISE_ATTRIBUTES = [
     'prerequisites',
     'slug',
     'title',
-    'usesAssessmentItems'
+    'usesAssessmentItems',
+    'suggested_completion_criteria',
+    'image_url_256',
 ]
 
 VIDEO_ATTRIBUTES = [

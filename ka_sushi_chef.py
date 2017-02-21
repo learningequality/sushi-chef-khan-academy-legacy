@@ -1,4 +1,4 @@
-from le_utils.constants import licenses
+from le_utils.constants import licenses, exercises
 from ricecooker.classes.nodes import (ChannelNode, ExerciseNode, VideoNode, TopicNode)
 from ricecooker.classes.questions import PerseusQuestion
 from ricecooker.classes.files import VideoFile
@@ -83,8 +83,10 @@ def create_node(node, assessment_dict):
         child_node = ExerciseNode(
             source_id=node['id'],
             title=node['title'],
+            exercise_data={'mastery_model': node.get('suggested_completion_criteria')},
             description='' if node.get("description") is None else node.get("description", '')[:400],
-            license=licenses.CC_BY_NC_SA
+            license=licenses.CC_BY_NC_SA,
+            thumbnail=node.get('image_url_256'),
         )
         path = 'https://www.khanacademy.org' + node.get('path').strip('khan')
         slug = path.split('/')[-2]
@@ -113,7 +115,7 @@ def create_node(node, assessment_dict):
     # Video node creation
     elif kind == 'Video':
         # standard download url for KA videos
-        download_url = "https://cdn.kastatic.org/KA-youtube-converted/{0}.mp4/{1}.mp4".format(node['youtube_id'], node['youtube_id'])
+        download_url = "https://cdn.kastatic.org/KA-youtube-converted/{0}.mp4/{1}.mp4".format(node['youtube_id'].split('=')[-1], node['youtube_id'].split('=')[-1])
         child_node = VideoNode(
             source_id=node["id"],
             title=node["title"],
