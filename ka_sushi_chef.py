@@ -1,4 +1,4 @@
-from le_utils.constants import licenses, exercises
+from le_utils.constants import licenses
 from ricecooker.classes.nodes import (ChannelNode, ExerciseNode, VideoNode, TopicNode)
 from ricecooker.classes.questions import PerseusQuestion
 from ricecooker.classes.files import VideoFile, SubtitleFile
@@ -12,8 +12,6 @@ FILE_URL_REGEX = re.compile('[\\\]*/content[\\\]*/assessment[\\\]*/khan[\\\]*/(?
 REPLACE_STRING = "/content/assessment/khan"
 cwd = os.getcwd()
 IMAGE_DL_LOCATION = 'file://' + cwd + '/build'
-SUBTITLE_PATH = cwd + '/build/subtitles'
-vtt_videos = []
 
 
 # recursive function to traverse tree and return parent node
@@ -29,9 +27,6 @@ def _getNode(paths, tree):
                     return parent
         else:  # we are not going down right path so drop out
             return None
-
-
-ChannelNode._getNode = _getNode
 
 
 def construct_channel(**kwargs):
@@ -64,21 +59,21 @@ def _build_tree(node_data, assessment_dict, lang_code):
         description='Khan Academy content for the {0} language.'.format(lang_code),
         thumbnail="https://cdn.kastatic.org/images/khan-logo-vertical-transparent.png",
     )
-    channel.path = 'khan'
-    node_data.pop(0)
-    global SUBTITLE_PATH
-    global vtt_videos
-    SUBTITLE_PATH += '/{}'.format(lang_code)
-    if os.path.exists(SUBTITLE_PATH):
-        for vtt in os.listdir(SUBTITLE_PATH):
+
+    # create subtitle path based on lang and look for vtt files in that directory
+    subtitle_path = cwd + '/build/subtitles/{}'.format(lang_code)
+    vtt_videos = []
+    if os.path.exists(subtitle_path):
+        for vtt in os.listdir(subtitle_path):
             vtt_videos += vtt.split('.vtt')[0]
 
-    # recall KA api for exercises to add in exercise thumbnails and mastery models
-    ka_exercises = requests.get('http://www.khanacademy.org/api/v1/exercises')
+    # recall KA api for exercises dict
+    ka_exercises = requests.get('http://www.khanacademy.org/api/v1/exercises').json()
     mapping = {}
     for item in ka_exercises:
         mapping[item['node_slug'].split('/')[-1]] = item
 
+    # adds mastery models and exercise thumbnails
     for idx in range(len(node_data)):
         if node_data[idx].get('kind') == 'Exercise':
             if node_data[idx].get('id') in mapping:
@@ -87,11 +82,14 @@ def _build_tree(node_data, assessment_dict, lang_code):
                 copy['suggested_completion_criteria'] = mapping[node_data[idx].get('id')]['suggested_completion_criteria']
                 node_data[idx] = copy
 
+    channel.path = 'khan'
+    node_data.pop(0)
+
     for node in node_data:
         paths = node['path'].split('/')[:-1]
         # recurse tree structure based on paths of node
         parent = _getNode(paths, channel)
-        child_node = create_node(node, assessment_dict)  # create node based on kinds
+        child_node = create_node(node, assessment_dict, subtitle_path, vtt_videos, lang_code)  # create node based on kinds
         if child_node:
             child_node.path = paths[-1]
             parent.add_child(child_node)
@@ -99,7 +97,7 @@ def _build_tree(node_data, assessment_dict, lang_code):
     return channel
 
 
-def create_node(node, assessment_dict):
+def create_node(node, assessment_dict, subtitle_path, vtt_videos, lang_code):
 
     kind = node.get('kind')
     # Exercise node creation
@@ -112,11 +110,17 @@ def create_node(node, assessment_dict):
             license=licenses.CC_BY_NC_SA,
             thumbnail=node.get('image_url_256'),
         )
-        path = 'https://www.khanacademy.org' + node.get('path').strip('khan')
+        # grab path and check if url exists for adding preview to questions
+        if lang_code != 'en':
+            path = 'https://{}.khanacademy.org'.format(lang_code) + node.get('path').strip('khan')
+        else:
+            path = 'https://www.khanacademy.org' + node.get('path').strip('khan')
         slug = path.split('/')[-2]
         path = path.replace(slug, 'e') + slug
+        status_code = requests.get(path).status_code
         # attach Perseus questions to Exercises
         for item in node['all_assessment_items']:
+            # we replace all references to assessment images with the local file path to the image
             for match in re.finditer(FILE_URL_REGEX, assessment_dict[item['id']]["item_data"]):
                 file_path = str(match.group(0)).replace('\\', '')
                 file_path = file_path.replace(REPLACE_STRING, IMAGE_DL_LOCATION)
@@ -124,7 +128,7 @@ def create_node(node, assessment_dict):
             question = PerseusQuestion(
                 id=item['id'],
                 raw_data=assessment_dict[item['id']]['item_data'],
-                source_url=path
+                source_url=path if status_code == '200' else None,
             )
             child_node.add_question(question)
 
@@ -139,10 +143,10 @@ def create_node(node, assessment_dict):
     # Video node creation
     elif kind == 'Video':
         # standard download url for KA videos
-        download_url = "https://cdn.kastatic.org/KA-youtube-converted/{0}.mp4/{1}.mp4".format(node['youtube_id'].split('=')[-1], node['youtube_id'].split('=')[-1])
+        download_url = "https://cdn.kastatic.org/KA-youtube-converted/{0}.mp4/{1}.mp4".format(node['youtube_id'], node['youtube_id'])
         files = [VideoFile(download_url)]
         if node['youtube_id'] in vtt_videos:
-            files += SubtitleFile(SUBTITLE_PATH + '/{}.vtt'.format(node['youtube_id']))
+            files += SubtitleFile(subtitle_path + '/{}.vtt'.format(node['youtube_id']))
         child_node = VideoNode(
             source_id=node["id"],
             title=node["title"],

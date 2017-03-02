@@ -61,8 +61,6 @@ EXERCISE_ATTRIBUTES = [
     'slug',
     'title',
     'usesAssessmentItems',
-    'suggested_completion_criteria',
-    'image_url_256',
 ]
 
 VIDEO_ATTRIBUTES = [
