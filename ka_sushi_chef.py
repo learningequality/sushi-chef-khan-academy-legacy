@@ -1,16 +1,19 @@
 from le_utils.constants import licenses, exercises
 from ricecooker.classes.nodes import (ChannelNode, ExerciseNode, VideoNode, TopicNode)
 from ricecooker.classes.questions import PerseusQuestion
-from ricecooker.classes.files import VideoFile
+from ricecooker.classes.files import VideoFile, SubtitleFile
 import subprocess
 import re
 import os
 import pickle
+import requests
 
 FILE_URL_REGEX = re.compile('[\\\]*/content[\\\]*/assessment[\\\]*/khan[\\\]*/(?P<build_path>\w+)[\\\]*/(?P<filename>\w+)', flags=re.IGNORECASE)
 REPLACE_STRING = "/content/assessment/khan"
 cwd = os.getcwd()
 IMAGE_DL_LOCATION = 'file://' + cwd + '/build'
+SUBTITLE_PATH = cwd + '/build/subtitles'
+vtt_videos = []
 
 
 # recursive function to traverse tree and return parent node
@@ -63,6 +66,27 @@ def _build_tree(node_data, assessment_dict, lang_code):
     )
     channel.path = 'khan'
     node_data.pop(0)
+    global SUBTITLE_PATH
+    global vtt_videos
+    SUBTITLE_PATH += '/{}'.format(lang_code)
+    if os.path.exists(SUBTITLE_PATH):
+        for vtt in os.listdir(SUBTITLE_PATH):
+            vtt_videos += vtt.split('.vtt')[0]
+
+    # recall KA api for exercises to add in exercise thumbnails and mastery models
+    ka_exercises = requests.get('http://www.khanacademy.org/api/v1/exercises')
+    mapping = {}
+    for item in ka_exercises:
+        mapping[item['node_slug'].split('/')[-1]] = item
+
+    for idx in range(len(node_data)):
+        if node_data[idx].get('kind') == 'Exercise':
+            if node_data[idx].get('id') in mapping:
+                copy = node_data[idx]
+                copy['image_url_256'] = mapping[node_data[idx].get('id')]['image_url_256']
+                copy['suggested_completion_criteria'] = mapping[node_data[idx].get('id')]['suggested_completion_criteria']
+                node_data[idx] = copy
+
     for node in node_data:
         paths = node['path'].split('/')[:-1]
         # recurse tree structure based on paths of node
@@ -116,11 +140,14 @@ def create_node(node, assessment_dict):
     elif kind == 'Video':
         # standard download url for KA videos
         download_url = "https://cdn.kastatic.org/KA-youtube-converted/{0}.mp4/{1}.mp4".format(node['youtube_id'].split('=')[-1], node['youtube_id'].split('=')[-1])
+        files = [VideoFile(download_url)]
+        if node['youtube_id'] in vtt_videos:
+            files += SubtitleFile(SUBTITLE_PATH + '/{}.vtt'.format(node['youtube_id']))
         child_node = VideoNode(
             source_id=node["id"],
             title=node["title"],
             description='' if node.get("description") is None else node.get("description", '')[:400],
-            files=[VideoFile(download_url)],
+            files=files,
             thumbnail=node.get('image_url'),
             license=licenses.CC_BY_NC_SA
         )

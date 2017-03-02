@@ -1,4 +1,4 @@
-contentpack: pex
+en: pex
 	mkdir -p out/
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite en 0.16 --out=out/en.zip --no-subtitles
 
