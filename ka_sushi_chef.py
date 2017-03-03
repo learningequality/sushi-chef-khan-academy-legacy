@@ -82,6 +82,15 @@ def _build_tree(node_data, assessment_dict, lang_code):
                 copy['suggested_completion_criteria'] = mapping[node_data[idx].get('id')]['suggested_completion_criteria']
                 node_data[idx] = copy
 
+    # get correct base url
+    if lang_code != 'en':
+        base_path = 'https://{}.khanacademy.org'.format(lang_code)
+    else:
+        base_path = 'https://www.khanacademy.org'
+
+    # if not lite version in page content, add previews to questions
+    lite_version = 'format=lite' in requests.get(base_path)
+
     channel.path = 'khan'
     node_data.pop(0)
 
@@ -89,7 +98,7 @@ def _build_tree(node_data, assessment_dict, lang_code):
         paths = node['path'].split('/')[:-1]
         # recurse tree structure based on paths of node
         parent = _getNode(paths, channel)
-        child_node = create_node(node, assessment_dict, subtitle_path, vtt_videos, lang_code)  # create node based on kinds
+        child_node = create_node(node, assessment_dict, subtitle_path, vtt_videos, base_path, lite_version)  # create node based on kinds
         if child_node:
             child_node.path = paths[-1]
             parent.add_child(child_node)
@@ -97,7 +106,7 @@ def _build_tree(node_data, assessment_dict, lang_code):
     return channel
 
 
-def create_node(node, assessment_dict, subtitle_path, vtt_videos, lang_code):
+def create_node(node, assessment_dict, subtitle_path, vtt_videos, base_path, lite_version):
 
     kind = node.get('kind')
     # Exercise node creation
@@ -110,17 +119,11 @@ def create_node(node, assessment_dict, subtitle_path, vtt_videos, lang_code):
             license=licenses.ALL_RIGHTS_RESERVED,
             thumbnail=node.get('image_url_256'),
         )
-        # build up base url and full path url
-        if lang_code != 'en':
-            base_path = 'https://{}.khanacademy.org'.format(lang_code)
-        else:
-            base_path = 'https://www.khanacademy.org'
+
+        # build exercise urls for previews
         full_path = base_path + node.get('path').strip('khan')
         slug = full_path.split('/')[-2]
         full_path = full_path.replace(slug, 'e') + slug
-
-        # if not lite version in page content, add previews to questions
-        lite_version = 'format=lite' in requests.get(base_path)
 
         # attach Perseus questions to Exercises
         for item in node['all_assessment_items']:
