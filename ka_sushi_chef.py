@@ -101,23 +101,27 @@ def create_node(node, assessment_dict, subtitle_path, vtt_videos, lang_code):
 
     kind = node.get('kind')
     # Exercise node creation
-    if kind == 'Exercise':  # All rights reserved
+    if kind == 'Exercise':
         child_node = ExerciseNode(
             source_id=node['id'],
             title=node['title'],
             exercise_data={'mastery_model': node.get('suggested_completion_criteria')},
             description='' if node.get("description") is None else node.get("description", '')[:400],
-            license=licenses.CC_BY_NC_SA,
+            license=licenses.ALL_RIGHTS_RESERVED,
             thumbnail=node.get('image_url_256'),
         )
-        # grab path and check if url exists for adding preview to questions
+        # build up base url and full path url
         if lang_code != 'en':
-            path = 'https://{}.khanacademy.org'.format(lang_code) + node.get('path').strip('khan')
+            base_path = 'https://{}.khanacademy.org'.format(lang_code)
         else:
-            path = 'https://www.khanacademy.org' + node.get('path').strip('khan')
-        slug = path.split('/')[-2]
-        path = path.replace(slug, 'e') + slug
-        status_code = requests.get(path).status_code
+            base_path = 'https://www.khanacademy.org'
+        full_path = base_path + node.get('path').strip('khan')
+        slug = full_path.split('/')[-2]
+        full_path = full_path.replace(slug, 'e') + slug
+
+        # if not lite version in page content, add previews to questions
+        lite_version = 'format=lite' in requests.get(base_path)
+
         # attach Perseus questions to Exercises
         for item in node['all_assessment_items']:
             # we replace all references to assessment images with the local file path to the image
@@ -128,7 +132,7 @@ def create_node(node, assessment_dict, subtitle_path, vtt_videos, lang_code):
             question = PerseusQuestion(
                 id=item['id'],
                 raw_data=assessment_dict[item['id']]['item_data'],
-                source_url=path if status_code == '200' else None,
+                source_url=full_path if not lite_version else None,
             )
             child_node.add_question(question)
 
