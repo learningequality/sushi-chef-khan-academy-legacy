@@ -7,6 +7,7 @@ import re
 import os
 import pickle
 import requests
+import copy
 
 FILE_URL_REGEX = re.compile('[\\\]*/content[\\\]*/assessment[\\\]*/khan[\\\]*/(?P<build_path>\w+)[\\\]*/(?P<filename>\w+)', flags=re.IGNORECASE)
 REPLACE_STRING = "/content/assessment/khan"
@@ -29,6 +30,19 @@ def _getNode(paths, tree):
             return None
 
 
+# utility function to remove topic nodes with no content under them
+def clean_nodes(node):
+    copy_children = copy.copy(node.children)
+    for child in copy_children:
+        if not child.children and child.kind == 'topic':
+            node.children.remove(child)
+        else:
+            idx = node.children.index(child)
+            clean_nodes(node.children[idx])
+    if not node.children and node.kind == 'topic':
+        node.parent.children.remove(node)
+
+
 def construct_channel(**kwargs):
 
     lang = kwargs['lang']
@@ -46,6 +60,7 @@ def construct_channel(**kwargs):
         assessment_dict[item['id']] = item
 
     tree = _build_tree(node_data, assessment_dict, lang)
+    clean_nodes(tree)
 
     return tree
 
@@ -60,6 +75,7 @@ def _build_tree(node_data, assessment_dict, lang_code):
         thumbnail="https://cdn.kastatic.org/images/khan-logo-vertical-transparent.png",
     )
 
+    lang_code = lang_code.lower()
     # create subtitle path based on lang and look for vtt files in that directory
     subtitle_path = cwd + '/build/subtitles/{}'.format(lang_code)
     vtt_videos = []
@@ -98,6 +114,9 @@ def _build_tree(node_data, assessment_dict, lang_code):
         paths = node['path'].split('/')[:-1]
         # recurse tree structure based on paths of node
         parent = _getNode(paths, channel)
+        # nodes with no parents are being returned by content pack maker, hence this check
+        if parent is None:
+            continue
         child_node = create_node(node, assessment_dict, subtitle_path, vtt_videos, base_path, lite_version)  # create node based on kinds
         if child_node:
             child_node.path = paths[-1]
