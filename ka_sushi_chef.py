@@ -1,4 +1,5 @@
 from le_utils.constants import licenses
+from le_utils.constants.languages import getlang
 from ricecooker.classes.nodes import (ChannelNode, ExerciseNode, VideoNode, TopicNode)
 from ricecooker.classes.questions import PerseusQuestion
 from ricecooker.classes.files import VideoFile, SubtitleFile
@@ -75,9 +76,8 @@ def _build_tree(node_data, assessment_dict, lang_code):
         thumbnail="https://cdn.kastatic.org/images/khan-logo-vertical-transparent.png",
     )
 
-    lang_code = lang_code.lower()
     # create subtitle path based on lang and look for vtt files in that directory
-    subtitle_path = cwd + '/build/subtitles/{}'.format(lang_code)
+    subtitle_path = cwd + '/build/subtitles/{}'.format(lang_code.lower())
     vtt_videos = []
     if os.path.exists(subtitle_path):
         for vtt in os.listdir(subtitle_path):
@@ -100,7 +100,7 @@ def _build_tree(node_data, assessment_dict, lang_code):
 
     # get correct base url
     if lang_code != 'en':
-        base_path = 'https://{}.khanacademy.org'.format(lang_code)
+        base_path = 'https://{}.khanacademy.org'.format(lang_code.lower())
     else:
         base_path = 'https://www.khanacademy.org'
 
@@ -117,7 +117,7 @@ def _build_tree(node_data, assessment_dict, lang_code):
         # nodes with no parents are being returned by content pack maker, hence this check
         if parent is None:
             continue
-        child_node = create_node(node, assessment_dict, subtitle_path, vtt_videos, base_path, lite_version)  # create node based on kinds
+        child_node = create_node(node, assessment_dict, subtitle_path, vtt_videos, base_path, lite_version, lang_code)  # create node based on kinds
         if child_node:
             child_node.path = paths[-1]
             parent.add_child(child_node)
@@ -125,7 +125,7 @@ def _build_tree(node_data, assessment_dict, lang_code):
     return channel
 
 
-def create_node(node, assessment_dict, subtitle_path, vtt_videos, base_path, lite_version):
+def create_node(node, assessment_dict, subtitle_path, vtt_videos, base_path, lite_version, lang_code):
 
     kind = node.get('kind')
     # Exercise node creation
@@ -172,7 +172,7 @@ def create_node(node, assessment_dict, subtitle_path, vtt_videos, base_path, lit
         download_url = "https://cdn.kastatic.org/KA-youtube-converted/{0}.mp4/{1}.mp4".format(node['youtube_id'], node['youtube_id'])
         files = [VideoFile(download_url)]
         if node['youtube_id'] in vtt_videos:
-            files += SubtitleFile(subtitle_path + '/{}.vtt'.format(node['youtube_id']))
+            files += SubtitleFile(subtitle_path + '/{}.vtt'.format(node['youtube_id']), language=getlang(lang_code))
         child_node = VideoNode(
             source_id=node["id"],
             title=node["title"],
