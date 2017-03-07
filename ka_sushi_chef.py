@@ -81,7 +81,7 @@ def _build_tree(node_data, assessment_dict, lang_code):
     vtt_videos = []
     if os.path.exists(subtitle_path):
         for vtt in os.listdir(subtitle_path):
-            vtt_videos += vtt.split('.vtt')[0]
+            vtt_videos.append(vtt.split('.vtt')[0])
 
     # recall KA api for exercises dict
     ka_exercises = requests.get('http://www.khanacademy.org/api/v1/exercises').json()

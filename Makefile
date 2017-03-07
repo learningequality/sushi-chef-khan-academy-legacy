@@ -4,59 +4,59 @@ en: pex
 
 
 es: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite es 0.16 --out=out/langpacks/es.zip --no-assessment-resources --subtitlelang=es --interfacelang=es-ES --contentlang=es-ES
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite es 0.16 --out=out/langpacks/es.zip --subtitlelang=es --interfacelang=es-ES --contentlang=es-ES
 
 
 pt-BR: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite pt-BR 0.16 --out=out/langpacks/pt-BR.zip --no-assessment-resources --videolang=pt-BR --contentlang=pt-BR
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite pt-BR 0.16 --out=out/langpacks/pt-BR.zip --videolang=pt-BR --contentlang=pt-BR
 
 
 sw: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite sw 0.16 --out=out/langpacks/sw.zip --no-assessment-resources --videolang=sw --subtitlelang=sw
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite sw 0.16 --out=out/langpacks/sw.zip --videolang=sw --subtitlelang=sw
 
 
 pt-PT: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite pt-PT 0.16 --out=out/langpacks/pt-PT.zip --no-assessment-resources --videolang=pt-PT --contentlang=pt-PT
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite pt-PT 0.16 --out=out/langpacks/pt-PT.zip --videolang=pt-PT --contentlang=pt-PT
 
 
 bn: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite bn 0.16 --out=out/langpacks/bn.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite bn 0.16 --out=out/langpacks/bn.zip
 
 
 de: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite de 0.16 --out=out/langpacks/de.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite de 0.16 --out=out/langpacks/de.zip
 
 
 fr: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite fr 0.16 --out=out/langpacks/fr.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite fr 0.16 --out=out/langpacks/fr.zip
 
 
 da: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite da 0.16 --out=out/langpacks/da.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite da 0.16 --out=out/langpacks/da.zip
 
 
 bg: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite bg 0.16 --out=out/langpacks/bg.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite bg 0.16 --out=out/langpacks/bg.zip
 
 
 ka: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite ka 0.16 --out=out/langpacks/ka.zip --no-assessment-resources
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite ka 0.16 --out=out/langpacks/ka.zip
 
 
 id: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite id 0.16 --out=out/langpacks/id.zip --no-assessment-resource
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite id 0.16 --out=out/langpacks/id.zip
 
 
 hi: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite hi 0.16 --out=out/langpacks/hi.zip --no-assessment-resource
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite hi 0.16 --out=out/langpacks/hi.zip
 
 
 xh: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite xh 0.16 --out=out/langpacks/xh.zip --no-assessment-resource
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite xh 0.16 --out=out/langpacks/xh.zip
 
 
 ta: pex
-	PEX_MODULE=contentpacks ./makecontentpacks ka-lite ta 0.16 --out=out/langpacks/ta.zip --no-assessment-resource
+	PEX_MODULE=contentpacks ./makecontentpacks ka-lite ta 0.16 --out=out/langpacks/ta.zip
 
 
 all: supported
