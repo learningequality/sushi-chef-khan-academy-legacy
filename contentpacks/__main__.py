@@ -33,7 +33,7 @@ import pickle
 
 
 def make_language_pack(lang, version, sublangargs, filename, ka_domain, no_assessment_items, no_subtitles, no_assessment_resources, no_dubbed_videos):
-    node_data, subtitle_data, interface_catalog, content_catalog = retrieve_language_resources(version, sublangargs, ka_domain, no_subtitles, no_dubbed_videos)
+    node_data, subtitle_data, content_catalog = retrieve_language_resources(version, sublangargs, ka_domain, no_subtitles, no_dubbed_videos)
 
     subtitles, subtitle_paths = subtitle_data.keys(), subtitle_data.values()
 

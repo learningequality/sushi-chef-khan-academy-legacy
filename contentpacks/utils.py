@@ -722,11 +722,6 @@ def clean_node_data_items(node_data):
         if kind == NodeType.exercise:
             if node.get("all_assessment_items"):
                 new_node_data.append(node)
-        elif kind == NodeType.video:
-            youtube_id = node.get("youtube_id")
-            if youtube_id not in youtube_ids:
-                youtube_ids.append(youtube_id)
-                new_node_data.append(node)
         else:
             new_node_data.append(node)
     return new_node_data

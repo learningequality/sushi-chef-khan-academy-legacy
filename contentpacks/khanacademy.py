@@ -94,7 +94,6 @@ LangpackResources = collections.namedtuple(
     "LangpackResources",
     ["node_data",
      "subtitles",
-     "kalite_catalog",
      "ka_catalog",
      ])
 
@@ -126,16 +125,8 @@ def retrieve_language_resources(version: str, sublangargs: dict, ka_domain: str,
     # retrieve KA Lite po files from CrowdIn
     interface_lang = sublangargs["interface_lang"]
     if interface_lang == EN_LANG_CODE:
-        kalite_catalog = Catalog()
         ka_catalog = Catalog()
     else:
-        crowdin_project_name = "ka-lite"
-        crowdin_secret_key = os.environ["KALITE_CROWDIN_SECRET_KEY"]
-
-        includes = "*{}*.po".format(version)
-        kalite_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key,
-                                               lang_code=sublangargs["interface_lang"], includes=includes, force=True)
-
         # retrieve Khan Academy po files from CrowdIn
         crowdin_project_name = "khanacademy"
         crowdin_secret_key = os.environ["KA_CROWDIN_SECRET_KEY"]
@@ -143,7 +134,7 @@ def retrieve_language_resources(version: str, sublangargs: dict, ka_domain: str,
         ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key,
                                            lang_code=sublangargs["interface_lang"], force=True)
 
-    return LangpackResources(node_data, subtitle_data, kalite_catalog, ka_catalog)
+    return LangpackResources(node_data, subtitle_data, ka_catalog)
 
 
 @cache_file
@@ -614,31 +605,7 @@ def retrieve_kalite_data(lang=EN_LANG_CODE, force=False, ka_domain=KA_DOMAIN, no
         with open(node_data_path, 'r') as f:
             node_data_temp = ujson.load(f)
         for node_temp in node_data_temp:
-            node_kind = node_temp.get("kind")
-            if (node_kind == NodeType.topic):
-                if not node_temp["path"] in topic_path_list:
-                    topic_path_list.append(node_temp["path"])
-                    node_data.append(node_temp)
-            if (node_kind == NodeType.exercise):
-                if not node_temp["id"] in exercise_ids:
-                    exercise_ids.append(node_temp["id"])
-                    node_data.append(node_temp)    
-            if (node_kind == NodeType.video):
-                if not node_temp["youtube_id"] in youtube_ids:
-                    youtube_lang = node_temp["translated_youtube_lang"]
-                    if youtube_lang == lang:
-                        youtube_ids.append(node_temp["youtube_id"])
-                        node_data.append(node_temp)
-                    elif not youtube_lang == EN_LANG_CODE:
-                        """
-                        Some translated_youtube_lang values return from KHAN API did not match
-                            to the specified language code. We need to override it to use the same
-                            language code.
-                        Example: using pt-BR language code in the khan api will return pt translated_youtube_lang.
-                        """
-                        youtube_ids.append(node_temp["youtube_id"])
-                        node_temp["translated_youtube_lang"] = lang
-                        node_data.append(node_temp)
+            node_data.append(node_temp)
     if not lang == EN_LANG_CODE and not no_dubbed_videos:
         node_data = add_dubbed_video_mappings(node_data, lang)
     return node_data
