@@ -513,11 +513,10 @@ def download_and_clean_kalite_data(url, path, lang=EN_LANG_CODE) -> str:
 
     for node in node_data["topics"]:
         hidden = node.pop("hide")
-        dnp = node.pop("do_not_publish")
         deleted = node.pop("deleted")
         # We want to remove all of these, except the root node,
         # the only node we do hide, but we use for defining the overall KA channel
-        if not (hidden or dnp or deleted) or node.get("id") == "x00000000":
+        if not (hidden or deleted) or node.get("id") == "x00000000":
             topic_nodes.append(node)
 
     node_data["topics"] = topic_nodes
@@ -677,7 +676,7 @@ def add_dubbed_video_mappings(node_data, lang=EN_LANG_CODE):
 
         if (node_kind == NodeType.video):
             youtube_id = node["youtube_id"]
-            if not youtube_id in youtube_ids:
+            if youtube_id not in youtube_ids:
                 if youtube_id in dubbed_videos_list:
                     node["youtube_id"] = dubbed_videos_list[youtube_id]
                     node["translated_youtube_lang"] = lang
