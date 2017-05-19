@@ -118,7 +118,7 @@ def _build_tree(node_data, assessment_dict, lang_code):
         if parent is None:
             continue
         child_node = create_node(node, assessment_dict, subtitle_path, vtt_videos, base_path, lite_version, lang_code)  # create node based on kinds
-        if child_node:
+        if child_node and child_node not in parent.children:
             child_node.path = paths[-1]
             parent.add_child(child_node)
 
