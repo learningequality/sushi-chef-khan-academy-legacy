@@ -172,7 +172,7 @@ def create_node(node, assessment_dict, subtitle_path, vtt_videos, base_path, lit
         download_url = "https://cdn.kastatic.org/KA-youtube-converted/{0}.mp4/{1}.mp4".format(node['youtube_id'], node['youtube_id'])
         files = [VideoFile(download_url)]
         if node['youtube_id'] in vtt_videos:
-            files += SubtitleFile(subtitle_path + '/{}.vtt'.format(node['youtube_id']), language=getlang(lang_code))
+            files.append(SubtitleFile(subtitle_path + '/{}.vtt'.format(node['youtube_id']), language=getlang(lang_code)))
         child_node = VideoNode(
             source_id=node["id"],
             title=node["title"],
