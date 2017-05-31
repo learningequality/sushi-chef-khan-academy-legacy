@@ -141,7 +141,7 @@ def translate_nodes(nodes: list, catalog: Catalog) -> list:
                 try:
                     node[field] = catalog[msgid]
                 except KeyError:
-                    logging.debug("could not translate {field} for {title}".format(field=field, title=node["title"]))
+                    logging.info("could not translate {field} for {title}".format(field=field, title=node["title"]))
 
     return nodes
 
