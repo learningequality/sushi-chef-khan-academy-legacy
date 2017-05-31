@@ -59,23 +59,9 @@ ta: pex
 	PEX_MODULE=contentpacks ./makecontentpacks ka-lite ta 0.16
 
 
-all: supported
-
-
-langpacks: pt-PT es pt-BR bn de fr da bg id hi xh ta ka sw
-	unzip -p out/en.zip content.db > content.db
-	./makecontentpacks collectmetadata.py out/langpacks/ --out=out/all_metadata.json
-
-
 sdist:
 	python setup.py sdist
 
 
 pex: sdist
 	pex --python=python3 -r requirements.txt -o makecontentpacks --disable-cache --no-wheel dist/content-pack-maker-`python setup.py --version`.tar.gz
-
-
-publish:
-	scp -P 4242 out/*.zip $(sshuser)@pantry.learningequality.org:/var/www/downloads/$(project)/$(version)/content/contentpacks/
-	scp -P 4242 out/khan_assessment.zip $(sshuser)@pantry.learningequality.org:/var/www/downloads/$(project)/$(version)/content/
-	scp -P 4242 all_metadata.json $(sshuser)@pantry.learningequality.org:/var/www/downloads/$(project)/$(version)/content/contentpacks/
