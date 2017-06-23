@@ -1,3 +1,4 @@
+from le_utils.constants.languages import getlang
 from html2text import html2text
 from le_utils.constants import licenses
 from ricecooker.classes.nodes import (ChannelNode, ExerciseNode, VideoNode, TopicNode)
@@ -164,7 +165,7 @@ def create_node(node, assessment_dict, base_path, lite_version, lang_code):
         # standard download url for KA videos
         download_url = "https://cdn.kastatic.org/KA-youtube-converted/{0}.mp4/{1}.mp4".format(node['youtube_id'], node['youtube_id'])
         files = [VideoFile(download_url)]
-        files.append(YouTubeSubtitleFile(node['youtube_id']), language=lang_code)
+        files.append(YouTubeSubtitleFile(node['youtube_id'], language=getlang(lang_code)))
         child_node = VideoNode(
             source_id=node["id"],
             title=node["title"],
