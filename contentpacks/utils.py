@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from peewee import Using, SqliteDatabase, fn
 import polib
 import ujson
+import json
 import zipfile
 import tempfile
 import pathlib
@@ -32,6 +33,7 @@ NODE_FIELDS_TO_TRANSLATE = [
     "title",
     "description",
     "display_name",
+    "descriptionHtml"
 ]
 
 
@@ -60,22 +62,6 @@ class Catalog(dict):
         else:
 
             self.update({m.msgid: m.msgstr for m in pofile if m.translated()})
-
-            # compute metadata -- needs to be after we add the translated strings
-            self.percent_translated = self.compute_translated(pofile)
-
-        super().__init__()
-
-    def compute_translated(self, pofile: polib._BaseFile) -> int:
-        """
-        Returns the percentage of strings translated. Returned number is between 0
-        to 100.
-
-        """
-        trans_count = len(self)
-        all_strings_count = len(pofile)
-
-        return (trans_count / all_strings_count) * 100
 
 
 def cache_file(func):
@@ -140,6 +126,8 @@ def translate_nodes(nodes: list, catalog: Catalog) -> list:
                 try:
                     node[field] = catalog[msgid]
                 except KeyError:
+                    if field == 'descriptionHtml' or field == 'description':
+                        node[field] = ''
                     logging.info("could not translate {field} for {title}".format(field=field, title=node["title"]))
 
     return nodes
@@ -162,19 +150,21 @@ def translate_assessment_item_text(items: list, catalog: Catalog):
         Convenience function for translating text through the given catalog.
         """
         trans = catalog.get(s) or s
+        if trans is '' or trans is None:
+            raise NotTranslatable
 
         return trans
 
     for item in items:
         item = copy.copy(item)
 
-        item_data = ujson.loads(item["item_data"])
+        item_data = json.loads(item["item_data"])
         try:
             translated_item_data = smart_translate_item_data(item_data, gettext)
         except NotTranslatable:
             continue
         else:
-            item["item_data"] = ujson.dumps(translated_item_data, gettext)
+            item["item_data"] = json.dumps(translated_item_data, gettext)
             yield item
 
 
@@ -190,12 +180,7 @@ def smart_translate_item_data(item_data: dict, gettext):
     """
     translate_item_fn = partial(smart_translate_item_data, gettext=gettext)
 
-    # TODO (aronasorman): implement tests
-    # just translate strings immediately
-    if isinstance(item_data, str):
-        return gettext(item_data)
-
-    elif isinstance(item_data, list):
+    if isinstance(item_data, list):
         return list(map(translate_item_fn, item_data))
 
     elif isinstance(item_data, dict):
@@ -208,7 +193,7 @@ def smart_translate_item_data(item_data: dict, gettext):
             elif isinstance(field_data, list):
                 item_data[field] = list(map(translate_item_fn, field_data))
 
-        return item_data
+    return item_data
 
 
 def remove_untranslated_exercises(nodes, translated_assessment_data):
@@ -216,15 +201,16 @@ def remove_untranslated_exercises(nodes, translated_assessment_data):
 
     def is_translated_exercise(ex):
 
-        ex_id = ex["id"]
-        elif ex["uses_assessment_items"]:
+        num_correct_in_a_row = ex.get('suggested_completion_criteria')
+        present_items = 0
+        if ex["uses_assessment_items"]:
             for item_data in ex["all_assessment_items"]:
                 assessment_id = item_data["id"]
                 if assessment_id in item_data_ids:
-                    continue
-                else:
-                    return False
-            return True
+                    present_items = present_items + 1
+            if present_items >= num_correct_in_a_row:
+                return True
+        return False
 
     for node in nodes:
         if node["kind"] != NodeType.exercise:
@@ -266,7 +252,7 @@ def get_lang_code_list(lang):
     """
     Returns a list of language codes that has a similar language name to the specified language code.
 
-    Example 1: Swahili language has { 
+    Example 1: Swahili language has {
                 "sw":{ "name":"Swahili", "native_name":"Kiswahili" },
                 "swa":{ "name":"Swahili", "native_name":"Kiswahili" },
             }

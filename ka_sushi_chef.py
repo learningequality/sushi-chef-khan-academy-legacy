@@ -1,8 +1,8 @@
+from html2text import html2text
 from le_utils.constants import licenses
-from le_utils.constants.languages import getlang
 from ricecooker.classes.nodes import (ChannelNode, ExerciseNode, VideoNode, TopicNode)
 from ricecooker.classes.questions import PerseusQuestion
-from ricecooker.classes.files import VideoFile, SubtitleFile
+from ricecooker.classes.files import VideoFile, YouTubeSubtitleFile
 import subprocess
 import re
 import os
@@ -10,7 +10,7 @@ import pickle
 import requests
 import copy
 
-FILE_URL_REGEX = re.compile('[\\\]*/content[\\\]*/assessment[\\\]*/khan[\\\]*/(?P<build_path>\w+)[\\\]*/(?P<filename>\w+)', flags=re.IGNORECASE)
+FILE_URL_REGEX = re.compile('[\\\]*/content[\\\]*/assessment[\\\]*/khan[\\\]*/(?P<build_path>\w+)[\\\]*/(?P<filename>\w+)\.?(?P<ext>\w+)?', flags=re.IGNORECASE)
 REPLACE_STRING = "/content/assessment/khan"
 cwd = os.getcwd()
 IMAGE_DL_LOCATION = 'file://' + cwd + '/build'
@@ -76,13 +76,6 @@ def _build_tree(node_data, assessment_dict, lang_code):
         thumbnail="https://cdn.kastatic.org/images/khan-logo-vertical-transparent.png",
     )
 
-    # create subtitle path based on lang and look for vtt files in that directory
-    subtitle_path = cwd + '/build/subtitles/{}'.format(lang_code.lower())
-    vtt_videos = []
-    if os.path.exists(subtitle_path):
-        for vtt in os.listdir(subtitle_path):
-            vtt_videos.append(vtt.split('.vtt')[0])
-
     # recall KA api for exercises dict
     ka_exercises = requests.get('http://www.khanacademy.org/api/v1/exercises').json()
     mapping = {}
@@ -117,7 +110,7 @@ def _build_tree(node_data, assessment_dict, lang_code):
         # nodes with no parents are being returned by content pack maker, hence this check
         if parent is None:
             continue
-        child_node = create_node(node, assessment_dict, subtitle_path, vtt_videos, base_path, lite_version, lang_code)  # create node based on kinds
+        child_node = create_node(node, assessment_dict, base_path, lite_version, lang_code)  # create node based on kinds
         if child_node and child_node not in parent.children:
             child_node.path = paths[-1]
             parent.add_child(child_node)
@@ -125,7 +118,7 @@ def _build_tree(node_data, assessment_dict, lang_code):
     return channel
 
 
-def create_node(node, assessment_dict, subtitle_path, vtt_videos, base_path, lite_version, lang_code):
+def create_node(node, assessment_dict, base_path, lite_version, lang_code):
 
     kind = node.get('kind')
     # Exercise node creation
@@ -171,12 +164,11 @@ def create_node(node, assessment_dict, subtitle_path, vtt_videos, base_path, lit
         # standard download url for KA videos
         download_url = "https://cdn.kastatic.org/KA-youtube-converted/{0}.mp4/{1}.mp4".format(node['youtube_id'], node['youtube_id'])
         files = [VideoFile(download_url)]
-        if node['youtube_id'] in vtt_videos:
-            files.append(SubtitleFile(subtitle_path + '/{}.vtt'.format(node['youtube_id']), language=getlang(lang_code)))
+        files.append(YouTubeSubtitleFile(node['youtube_id']), language=lang_code)
         child_node = VideoNode(
             source_id=node["id"],
             title=node["title"],
-            description='' if node.get("description") is None else node.get("description", '')[:400],
+            description='' if node.get("descriptionHtml") is None else html2text(node.get("descriptionHtml", '')[:400]),
             files=files,
             thumbnail=node.get('image_url'),
             license=licenses.CC_BY_NC_SA

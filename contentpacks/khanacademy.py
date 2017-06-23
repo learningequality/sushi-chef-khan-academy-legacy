@@ -79,7 +79,7 @@ VIDEO_ATTRIBUTES = [
     'title',
     'translatedYoutubeLang',
     'youtubeId',
-    # 'htmlDescription',
+    'descriptionHtml',
 ]
 
 PROJECTION_KEYS = OrderedDict([
@@ -142,27 +142,12 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code=EN
     request_url_template = ("https://api.crowdin.com/api/"
                             "project/{project_id}/download/"
                             "{lang_code}.zip?key={key}")
-    export_url_template = ("https://api.crowdin.com/api/"
-                            "project/{project_id}/export/"
-                            "{lang_code}.zip?key={key}")
+
     request_url = request_url_template.format(
         project_id=crowdin_project_name,
         lang_code=lang_code,
         key=crowdin_secret_key,
     )
-    export_url = export_url_template.format(
-        project_id=crowdin_project_name,
-        lang_code=lang_code,
-        key=crowdin_secret_key,
-    )
-
-    logging.info("requesting CrowdIn to rebuild latest translations.")
-    try:
-        requests.get(export_url)
-    except requests.exceptions.RequestException as e:
-        logging.info(
-            "Got exception when building CrowdIn translations: {}".format(e)
-        )
 
     logging.debug("Retrieving translations from {}".format(request_url))
     zip_path = download_and_cache_file(request_url, ignorecache=force)
@@ -801,7 +786,11 @@ def retrieve_assessment_item_data(assessment_item, lang=None, force=False, no_it
 
     # TEMP HACK: translate the item text here before URLs are localized, because otherwise, later, Crowdin strings no longer match
     if lang != "en" and content_catalog is not None:
-        item_data = list(translate_assessment_item_text([item_data], content_catalog))[0]
+        item_data = list(translate_assessment_item_text([item_data], content_catalog))
+        if item_data:
+            item_data = item_data[0]
+        else:
+            return {}, []
 
     image_urls = find_all_image_urls(item_data)
     graphie_urls = find_all_graphie_urls(item_data)

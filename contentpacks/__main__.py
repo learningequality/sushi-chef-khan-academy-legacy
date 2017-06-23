@@ -10,7 +10,7 @@ Usage:
 --contentlang=content-lang     The language to for content, i.e. what language to pull from Khan Academy.
 --interfacelang=interface-lang The language to pull from CrowdIn for KALite's/Kolibri's interface.
 --videolang=video-lang         The language of dubbed videos, i.e. what dubbed video mapping language to use.
---out=outdir                   The path to place the final content pack. 
+--out=outdir                   The path to place the final content pack.
 --logging=log_file             The file for logging output. Defaults to stderr if not specified.
 --no-subtitles                 If specified, will omit downloading and including any subtitles.
 --no-assessment-items          If specified, will omit downloading and including any assessment item data.
@@ -49,7 +49,6 @@ def make_language_pack(lang, version, sublangargs, filename, ka_domain, no_asses
     node_data = remove_nonexistent_assessment_items_from_exercises(node_data, all_assessment_data)
 
     node_data = clean_node_data_items(node_data)
-
     node_data = remove_untranslated_exercises(node_data, all_assessment_data) if lang != "en" else node_data
     node_data = list(node_data)
     node_data = sorted(node_data, key=lambda x: x.get('sort_order'))
@@ -95,7 +94,7 @@ def main():
     no_subtitles = args['--no-subtitles']
     no_dubbed_videos = args['--no-dubbed-videos']
 
-    log_file = args["--logging"] or "debug.log"
+    # log_file = args["--logging"] or "debug.log"
 
     logging.basicConfig(level=logging.INFO)
 
