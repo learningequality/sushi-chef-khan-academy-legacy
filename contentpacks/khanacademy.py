@@ -28,7 +28,7 @@ from math import ceil, log, exp
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file,\
     is_video_node_dubbed, get_lang_name, NodeType, get_lang_native_name,\
     get_lang_ka_name, get_lang_code_list, translate_assessment_item_text
-from contentpacks.models import AssessmentItem
+# from contentpacks.models import AssessmentItem
 from contentpacks.generate_dubbed_video_mappings import main, DUBBED_VIDEOS_MAPPING_FILEPATH
 
 
@@ -78,7 +78,8 @@ VIDEO_ATTRIBUTES = [
     'slug',
     'title',
     'translatedYoutubeLang',
-    'youtubeId'
+    'youtubeId',
+    # 'htmlDescription',
 ]
 
 PROJECTION_KEYS = OrderedDict([
@@ -119,8 +120,7 @@ POEntry_class.merge = new_merge
 def retrieve_language_resources(version: str, sublangargs: dict, ka_domain: str, no_subtitles: bool, no_dubbed_videos: bool) -> LangpackResources:
     node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True, ka_domain=ka_domain, no_dubbed_videos=no_dubbed_videos)
 
-    video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
-    subtitle_data = retrieve_subtitles(video_ids, sublangargs["subtitle_lang"]) if not no_subtitles else {}
+    subtitle_data = []
 
     # retrieve KA Lite po files from CrowdIn
     interface_lang = sublangargs["interface_lang"]
@@ -137,60 +137,6 @@ def retrieve_language_resources(version: str, sublangargs: dict, ka_domain: str,
     return LangpackResources(node_data, subtitle_data, ka_catalog)
 
 
-@cache_file
-def retrieve_subtitle_meta_data(url, path):
-
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-    except requests.HTTPError:
-        raise
-
-    content = ujson.loads(response.content)
-
-    if not content.get("objects"):
-        raise KeyError
-
-    amara_id = content["objects"][0]["id"]
-
-    with open(path, 'w') as f:
-        f.write(amara_id)
-
-
-def retrieve_subtitles(videos: list, lang=EN_LANG_CODE, force=False, threads=NUM_PROCESSES) -> dict:
-    # videos => contains list of youtube ids
-    """return list of youtubeids that were downloaded"""
-    lang = lang.lower()         # Amara likes lowercase codes
-    def _download_subtitle_data(youtube_id):
-
-        logging.info("trying to download subtitle for %s" % youtube_id)
-        request_url = "https://www.amara.org/api2/partners/videos/?format=json&video_url=http://www.youtube.com/watch?v=%s" % (
-            youtube_id
-        )
-
-        try:
-            amara_id_file = retrieve_subtitle_meta_data(request_url, filename="subtitles/meta_data/{youtube_id}".format(
-                youtube_id=youtube_id))
-            with open(amara_id_file, 'r') as f:
-                amara_id = f.read()
-            subtitle_download_uri = "https://www.amara.org/api/videos/%s/languages/%s/subtitles/?format=vtt" % (
-                amara_id, lang)
-            filename = "subtitles/{lang}/{youtube_id}.vtt".format(lang=lang, youtube_id=youtube_id)
-            subtitle_path = download_and_cache_file(subtitle_download_uri, filename=filename, ignorecache=False)
-            logging.info("subtitle path: {}".format(subtitle_path))
-            return youtube_id, subtitle_path
-        except (requests.exceptions.RequestException, KeyError, urllib.error.HTTPError, urllib.error.URLError) as e:
-            logging.info("got error while downloading subtitles: {}".format(e))
-            pass
-
-    pools = ThreadPool(processes=threads)
-
-    poolresult = pools.map(_download_subtitle_data, videos)
-    subtitle_data = dict(s for s in poolresult if s) # remove empty return values
-
-    return subtitle_data
-
-
 def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code=EN_LANG_CODE, force=False,
                           includes="*.po") -> Catalog:
     request_url_template = ("https://api.crowdin.com/api/"
@@ -204,7 +150,7 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code=EN
         lang_code=lang_code,
         key=crowdin_secret_key,
     )
-    export_url = request_url_template.format(
+    export_url = export_url_template.format(
         project_id=crowdin_project_name,
         lang_code=lang_code,
         key=crowdin_secret_key,
@@ -214,7 +160,7 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code=EN
     try:
         requests.get(export_url)
     except requests.exceptions.RequestException as e:
-        logging.warning(
+        logging.info(
             "Got exception when building CrowdIn translations: {}".format(e)
         )
 
@@ -690,14 +636,6 @@ def add_dubbed_video_mappings(node_data, lang=EN_LANG_CODE):
     return node_data
 
 
-def clean_assessment_item(assessment_item) -> dict:
-    item = {}
-    for key, val in assessment_item.items():
-        if key in AssessmentItem._meta.get_field_names():
-            item[key] = val
-    return item
-
-
 @cache_file
 def download_assessment_item_data(url, path, lang=None, force=False) -> str:
     """
@@ -720,8 +658,6 @@ def download_assessment_item_data(url, path, lang=None, force=False) -> str:
         raise requests.RequestException
 
     item_data = ujson.loads(data.content)
-
-    item_data = clean_assessment_item(item_data)
 
     with open(path, 'w') as f:
         json.dump(item_data, f)
@@ -945,53 +881,6 @@ def retrieve_all_assessment_item_data(lang=None, force=False, node_data=None, no
     return assessment_item_data, set(all_file_paths)
 
 
-def query_remote_content_file_sizes(content_items, threads=NUM_PROCESSES):
-    """
-    Query and store the file sizes for downloadable videos, by running HEAD requests against them,
-    and reading the `content-length` header. Right now, this is only for the "khan" channel, and hence lives here.
-    TODO(jamalex): Generalize this to other channels once they're centrally hosted and downloadable.
-    """
-
-    sizes_by_id = {}
-
-    if isinstance(content_items, dict):
-        content_items = content_items.values()
-
-    content_items = [content for content in content_items if content.get("format") in content.get("download_urls", {}) and content.get("youtube_id")]
-
-    pool = ThreadPool(threads)
-    sizes = pool.map(get_content_length, content_items)
-
-    for content, size in zip(content_items, sizes):
-        # TODO(jamalex): This should be generalized from "youtube_id" to support other content types
-        if size:
-            sizes_by_id[content["youtube_id"]] = size
-
-    return sizes_by_id
-
-
-def get_content_length(content):
-    url = content["download_urls"][content["format"]].replace("http://fastly.kastatic.org/", "http://s3.amazonaws.com/") # because fastly is SLOWLY
-    logging.info("Checking remote file size for content '{title}' at {url}...".format(title=content.get("title"), url=url))
-    size = 0
-    for i in range(5):
-        try:
-            size = int(requests.head(url, timeout=60).headers["content-length"])
-            break
-        except requests.Timeout:
-            logging.warning("Timed out on try {i} while checking remote file size for '{title}'!".format(title=content.get("title"), i=i))
-        except requests.ConnectionError:
-            logging.warning("Connection error on try {i} while checking remote file size for '{title}'!".format(title=content.get("title"), i=i))
-        except TypeError:
-            logging.warning("No numeric content-length returned while checking remote file size for '{title}' ({readable_id})!".format(**content))
-            break
-    if size:
-        logging.info("Finished checking remote file size for content '{title}'!".format(title=content.get("title")))
-    else:
-        logging.error("No file size retrieved (timeouts?) for content '{title}'!".format(title=content.get("title")))
-    return size
-
-
 def apply_dubbed_video_map(content_data: list, subtitles: list, lang: str) -> (list, int):
 
     if lang != EN_LANG_CODE:
@@ -1019,61 +908,3 @@ def apply_dubbed_video_map(content_data: list, subtitles: list, lang: str) -> (l
             item["total_files"] = 1
 
     return content_data, dubbed_count
-
-
-def retrieve_html_exercises(exercises: [str], lang: str, force=False) -> (str, [str]):
-    """
-    Return a 2-tuple with the first element pointing to the path the exercise files are stored,
-    and the second element a list of exercise ids that have html exercises.
-    """
-    BUILD_DIR = os.path.join(os.getcwd(), "build", lang)
-    EN_BUILD_DIR = os.path.join(os.getcwd(), "build", EN_LANG_CODE)
-    EXERCISE_DOWNLOAD_URL_TEMPLATE = ("https://es.khanacademy.org/"
-                                      "khan-exercises/exercises/{id}.html?lang={lang}")
-    lang_codes = get_lang_code_list(lang)
-    def _download_html_exercise(exercise_id):
-        """
-        Download an exercise and return its exercise id *if* the
-        downloaded url from the selected language is different from the english version.
-        """
-        try:
-            for lang in lang_codes:
-                lang_url = EXERCISE_DOWNLOAD_URL_TEMPLATE.format(id=exercise_id, lang=lang)
-                en_url = EXERCISE_DOWNLOAD_URL_TEMPLATE.format(id=exercise_id, lang=EN_LANG_CODE)
-                try:
-                    lang_file = download_and_cache_file(lang_url, cachedir=BUILD_DIR, ignorecache=force)
-                    en_file = download_and_cache_file(en_url, cachedir=EN_BUILD_DIR, ignorecache=force)
-                    if not filecmp.cmp(lang_file, en_file, shallow=False):
-                        return exercise_id
-                except requests.exceptions.HTTPError as e:
-                    logging.warning("Failed to fetch html for lang: {}, exercise {}, exception: {}".format(lang, exercise_id, e))
-        except requests.exceptions.HTTPError as e:
-            logging.warning("Failed to fetch exercise for lang_codes: {}, exception: {}".format(lang_codes, e))
-            return None
-
-    pool = ThreadPool(processes=NUM_PROCESSES)
-    translated_exercises = pool.map(_download_html_exercise, exercises)
-    # filter out Nones, since it means we got an error downloading those exercises
-    result = [e for e in translated_exercises if e]
-    return (BUILD_DIR, result)
-
-def _list_all_exercises_with_bad_links():
-    """This is a standalone helper method used to provide KA with a list of exercises with bad URLs in them."""
-    url_pattern = r"https?://www\.khanacademy\.org/[\/\w\-]*/./(?P<slug>[\w\-]+)"
-    assessment_items = {item.get("id"): item for item in retrieve_all_assessment_item_data()}
-    for ex in retrieve_kalite_data():
-        if ex.get("kind") == "Exercise":
-            checked_urls = []
-            displayed_title = False
-            for aidict in ex.get("all_assessment_items", []):
-                ai = assessment_items[aidict["id"]]
-                for match in re.finditer(url_pattern, ai["item_data"], flags=re.IGNORECASE):
-                    url = str(match.group(0))
-                    if url in checked_urls:
-                        continue
-                    checked_urls.append(url)
-                    status_code = requests.get(url).status_code
-                    if status_code != 200:
-                        if not displayed_title:
-                            logging.debug("bad link for exercise: '%s'" % ex["title"], ex["path"])
-                            displayed_title = True

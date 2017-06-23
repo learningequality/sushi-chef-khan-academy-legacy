@@ -20,11 +20,9 @@ Usage:
 """
 from docopt import docopt
 from pathlib import Path
-from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_video_map, retrieve_html_exercises, \
+from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_video_map, \
     retrieve_all_assessment_item_data
-from contentpacks.utils import translate_nodes, \
-    remove_untranslated_exercises, bundle_language_pack, separate_exercise_types, \
-    generate_kalite_language_pack_metadata, translate_assessment_item_text, \
+from contentpacks.utils import translate_nodes, remove_untranslated_exercises, \
     remove_assessment_data_with_empty_widgets, remove_nonexistent_assessment_items_from_exercises, \
     clean_node_data_items
 
@@ -35,14 +33,9 @@ import pickle
 def make_language_pack(lang, version, sublangargs, filename, ka_domain, no_assessment_items, no_subtitles, no_assessment_resources, no_dubbed_videos):
     node_data, subtitle_data, content_catalog = retrieve_language_resources(version, sublangargs, ka_domain, no_subtitles, no_dubbed_videos)
 
-    subtitles, subtitle_paths = subtitle_data.keys(), subtitle_data.values()
-
     node_data = translate_nodes(node_data, content_catalog)
     node_data = list(node_data)
-    node_data, dubbed_video_count = apply_dubbed_video_map(node_data, subtitles, sublangargs["video_lang"])
-
-    html_exercise_ids, assessment_exercise_ids, node_data = separate_exercise_types(node_data)
-    html_exercise_path, translated_html_exercise_ids = retrieve_html_exercises(html_exercise_ids, lang)
+    node_data, dubbed_video_count = apply_dubbed_video_map(node_data, subtitle_data, sublangargs["video_lang"])
 
     # now include only the assessment item resources that we need
     all_assessment_data, all_assessment_files = retrieve_all_assessment_item_data(
@@ -56,9 +49,8 @@ def make_language_pack(lang, version, sublangargs, filename, ka_domain, no_asses
     node_data = remove_nonexistent_assessment_items_from_exercises(node_data, all_assessment_data)
 
     node_data = clean_node_data_items(node_data)
-    assessment_data = list(translate_assessment_item_text(all_assessment_data, content_catalog)) if lang != "en" else all_assessment_data
 
-    node_data = remove_untranslated_exercises(node_data, translated_html_exercise_ids, assessment_data) if lang != "en" else node_data
+    node_data = remove_untranslated_exercises(node_data, all_assessment_data) if lang != "en" else node_data
     node_data = list(node_data)
     node_data = sorted(node_data, key=lambda x: x.get('sort_order'))
 
@@ -66,7 +58,7 @@ def make_language_pack(lang, version, sublangargs, filename, ka_domain, no_asses
         pickle.dump(node_data, handle)
 
     with open('assessment_data_{0}.pickle'.format(lang), 'wb') as handle:
-        pickle.dump(assessment_data, handle)
+        pickle.dump(all_assessment_data, handle)
 
 
 def normalize_sublang_args(args):

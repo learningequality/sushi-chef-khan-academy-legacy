@@ -6,7 +6,6 @@ import re
 import requests
 from functools import partial
 from urllib.parse import urlparse
-from contentpacks.models import Item, AssessmentItem
 from peewee import Using, SqliteDatabase, fn
 import polib
 import ujson
@@ -212,15 +211,12 @@ def smart_translate_item_data(item_data: dict, gettext):
         return item_data
 
 
-def remove_untranslated_exercises(nodes, html_ids, translated_assessment_data):
+def remove_untranslated_exercises(nodes, translated_assessment_data):
     item_data_ids = set([item.get("id") for item in translated_assessment_data])
-    html_ids = set(html_ids)
 
     def is_translated_exercise(ex):
 
         ex_id = ex["id"]
-        if ex_id in html_ids:  # translated html exercise
-            return True
         elif ex["uses_assessment_items"]:
             for item_data in ex["all_assessment_items"]:
                 assessment_id = item_data["id"]
@@ -237,283 +233,6 @@ def remove_untranslated_exercises(nodes, html_ids, translated_assessment_data):
             yield node
         else:
             continue
-
-
-def remove_unavailable_topics(nodes):
-
-    node_dict = {node.get("path"): node for node in nodes}
-
-    node_list = []
-
-    def recurse_nodes(node):
-
-        """
-        :param node: dict
-        """
-
-        path_re = re.compile(node.get("path") + "[a-z0-9A-Z\-_]+/\Z")
-
-        children = [node_dict[key] for key in node_dict.keys() if path_re.match(key)]
-
-        for child in children:
-            recurse_nodes(child)
-
-        if children or node.get("kind") != "Topic":
-            node_list.append(node)
-
-    root_key = next(key for key in node_dict.keys() if re.match("[a-z0-9A-Z\-_]+/\Z", key))
-
-    recurse_nodes(node_dict[root_key])
-
-    return node_list
-
-
-def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata, assessment_items, assessment_files, subtitles, html_exercise_path):
-
-    # make sure dest's parent directories exist
-    pathlib.Path(dest).parent.mkdir(parents=True, exist_ok=True)
-
-    with zipfile.ZipFile(dest, "w") as zf, tempfile.NamedTemporaryFile() as dbf:
-        db = SqliteDatabase(dbf.name)
-        db.connect()
-
-        nodes = convert_dicts_to_models(nodes)
-        nodes = mark_exercises_as_available(nodes)
-        nodes = list(save_models(nodes, db)) # we have to make sure to force
-                                             # the evaluation of each
-                                             # save_models call, in order to
-                                             # avoid nesting them.
-        nodes = list(populate_parent_foreign_keys(nodes))
-        list(save_models(nodes, db))
-
-        nodes = recurse_availability_up_tree(nodes, db)
-        list(save_models(nodes, db))
-
-        assessment_items = convert_dicts_to_assessment_items(assessment_items)
-        list(save_assessment_items(assessment_items, db))
-
-        db.close()
-        dbf.flush()
-
-        save_catalog(frontend_catalog, zf, "frontend.mo")
-        save_catalog(backend_catalog, zf, "backend.mo")
-        # save_subtitles(subtitle_path, zf)
-
-        try:                    # sometimes we have no html exercises
-            save_html_exercises(html_exercise_path, zf)
-        except FileNotFoundError:
-            logging.warning("No html exercises found; skipping.")
-
-        save_db(db, zf)
-
-        save_metadata(zf, metadata)
-
-        for file_path in assessment_files:
-            save_assessment_file(file_path, zf)
-        write_assessment_version(metadata, zf)
-
-        for subtitle_path in subtitles:
-            save_subtitle(subtitle_path, zf)
-
-    return dest
-
-
-def write_assessment_version(metadata: dict, zf):
-    lang = metadata.get("code") or "en"
-    if lang != "en":            # Don't write the assessment version for non-en lang packs
-        return
-    else:
-        version = str(metadata.get("software_version", "xx.xx"))
-        assessment_version_zip_path = os.path.join(ASSESSMENT_RESOURCES_ZIP_FOLDER, ASSESSMENT_VERSION_FILENAME)
-        zf.writestr(assessment_version_zip_path, version)
-
-
-def save_html_exercises(html_exercise_path, zf):
-    logging.info("Saving html exercises in {}".format(html_exercise_path))
-    zip_html_exercise_root = pathlib.Path("exercises/")
-
-    html_exercise_path = pathlib.Path(html_exercise_path)
-
-    for exercise_path in html_exercise_path.iterdir():
-        exercise_name = exercise_path.name
-        zip_exercise_path = zip_html_exercise_root / exercise_name
-
-        zf.writestr(str(zip_exercise_path), exercise_path.read_bytes())
-
-
-def save_subtitle(path: str, zf: zipfile.ZipFile):
-    zip_subtitle_root = pathlib.Path("subtitles/")
-
-    path = pathlib.Path(path)
-    name = path.name
-
-    zip_subtitle_path = zip_subtitle_root / name
-    zf.write(str(path), str(zip_subtitle_path))
-
-
-def convert_dicts_to_models(nodes):
-    def _make_extra_fields_value(present_fields, node_dict):
-        """
-        Generate the JSON string that goes into an item's extra_fields value.
-        Do this by looking at the model's columns and then adding those values
-        not in the columns into the extra_fields.
-        """
-        fields_diff = set(node_dict.keys()) - set(present_fields)
-
-        extra_fields = {}
-        for field in fields_diff:
-            extra_fields[field] = node_dict[field]
-
-        return ujson.dumps(extra_fields)
-
-    def convert_dict_to_model(node):
-        item = Item(**node)
-
-        item.__dict__.update(**node)
-
-        item.available = False
-
-        # make sure description is a string, not None
-        item.description = item.description or ""
-
-        item.extra_fields = _make_extra_fields_value(
-            item._meta.get_field_names(),
-            node
-        )
-
-        return item
-
-    yield from (convert_dict_to_model(node) for node in nodes)
-
-
-def mark_exercises_as_available(nodes):
-    '''
-    Mark all exercises as available. Unavailable exercises should've been
-    removed from the topic tree by this point.
-
-    '''
-    for node in nodes:
-        if node.kind == NodeType.exercise:
-            node.available = True
-        yield node
-
-
-def convert_dicts_to_assessment_items(assessment_items):
-    yield from (AssessmentItem(**item) for item in assessment_items)
-
-
-def save_models(nodes, db):
-    """
-    Save all the models in nodes into the db specified.
-    """
-    # aron: I didn't bother writing tests for this, since it's such a simple
-    # function!
-    db.create_table(Item, safe=True)
-    with Using(db, [Item]):
-        for node in nodes:
-            try:
-                node.save()
-            except Exception as e:
-                logging.warning("Cannot save {path}, exception: {e}".format(path=node.path, e=e))
-
-            yield node
-
-
-def save_assessment_items(assessment_items, db):
-    """
-    Save all the models in nodes into the db specified.
-    """
-    # aron: I didn't bother writing tests for this, since it's such a simple
-    # function!
-    db.create_table(AssessmentItem, safe=True)
-    with Using(db, [AssessmentItem]):
-        for item in assessment_items:
-            try:
-                item.save()
-            except Exception as e:
-                logging.warning("Cannot save {id}, exception: {e}".format(id=item.id, e=e))
-
-            yield item
-
-
-def save_catalog(catalog: dict, zf: zipfile.ZipFile, name: str):
-    mofile = polib.MOFile()
-    for msgid, msgstr in catalog.items():
-        entry = polib.POEntry(msgid=msgid, msgstr=msgstr)
-        mofile.append(entry)
-
-    # zf.writestr(name, mofile.to_binary())
-    with tempfile.NamedTemporaryFile() as f:
-        mofile.save(f.name)
-        zf.write(f.name, name)
-
-
-def populate_parent_foreign_keys(nodes):
-    node_keys = {node.path: node for node in nodes}
-
-    orphan_count = 0
-
-    for node in node_keys.values():
-        path = pathlib.Path(node.path)
-        parent_slug = str(path.parent)
-        # topic tree paths end in a slash, but path.parent removes the trailing slash. Re-add it so parent_slug matches the key in node_keys
-        parent_slug += "/"
-        try:
-            parent = node_keys[parent_slug]
-            node.parent = parent
-        except KeyError:
-            orphan_count += 1
-            logging.warning("{path} is an orphan. (number {orphan_count})".format(path=node.path, orphan_count=orphan_count))
-
-        yield node
-
-
-def save_db(db, zf):
-    zf.write(db.database, "content.db")
-
-
-def save_assessment_file(assessment_file, zf):
-        zf.write(assessment_file, os.path.join(ASSESSMENT_RESOURCES_ZIP_FOLDER, os.path.basename(os.path.dirname(
-            assessment_file)), os.path.basename(assessment_file)))
-
-
-def separate_exercise_types(node_data):
-    node_data = list(node_data)
-
-    def _is_html_exercise(node):
-        return node["kind"] == NodeType.exercise and not node["uses_assessment_items"]
-
-    def _is_assessment_exercise(node):
-        return node["kind"] == NodeType.exercise and node["uses_assessment_items"]
-
-    return (n['id'] for n in node_data if _is_html_exercise(n)), \
-           (n['id'] for n in node_data if _is_assessment_exercise(n)), \
-           node_data
-
-
-def generate_kalite_language_pack_metadata(lang: str, version: str, interface_catalog: Catalog,
-                                           content_catalog: Catalog, subtitles: list, dubbed_video_count: int):
-    """
-    Create the language pack metadata based on the files passed in.
-    """
-
-    # language packs are automatically beta if they have no dubbed videos and subtitles
-    is_beta = dubbed_video_count == 0 and len(subtitles) == 0
-
-    metadata = {
-        "code": lang,
-        'software_version': version,
-        'language_pack_version': int(os.environ.get("CONTENT_PACK_VERSION") or "1"),
-        'percent_translated': interface_catalog.percent_translated,
-        'topic_tree_translated': content_catalog.percent_translated,
-        'subtitle_count': len(subtitles),
-        "name": get_lang_name(lang),
-        'native_name': get_lang_native_name(lang),
-        "video_count": dubbed_video_count,
-        "beta": is_beta,
-    }
-
-    return metadata
 
 
 def get_lang_name(lang):
@@ -579,65 +298,6 @@ def get_lang_code_list(lang):
         logging.warning("No language code found for {}. Defaulting to an empty list.".format(lang))
         return []
 
-
-def save_metadata(zf, metadata):
-    dump = ujson.dumps(metadata)
-    metadata_name = "metadata.json"
-    zf.writestr(metadata_name, dump)
-
-
-def recurse_availability_up_tree(nodes, db) -> [Item]:
-
-    logging.info("Marking availability.")
-
-    nodes = list(nodes)
-
-    def _recurse_availability_up_tree(node):
-
-        available = node.available
-        if not node.parent:
-            return node
-        else:
-            parent = node.parent
-        Parent = Item.alias()
-        children = Item.select().join(Parent, on=(Item.parent == Parent.pk)).where(Item.parent == parent.pk)
-        if not available:
-            children_available = children.where(Item.available == True).count() > 0
-            available = children_available
-
-        total_files = children.aggregate(fn.SUM(Item.total_files))
-
-        child_remote = children.where(((Item.available == False) & (Item.kind != "Topic")) | (Item.kind == "Topic")).aggregate(fn.SUM(Item.remote_size))
-        child_on_disk = children.aggregate(fn.SUM(Item.size_on_disk))
-
-        if parent.available != available:
-            parent.available = available
-        if parent.total_files != total_files:
-            parent.total_files = total_files
-        # Ensure that the aggregate sizes are not None
-        if parent.remote_size != child_remote and child_remote:
-            parent.remote_size = child_remote
-        # Ensure that the aggregate sizes are not None
-        if parent.size_on_disk != child_on_disk and child_on_disk:
-            parent.size_on_disk = child_on_disk
-        if parent.is_dirty():
-            parent.save()
-            _recurse_availability_up_tree(parent)
-
-        return node
-
-    with Using(db, [Item]):
-        # at this point, the only thing that can affect a topic's availability
-        # are exercises. Videos and other content's availability can only be
-        # determined by what's in the client. However, we need to set total_files
-        # and remote_sizes. So, loop over exercises and other content,
-        # and skip topics as they will be recursed upwards.
-        for node in (n for n in nodes if n.kind != NodeType.topic):
-            _recurse_availability_up_tree(node)
-
-    return nodes
-
-
 def is_video_node_dubbed(video_node: dict, expected_lang: str) -> bool:
     assert 'translated_youtube_lang' in video_node, "We need the " \
         "translated_youtube_lang attribute to figure out if a video is dubbed!"
@@ -660,9 +320,7 @@ def get_primary_language(lang):
         # lang is something like pt-BR
         # Split the lang code into two parts (pt, BR)
         # And return the first part (pt)
-        return lang.\
-            split("-")\
-            [0]
+        return lang.split("-")[0]
 
 
 def remove_assessment_data_with_empty_widgets(assessment_data):
@@ -692,7 +350,6 @@ def remove_nonexistent_assessment_items_from_exercises(node_data: list, assessme
         if node["kind"] != NodeType.exercise:
             yield node
         else:
-            # import pdb; pdb.set_trace()
             try:
                 assessment_items = node["all_assessment_items"]
                 new_assessment_items = []
