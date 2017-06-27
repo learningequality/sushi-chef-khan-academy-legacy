@@ -48,7 +48,7 @@ def clean_nodes(node):
 def construct_channel(**kwargs):
 
     lang = kwargs['lang']
-    subprocess.run('make {0}'.format(lang), shell=True)
+    subprocess.run('make {0}'.format(lang), shell=True, check=True)
 
     with open('node_data_{0}.pickle'.format(lang), 'rb') as handle:
         node_data = pickle.load(handle)

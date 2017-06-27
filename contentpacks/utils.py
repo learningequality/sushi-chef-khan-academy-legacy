@@ -202,13 +202,17 @@ def remove_untranslated_exercises(nodes, translated_assessment_data):
     def is_translated_exercise(ex):
 
         num_correct_in_a_row = ex.get('suggested_completion_criteria')
+        if num_correct_in_a_row:
+            num = int(num_correct_in_a_row.split('_')[-1])
+        else:
+            num = 3
         present_items = 0
         if ex["uses_assessment_items"]:
             for item_data in ex["all_assessment_items"]:
                 assessment_id = item_data["id"]
                 if assessment_id in item_data_ids:
                     present_items = present_items + 1
-            if present_items >= num_correct_in_a_row:
+            if present_items >= num:
                 return True
         return False
 
