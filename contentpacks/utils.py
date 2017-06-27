@@ -150,8 +150,6 @@ def translate_assessment_item_text(items: list, catalog: Catalog):
         Convenience function for translating text through the given catalog.
         """
         trans = catalog.get(s) or s
-        if trans is '' or trans is None:
-            raise NotTranslatable
 
         return trans
 
@@ -201,20 +199,14 @@ def remove_untranslated_exercises(nodes, translated_assessment_data):
 
     def is_translated_exercise(ex):
 
-        num_correct_in_a_row = ex.get('suggested_completion_criteria')
-        if num_correct_in_a_row:
-            num = int(num_correct_in_a_row.split('_')[-1])
-        else:
-            num = 3
-        present_items = 0
         if ex["uses_assessment_items"]:
             for item_data in ex["all_assessment_items"]:
                 assessment_id = item_data["id"]
                 if assessment_id in item_data_ids:
-                    present_items = present_items + 1
-            if present_items >= num:
-                return True
-        return False
+                    continue
+                else:
+                    return False
+            return True
 
     for node in nodes:
         if node["kind"] != NodeType.exercise:
