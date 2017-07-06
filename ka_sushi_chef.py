@@ -1,6 +1,7 @@
 from le_utils.constants.languages import getlang
 from html2text import html2text
 from le_utils.constants import licenses
+from ricecooker.chefs import SushiChef
 from ricecooker.classes.nodes import (ChannelNode, ExerciseNode, VideoNode, TopicNode)
 from ricecooker.classes.questions import PerseusQuestion
 from ricecooker.classes.files import VideoFile, YouTubeSubtitleFile
@@ -44,27 +45,32 @@ def clean_nodes(node):
     if not node.children and node.kind == 'topic':
         node.parent.children.remove(node)
 
+class KASushiChef(SushiChef):
 
-def construct_channel(**kwargs):
+    def get_channel(self, *args, **kwargs):
 
-    lang = kwargs['lang']
-    subprocess.run('make {0}'.format(lang), shell=True, check=True)
+        return self.construct_channel(*args, **kwargs)
 
-    with open('node_data_{0}.pickle'.format(lang), 'rb') as handle:
-        node_data = pickle.load(handle)
+    def construct_channel(self, *args, **kwargs):
 
-    with open('assessment_data_{0}.pickle'.format(lang), 'rb') as handle:
-        assessment_data = pickle.load(handle)
+        lang = kwargs['lang']
+        subprocess.run('make {0}'.format(lang), shell=True, check=True)
 
-    # create mapping between ids and each assessment item
-    assessment_dict = {}
-    for item in assessment_data:
-        assessment_dict[item['id']] = item
+        with open('node_data_{0}.pickle'.format(lang), 'rb') as handle:
+            node_data = pickle.load(handle)
 
-    tree = _build_tree(node_data, assessment_dict, lang)
-    clean_nodes(tree)
+        with open('assessment_data_{0}.pickle'.format(lang), 'rb') as handle:
+            assessment_data = pickle.load(handle)
 
-    return tree
+        # create mapping between ids and each assessment item
+        assessment_dict = {}
+        for item in assessment_data:
+            assessment_dict[item['id']] = item
+
+        tree = _build_tree(node_data, assessment_dict, lang)
+        clean_nodes(tree)
+
+        return tree
 
 
 def _build_tree(node_data, assessment_dict, lang_code):
@@ -179,3 +185,10 @@ def create_node(node, assessment_dict, base_path, lite_version, lang_code):
         return None
 
     return child_node
+
+if __name__ == "__main__":
+    """
+    This code will run when the sushi chef is called from the command line.
+    """
+    chef = KASushiChef()
+    chef.main()
