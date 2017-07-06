@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from le_utils.constants.languages import getlang
 from html2text import html2text
 from le_utils.constants import licenses
