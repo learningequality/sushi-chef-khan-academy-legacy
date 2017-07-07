@@ -169,6 +169,12 @@ def create_node(node, assessment_dict, base_path, lite_version, lang_code):
 
     # Video node creation
     elif kind == 'Video':
+        if node.get('description_html'):
+            video_description = html2text(node.get('description_html'))[:400]
+        elif node.get('description'):
+            video_description = node.get('description')[:400]
+        else:
+            video_description = ''
         # standard download url for KA videos
         download_url = "https://cdn.kastatic.org/KA-youtube-converted/{0}.mp4/{1}.mp4".format(node['youtube_id'], node['youtube_id'])
         files = [VideoFile(download_url)]
@@ -176,7 +182,7 @@ def create_node(node, assessment_dict, base_path, lite_version, lang_code):
         child_node = VideoNode(
             source_id=node["id"],
             title=node["title"],
-            description='' if node.get("description_html") is None else html2text(node.get("description_html", ''))[:400],
+            description=video_description,
             files=files,
             thumbnail=node.get('image_url'),
             license=licenses.CC_BY_NC_SA
