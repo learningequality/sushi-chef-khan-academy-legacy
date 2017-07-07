@@ -33,7 +33,7 @@ NODE_FIELDS_TO_TRANSLATE = [
     "title",
     "description",
     "display_name",
-    "descriptionHtml"
+    "description_html"
 ]
 
 

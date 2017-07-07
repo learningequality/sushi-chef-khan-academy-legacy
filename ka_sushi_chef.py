@@ -176,7 +176,7 @@ def create_node(node, assessment_dict, base_path, lite_version, lang_code):
         child_node = VideoNode(
             source_id=node["id"],
             title=node["title"],
-            description='' if node.get("descriptionHtml") is None else html2text(node.get("descriptionHtml", '')[:400]),
+            description='' if node.get("description_html") is None else html2text(node.get("description_html", ''))[:400],
             files=files,
             thumbnail=node.get('image_url'),
             license=licenses.CC_BY_NC_SA
