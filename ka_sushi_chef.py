@@ -50,10 +50,22 @@ class KASushiChef(SushiChef):
 
     def get_channel(self, *args, **kwargs):
 
-        return self.construct_channel(*args, **kwargs)
+        lang_code = kwargs['lang']
+
+        channel = ChannelNode(
+            source_id="KA ({0})".format(lang_code),
+            source_domain="khanacademy.org",
+            title="Khan Academy ({0})".format(lang_code),
+            description='Khan Academy content for the {0} language.'.format(lang_code),
+            thumbnail="https://cdn.kastatic.org/images/khan-logo-vertical-transparent.png",
+        )
+
+        return channel
+
 
     def construct_channel(self, *args, **kwargs):
 
+        channel = self.get_channel(*args, **kwargs)
         lang = kwargs['lang']
         subprocess.run('make {0}'.format(lang), shell=True, check=True)
 
@@ -68,21 +80,13 @@ class KASushiChef(SushiChef):
         for item in assessment_data:
             assessment_dict[item['id']] = item
 
-        tree = _build_tree(node_data, assessment_dict, lang)
+        tree = _build_tree(channel, node_data, assessment_dict, lang)
         clean_nodes(tree)
 
         return tree
 
 
-def _build_tree(node_data, assessment_dict, lang_code):
-
-    channel = ChannelNode(
-        source_id="KA ({0})".format(lang_code),
-        source_domain="khanacademy.org",
-        title="Khan Academy ({0})".format(lang_code),
-        description='Khan Academy content for the {0} language.'.format(lang_code),
-        thumbnail="https://cdn.kastatic.org/images/khan-logo-vertical-transparent.png",
-    )
+def _build_tree(channel, node_data, assessment_dict, lang_code):
 
     # recall KA api for exercises dict
     ka_exercises = requests.get('http://www.khanacademy.org/api/v1/exercises').json()
