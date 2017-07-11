@@ -12,4 +12,6 @@ six==1.10.0
 ujson==1.33
 decorator==4.0.10
 httplib2==0.9.2
-html2text
+html2text==2016.9.19
+le-utils==0.0.9rc24
+ricecooker>=0.6.2
